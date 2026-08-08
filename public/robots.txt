@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /admin
+Disallow: /staff
+Disallow: /dashboard
+Disallow: /billing
+Disallow: /profile
+Disallow: /login
+Disallow: /password
+
+Sitemap: /sitemap.xml

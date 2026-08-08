@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium salon interior line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M230 188h340v222H230V188Z" fill="none" stroke="#fff9ea" stroke-width="14"/>
+  <path d="M285 410v72m230-72v72M330 248h140m-140 54h140" stroke="#d5a93b" stroke-width="14" stroke-linecap="round"/>
+  <path d="M250 482h300M545 188v222" stroke="#fff9ea" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="590" cy="300" r="30" fill="none" stroke="#d5a93b" stroke-width="10"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium facial line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M310 238c18-60 162-60 180 0 12 40 4 142-90 205-94-63-102-165-90-205Z" fill="none" stroke="#fff9ea" stroke-width="14"/>
+  <path d="M350 295h1m98 0h1M365 365c22 18 48 18 70 0" stroke="#d5a93b" stroke-width="14" stroke-linecap="round"/>
+  <path d="M250 210c42 14 70 42 85 84m215-84c-42 14-70 42-85 84" fill="none" stroke="#d5a93b" stroke-width="10" stroke-linecap="round"/>
+</svg>

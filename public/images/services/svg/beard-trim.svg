@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium beard trim line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M312 230c32-58 145-58 176 0m-176 0c-17 110 17 204 88 245 71-41 105-135 88-245" fill="none" stroke="#fff9ea" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M315 347c40 65 130 65 170 0M340 242c42 24 78 24 120 0" fill="none" stroke="#d5a93b" stroke-width="14" stroke-linecap="round"/>
+  <path d="M285 205l230 230m0-230L285 435" fill="none" stroke="#d5a93b" stroke-width="8" stroke-linecap="round" opacity=".55"/>
+</svg>

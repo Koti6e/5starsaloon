@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium hair spa line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M290 390c18-150 202-176 244-35 14 48-6 97-54 126" fill="none" stroke="#fff9ea" stroke-width="14" stroke-linecap="round"/>
+  <path d="M311 295c55-76 123-103 210-58-62 3-95 29-124 79-23 40-50 65-86 77" fill="none" stroke="#d5a93b" stroke-width="18" stroke-linecap="round"/>
+  <path d="M250 170c40 14 64 39 72 76-40-14-64-39-72-76Zm300 0c-40 14-64 39-72 76 40-14 64-39 72-76Zm-150-52c32 28 45 60 38 98-32-28-45-60-38-98Z" fill="none" stroke="#d5a93b" stroke-width="10" stroke-linejoin="round"/>
+</svg>

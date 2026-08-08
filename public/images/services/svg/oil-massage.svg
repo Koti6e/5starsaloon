@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium oil massage line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M400 132c58 72 88 128 88 168 0 55-39 98-88 98s-88-43-88-98c0-40 30-96 88-168Z" fill="none" stroke="#d5a93b" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M286 430c42-43 85-54 129-32 36 18 69 14 99-12" fill="none" stroke="#fff9ea" stroke-width="14" stroke-linecap="round"/>
+  <path d="M272 346c38-38 83-49 136-33m120 41c-39 39-85 49-139 30" fill="none" stroke="#fff9ea" stroke-width="12" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium hair wash line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M245 365h290c40 0 72 32 72 72H173c0-40 32-72 72-72Z" fill="none" stroke="#fff9ea" stroke-width="14"/>
+  <path d="M304 342c28-74 153-87 196 0" fill="none" stroke="#d5a93b" stroke-width="16" stroke-linecap="round"/>
+  <path d="M285 164h175l-22 80H307l-22-80Z" fill="none" stroke="#fff9ea" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M350 268c-10 30-10 54 0 72m50-72c-10 30-10 54 0 72m50-72c-10 30-10 54 0 72" fill="none" stroke="#d5a93b" stroke-width="10" stroke-linecap="round"/>
+</svg>

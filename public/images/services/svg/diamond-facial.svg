@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium diamond facial line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M300 250c20-62 180-62 200 0 9 42-9 137-100 193-91-56-109-151-100-193Z" fill="none" stroke="#fff9ea" stroke-width="14"/>
+  <path d="M400 130 494 236 400 342 306 236 400 130Z" fill="none" stroke="#d5a93b" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M306 236h188M353 184l47 158 47-158" fill="none" stroke="#d5a93b" stroke-width="8" stroke-linecap="round"/>
+</svg>

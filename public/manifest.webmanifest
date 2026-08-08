@@ -1,0 +1,24 @@
+{
+  "name": "5 Star New Look Salon",
+  "short_name": "5 Star Salon",
+  "description": "Salon management and booking experience for 5 Star New Look Salon.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#080705",
+  "theme_color": "#d5a93b",
+  "icons": [
+    {
+      "src": "/images/brand/logo-small.webp",
+      "sizes": "96x96",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/brand/logo-mark.webp",
+      "sizes": "256x256",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}

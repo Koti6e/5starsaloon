@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium de tan line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <circle cx="400" cy="290" r="92" fill="none" stroke="#d5a93b" stroke-width="14"/>
+  <path d="M400 145v-44m0 378v-44m145-145h44m-378 0h44m103-103-31-31m267 267-31-31m0-236 31-31M327 424l31-31" stroke="#d5a93b" stroke-width="12" stroke-linecap="round"/>
+  <path d="M292 395c74 54 142 54 216 0" fill="none" stroke="#fff9ea" stroke-width="14" stroke-linecap="round"/>
+</svg>

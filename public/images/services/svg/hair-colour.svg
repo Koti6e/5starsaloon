@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium hair colour line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M335 438c-34-34-52-78-52-132 0-86 55-154 125-154 74 0 127 66 127 154 0 56-20 100-55 133" fill="none" stroke="#fff9ea" stroke-width="14" stroke-linecap="round"/>
+  <path d="M297 299c70-105 141-123 228-52-59-8-100 15-125 69-24 51-57 83-103 96" fill="none" stroke="#d5a93b" stroke-width="18" stroke-linecap="round"/>
+  <path d="M536 165l58 58-136 136-72 14 14-72 136-136Z" fill="none" stroke="#fff9ea" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M507 194l58 58" stroke="#d5a93b" stroke-width="12" stroke-linecap="round"/>
+</svg>

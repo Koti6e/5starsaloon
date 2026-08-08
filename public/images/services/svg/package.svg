@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium smart saver package line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M270 245h260v220H270V245Z" fill="none" stroke="#fff9ea" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M270 305h260M400 245v220" stroke="#d5a93b" stroke-width="14" stroke-linecap="round"/>
+  <path d="M350 245c-45-40-10-102 50-42 60-60 95 2 50 42" fill="none" stroke="#d5a93b" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m400 115 15 46h49l-40 29 15 47-39-29-39 29 15-47-40-29h49l15-46Z" fill="none" stroke="#d5a93b" stroke-width="9"/>
+</svg>

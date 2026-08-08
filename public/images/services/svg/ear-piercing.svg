@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Premium ear piercing line art">
+  <rect width="800" height="600" fill="#080705"/>
+  <circle cx="400" cy="300" r="210" fill="none" stroke="#c8a24a" stroke-width="10"/>
+  <path d="M405 164c75 27 115 91 95 157-11 37-36 58-67 76-30 17-48 36-48 69 0 35 29 56 65 45" fill="none" stroke="#fff9ea" stroke-width="14" stroke-linecap="round"/>
+  <path d="M385 244c35 10 50 35 44 66-5 27-25 42-48 54" fill="none" stroke="#d5a93b" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="438" cy="406" r="24" fill="none" stroke="#d5a93b" stroke-width="12"/>
+  <circle cx="491" cy="198" r="18" fill="none" stroke="#d5a93b" stroke-width="10"/>
+</svg>
