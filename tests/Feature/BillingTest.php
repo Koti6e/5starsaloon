@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Bill;
+use App\Models\Appointment;
 use App\Models\Customer;
 use App\Models\Service;
 use App\Models\ServiceCategory;
@@ -23,7 +24,9 @@ class BillingTest extends TestCase
             ->get(route('staff.billing.create'))
             ->assertOk()
             ->assertSee('Quick Billing')
-            ->assertSee('Add Selected Services');
+            ->assertSee('Search customer by name or mobile number')
+            ->assertSee('Search / Select Other Service')
+            ->assertSee('Generate Bill');
     }
 
     public function test_billing_form_forces_browser_navigation_to_success_response(): void
@@ -39,7 +42,9 @@ class BillingTest extends TestCase
             ->assertSee("lookupUrl: '/staff/billing/customer-lookup'", false)
             ->assertDontSee('action="http://localhost/staff/billing"', false)
             ->assertSee(':disabled="paymentMethod !== \'split\'"', false)
-            ->assertSee('selectedServices.length === 0', false)
+            ->assertSee('openPayment()', false)
+            ->assertSee('Search / Select Other Service')
+            ->assertDontSee('Add Selected Services')
             ->assertSee('window.location.assign(response.url)', false)
             ->assertSee("! response.url.includes('/billing/create')", false);
     }
@@ -310,7 +315,36 @@ class BillingTest extends TestCase
             ->getJson(route('staff.billing.customer-lookup', ['mobile' => '9876543210']))
             ->assertOk()
             ->assertJsonPath('found', true)
-            ->assertJsonPath('customer.name', 'Rajesh');
+            ->assertJsonPath('customer.name', 'Rajesh')
+            ->assertJsonPath('customers.0.name', 'Rajesh');
+    }
+
+    public function test_customer_lookup_returns_partial_mobile_suggestions(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
+        Customer::factory()->create(['name' => 'Koteeswaran', 'mobile' => '9445123456']);
+        Customer::factory()->create(['name' => 'Kumar', 'mobile' => '9445987654']);
+        Customer::factory()->create(['name' => 'Different', 'mobile' => '9000011111']);
+
+        $this->actingAs($staff)
+            ->getJson(route('staff.billing.customer-lookup', ['q' => '9445']))
+            ->assertOk()
+            ->assertJsonPath('customers.0.name', 'Koteeswaran')
+            ->assertJsonPath('customers.1.name', 'Kumar')
+            ->assertJsonMissing(['name' => 'Different']);
+    }
+
+    public function test_customer_lookup_returns_partial_name_suggestions(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
+        Customer::factory()->create(['name' => 'Koteeswaran', 'mobile' => '9445123456']);
+        Customer::factory()->create(['name' => 'Kumar', 'mobile' => '9445987654']);
+
+        $this->actingAs($staff)
+            ->getJson(route('staff.billing.customer-lookup', ['q' => 'Koti']))
+            ->assertOk()
+            ->assertJsonPath('customers.0.name', 'Koteeswaran')
+            ->assertJsonMissing(['name' => 'Kumar']);
     }
 
     public function test_same_idempotency_key_does_not_create_duplicate_bill(): void
@@ -650,6 +684,50 @@ class BillingTest extends TestCase
         $payment = Bill::query()->firstOrFail()->payments()->firstOrFail();
         $this->assertSame('Paid at counter', $payment->method_note);
         $this->assertNull($payment->transaction_reference);
+    }
+
+    public function test_billing_started_from_appointment_preserves_relationship(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
+        $service = $this->service(['price' => '120.00']);
+        $customer = Customer::query()->create([
+            'customer_code' => 'CUS-2026-000777',
+            'name' => 'Appointment Customer',
+            'mobile' => '9876543210',
+            'status' => 'active',
+        ]);
+        $appointment = Appointment::factory()->create([
+            'customer_id' => $customer->id,
+            'status' => 'confirmed',
+        ]);
+        $appointment->appointmentServices()->create([
+            'service_id' => $service->id,
+            'service_name_snapshot' => $service->name,
+            'unit_price' => '120.00',
+            'duration_minutes' => 30,
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('staff.billing.create', ['appointment_id' => $appointment->id]))
+            ->assertOk()
+            ->assertSee('name="appointment_id" value="'.$appointment->id.'"', false)
+            ->assertSee('Appointment Customer')
+            ->assertSee('9876543210');
+
+        $this->actingAs($staff)->post(route('staff.billing.store'), [
+            'appointment_id' => $appointment->id,
+            'customer_mobile' => '9876543210',
+            'customer_name' => 'Appointment Customer',
+            'items' => [['service_id' => $service->id, 'quantity' => 1]],
+            'payment_method' => 'cash',
+            'idempotency_key' => 'appointment-linked-bill',
+        ])->assertSessionHasNoErrors();
+
+        $bill = Bill::query()->with('appointment')->firstOrFail();
+        $this->assertSame($appointment->id, $bill->appointment_id);
+        $this->assertSame($appointment->booking_number, $bill->appointment_booking_number);
+        $this->assertSame('completed', $appointment->fresh()->status);
+        $this->assertSame($appointment->id, $bill->appointment->id);
     }
 
     public function test_other_payment_requires_note(): void

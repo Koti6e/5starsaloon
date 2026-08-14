@@ -86,8 +86,8 @@ table {
     --elite-text-dark: #211a11;
     --elite-text-light: #fff9ea;
     --elite-muted: #8a7a5a;
-    --elite-gold: #d5a93b;
-    --elite-border-muted: rgba(138,102,22,0.18);
+    --elite-gold: #32e875;
+    --elite-border-muted: rgba(57,255,136,0.18);
     --elite-error: #e04f4f;
 }
 
@@ -100,7 +100,7 @@ table {
     font-size: 0.95rem;
 }
 .elite-input::placeholder { color: var(--elite-muted); }
-.elite-input:focus { outline: none; box-shadow: 0 0 0 4px rgba(213,169,59,0.12); border-color: var(--elite-gold); }
+.elite-input:focus { outline: none; box-shadow: 0 0 0 4px rgba(57,255,136,0.12); border-color: var(--elite-gold); }
 .elite-input--light { background-color: #fff; color: var(--elite-text-dark); }
 .elite-input--invalid { border-color: var(--elite-error); box-shadow: 0 0 0 4px rgba(224,79,79,0.08); }
 
@@ -122,7 +122,7 @@ html.theme-light input:-webkit-autofill, html.theme-light textarea:-webkit-autof
 }
 
 /* Selection and caret */
-::selection { background: rgba(213,169,59,0.28); color: #000; }
+::selection { background: rgba(57,255,136,0.28); color: #000; }
 input, textarea, select { caret-color: var(--elite-text-light); }
 
 @media (max-width: 767px) {

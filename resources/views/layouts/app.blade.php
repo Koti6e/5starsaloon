@@ -23,12 +23,12 @@
                 --app-text: #fff9ea;
                 --app-muted: #d8c8a3;
                 --app-subtle: #a89567;
-                --app-primary: #f4d27a;
-                --app-primary-strong: #d5a93b;
-                --app-primary-soft: rgba(213, 169, 59, 0.14);
-                --app-border: rgba(200, 162, 74, 0.2);
-                --app-focus: rgba(244, 210, 122, 0.35);
-                --app-glow: rgba(213, 169, 59, 0.18);
+                --app-primary: #39ff88;
+                --app-primary-strong: #32e875;
+                --app-primary-soft: rgba(57, 255, 136, 0.12);
+                --app-border: rgba(57, 255, 136, 0.18);
+                --app-focus: rgba(57, 255, 136, 0.28);
+                --app-glow: rgba(57, 255, 136, 0.2);
                 --app-success: #34d399;
                 --app-warning: #fbbf24;
                 --app-danger: #f87171;
@@ -41,12 +41,12 @@
                 --app-text: #211a11;
                 --app-muted: #6f6042;
                 --app-subtle: #8a7a5a;
-                --app-primary: #8a6616;
-                --app-primary-strong: #d5a93b;
-                --app-primary-soft: rgba(213, 169, 59, 0.16);
-                --app-border: rgba(138, 102, 22, 0.22);
-                --app-focus: rgba(213, 169, 59, 0.24);
-                --app-glow: rgba(213, 169, 59, 0.16);
+                --app-primary: #087a3f;
+                --app-primary-strong: #32e875;
+                --app-primary-soft: rgba(50, 232, 117, 0.16);
+                --app-border: rgba(8, 122, 63, 0.22);
+                --app-focus: rgba(50, 232, 117, 0.24);
+                --app-glow: rgba(50, 232, 117, 0.16);
             }
 
             .app-transition-mask {

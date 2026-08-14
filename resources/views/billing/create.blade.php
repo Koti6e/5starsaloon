@@ -99,20 +99,24 @@
             services: @js($servicePayload),
             categories: @js($categoryPayload),
             initialItems: @js($initialItems),
-            initialMobile: @js(old('customer_mobile', '')),
-            initialCustomerName: @js(old('customer_name', '')),
-            initialCustomerId: @js(old('customer_id', '')),
+            initialMobile: @js(old('customer_mobile', $appointment?->customer?->mobile ?? '')),
+            initialCustomerName: @js(old('customer_name', $appointment?->customer?->name ?? '')),
+            initialCustomerId: @js(old('customer_id', $appointment?->customer_id ?? '')),
             initialActiveCategory: @js(request()->query('category')),
             initialPaymentMethod: @js(old('payment_method', 'cash')),
             initialPaymentNote: @js(old('payment_note', '')),
             initialSplitPayments: @js(old('split_payments', [['method' => 'cash', 'amount' => 0], ['method' => 'upi', 'amount' => 0]])),
+            staff: @js(collect([auth()->user()])->merge($staff)->unique('id')->map(fn ($staffMember) => ['id' => $staffMember->id, 'name' => $staffMember->name])->values()),
             lookupUrl: '{{ route($routeRoot.'.billing.customer-lookup', [], false) }}',
             favoriteToggleBase: '{{ auth()->user()->isAdmin() ? url('admin/services') : '' }}',
             isAdmin: @js(auth()->user()->isAdmin()),
         })" class="mx-auto grid max-w-7xl gap-5 px-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
-            <form method="POST" action="{{ route($routeRoot.'.billing.store', [], false) }}" class="space-y-5" @submit.prevent="submitBilling($event)">
+            <form method="POST" action="{{ route($routeRoot.'.billing.store', [], false) }}" class="space-y-5 pb-28 lg:pb-5" @submit.prevent="submitBilling($event)">
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
+                @if ($appointment)
+                    <input type="hidden" name="appointment_id" value="{{ $appointment->id }}">
+                @endif
 
                 <div x-show="submitError" x-cloak class="rounded-lg border border-red-300/30 bg-red-500/10 p-4 text-sm text-red-100">
                     <p class="font-semibold">Billing could not be completed.</p>
@@ -130,124 +134,120 @@
                     </div>
                 @endif
 
-                <section class="rounded-[32px] border border-[#c8a24a]/15 bg-[#0c0a08]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-                    <div class="mb-4 flex items-center justify-between gap-3">
+                <section class="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-5">
+                    <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.16em] text-[#a89567]">Customer Details</p>
-                            <p class="mt-1 text-sm text-[#d8c8a3]">Search existing profiles and confirm customer information quickly.</p>
+                            <h2 class="text-xl font-bold text-[var(--app-primary)]">New Bill</h2>
+                            <p class="mt-1 text-sm text-[var(--app-muted)]" x-text="billClock()"></p>
                         </div>
-                        <span class="rounded-full border border-[#c8a24a]/20 bg-[#11100d] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#f4d27a]">Customer Lookup</span>
-                    </div>
-
-                    <label class="block">
-                        <span class="text-sm font-semibold text-[#fff9ea]">Mobile Number</span>
-                        <div class="mt-3">
-                            <x-input-group prefix="+91" class="w-full">
-                                <input x-model="mobile" @input.debounce.400ms="sanitizeMobile(); lookupCustomer()" name="customer_mobile" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" minlength="10" required class="elite-input flex-1" placeholder="9876543210">
-                                <span x-show="lookupLoading" class="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-[#c8a24a]/30 border-t-[#f4d27a]"></span>
-                            </x-input-group>
-                        </div>
-                        <input type="hidden" name="customer_id" :value="customerId">
-                        <x-input-error :messages="$errors->get('customer_mobile')" class="mt-2" />
-                    </label>
-
-                    <label class="mt-5 block">
-                        <span class="text-sm font-semibold text-[#fff9ea]">Customer Name</span>
-                        <input x-model="customerName" @input="sanitizeCustomerName" name="customer_name" type="text" maxlength="50" pattern="[A-Za-z]+( [A-Za-z]+)*" required class="mt-3 elite-input w-full" placeholder="Customer name">
-                        <x-input-error :messages="$errors->get('customer_name')" class="mt-2" />
-                    </label>
-
-                    <div class="mt-4 flex flex-wrap items-center gap-2">
-                        <p class="inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase" :class="customerFound ? 'bg-emerald-500/15 text-emerald-300' : 'bg-[#c8a24a]/15 text-[#f4d27a]'" x-text="customerStatus"></p>
-                        <p x-show="lastVisit" class="text-xs text-[#d8c8a3]">Last visit: <span x-text="lastVisit"></span></p>
+                        <span class="rounded-full border border-[var(--app-border)] bg-[var(--app-primary-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--app-primary)]">POS</span>
                     </div>
                 </section>
 
-                <section class="rounded-[32px] border border-[#c8a24a]/15 bg-[#0c0a08]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-                    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.16em] text-[#a89567]">Service Selection</p>
-                            <p class="mt-1 text-sm text-[#d8c8a3]">Pick services, packages, or create a fast bill for returning guests.</p>
-                        </div>
-                        <span class="inline-flex items-center rounded-full border border-[#c8a24a]/20 bg-[#11100d] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#f4d27a]" x-text="`${services.length} services`"></span>
-                    </div>
-
-                    <div x-show="isAdmin || favouriteServices.length" class="space-y-3">
-                        <div class="flex items-center justify-between gap-3">
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#a89567]">Quick Services</p>
-                            <p x-show="!favouriteServices.length" class="text-xs text-[#a89567]">Use the star beside any service to add it here for faster billing.</p>
-                        </div>
-                        <div class="grid gap-2 sm:grid-cols-2">
-                            <template x-if="favouriteServices.length">
-                                <template x-for="service in favouriteServices" :key="service.id">
-                                    <button type="button" @click="quickAdd(service)" class="group min-h-14 rounded-[28px] border border-[#c8a24a]/25 bg-[#090806] px-4 py-3 text-left transition hover:border-[#f4d27a]" :class="isAdded(service) ? 'border-emerald-400/50 bg-[#11100d]' : ''">
-                                        <span class="block text-sm font-semibold text-[#fff9ea]" x-text="service.name"></span>
-                                        <span class="mt-1 text-xs font-semibold" :class="isAdded(service) ? 'text-emerald-300' : 'text-[#f4d27a]'" x-text="isAdded(service) ? 'Added – use + for qty' : service.display_price"></span>
+                <section class="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-5">
+                    <label class="block">
+                        <span class="text-sm font-semibold text-[var(--app-text)]">Search customer by name or mobile number</span>
+                        <div class="relative mt-3">
+                            <input
+                                x-model="customerQuery"
+                                @input.debounce.250ms="lookupCustomer()"
+                                @focus="customerSuggestionsOpen = customerSuggestions.length > 0"
+                                type="search"
+                                autocomplete="off"
+                                class="w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4 pr-12 text-base text-[var(--app-text)] placeholder:text-[var(--app-subtle)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]"
+                                placeholder="Koti or 9445"
+                            >
+                            <span x-show="lookupLoading" class="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-[var(--app-primary)]"></span>
+                            <div x-show="customerSuggestionsOpen" x-cloak @click.outside="customerSuggestionsOpen = false" class="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-2 shadow-2xl shadow-black/40">
+                                <template x-for="customer in customerSuggestions" :key="customer.id">
+                                    <button type="button" @click="selectCustomer(customer)" class="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--app-primary-soft)]">
+                                        <span class="min-w-0">
+                                            <span class="block truncate text-sm font-semibold text-[var(--app-text)]" x-text="customer.name"></span>
+                                            <span class="mt-1 block text-xs text-[var(--app-muted)]" x-text="`+91 ${maskMobile(customer.mobile)}`"></span>
+                                        </span>
+                                        <span class="shrink-0 text-xs font-bold text-[var(--app-primary)]">Select</span>
                                     </button>
                                 </template>
-                            </template>
-                            <div x-show="!favouriteServices.length" class="rounded-[28px] border border-[#c8a24a]/20 bg-[#090806] p-4 text-sm text-[#d8c8a3]">
-                                <p class="font-semibold text-[#fff9ea]">No favorite services yet</p>
-                                <p class="mt-1">Use the star beside any service to add it here for faster billing.</p>
+                                <button type="button" x-show="customerQuery.trim().length >= 2 && customerSuggestions.length === 0 && !lookupLoading" @click="startNewCustomer()" class="w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-primary-soft)] px-3 py-3 text-left text-sm font-semibold text-[var(--app-primary)]">+ Create New Customer</button>
                             </div>
                         </div>
+                    </label>
+
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--app-subtle)]">Mobile Number</span>
+                            <x-input-group prefix="+91" class="mt-2 w-full border border-[var(--app-border)] bg-[var(--app-bg)]">
+                                <input x-model="mobile" @input.debounce.250ms="sanitizeMobile(); syncCustomerQueryFromFields(); lookupCustomer()" name="customer_mobile" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" minlength="10" required class="elite-input min-w-0 flex-1 border-0 bg-transparent" placeholder="9876543210">
+                            </x-input-group>
+                            <x-input-error :messages="$errors->get('customer_mobile')" class="mt-2" />
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--app-subtle)]">Customer Name</span>
+                            <input x-model="customerName" @input="sanitizeCustomerName(); syncCustomerQueryFromFields()" name="customer_name" type="text" maxlength="50" pattern="[A-Za-z]+( [A-Za-z]+)*" required class="mt-2 w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4 text-base text-[var(--app-text)] placeholder:text-[var(--app-subtle)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]" placeholder="Customer name">
+                            <x-input-error :messages="$errors->get('customer_name')" class="mt-2" />
+                        </label>
+                        <input type="hidden" name="customer_id" :value="customerId">
                     </div>
 
-                    <div class="mt-5 overflow-x-auto pb-1">
-                        <div class="flex min-w-max gap-2">
-                            <button type="button" @click="activeCategory = null" class="rounded-full border px-4 py-2 text-sm font-semibold transition" :class="activeCategory === null ? 'border-[#f4d27a] bg-[#d5a93b] text-black' : 'border-[#c8a24a]/30 text-[#f8efd8] hover:border-[#f4d27a] hover:text-[#f4d27a]'">All Services</button>
-                            <template x-for="category in categories" :key="category.id">
-                                <button type="button" @click="activeCategory = category.id" class="rounded-full border px-4 py-2 text-sm font-semibold transition" :class="activeCategory === category.id ? 'border-[#f4d27a] bg-[#d5a93b] text-black' : 'border-[#c8a24a]/30 text-[#f8efd8] hover:border-[#f4d27a] hover:text-[#f4d27a]'"><span x-text="category.name"></span></button>
+                    <div class="mt-4 flex flex-wrap items-center gap-2">
+                        <p class="inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase" :class="customerFound ? 'bg-emerald-500/15 text-emerald-300' : 'bg-[var(--app-primary-soft)] text-[var(--app-primary)]'" x-text="customerStatus"></p>
+                        <p x-show="lastVisit" class="text-xs text-[var(--app-muted)]">Last visit: <span x-text="lastVisit"></span></p>
+                    </div>
+                </section>
+
+                <section class="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-5">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm font-bold uppercase tracking-[0.16em] text-[var(--app-subtle)]">Favourites</p>
+                        <span class="text-xs text-[var(--app-muted)]" x-text="`${favouriteServices.length} quick`"></span>
+                    </div>
+                    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        <template x-for="service in favouriteServices" :key="service.id">
+                            <button type="button" @click="quickAdd(service)" class="min-h-20 rounded-3xl border px-3 py-3 text-left transition active:scale-[0.98]" :class="isAdded(service) ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)] shadow-[0_0_20px_var(--app-glow)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] hover:border-[var(--app-primary)]'">
+                                <span class="block truncate text-sm font-bold text-[var(--app-text)]" x-text="service.name"></span>
+                                <span class="mt-2 block text-xs font-semibold" :class="isAdded(service) ? 'text-emerald-300' : 'text-[var(--app-primary)]'" x-text="isAdded(service) ? 'Added' : service.display_price"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <div x-show="!favouriteServices.length" class="mt-3 rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] p-4 text-sm text-[var(--app-muted)]">No favourite services yet.</div>
+
+                    <div class="mt-5">
+                        <label class="block">
+                            <span class="text-sm font-semibold text-[var(--app-text)]">Search / Select Other Service</span>
+                            <div class="relative mt-3">
+                                <input x-model="serviceQuery" @focus="servicePickerOpen = true" @input="servicePickerOpen = true" type="search" class="w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4 text-base text-[var(--app-text)] placeholder:text-[var(--app-subtle)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]" placeholder="Search service">
+                                <div x-show="servicePickerOpen" x-cloak @click.outside="servicePickerOpen = false" class="absolute left-0 right-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-2 shadow-2xl shadow-black/40">
+                                    <template x-for="service in visibleServices" :key="service.id">
+                                        <button type="button" @click="addService(service); servicePickerOpen = false; serviceQuery = ''" class="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--app-primary-soft)]">
+                                            <span class="min-w-0">
+                                                <span class="block truncate text-sm font-semibold text-[var(--app-text)]" x-text="service.name"></span>
+                                                <span class="mt-1 block truncate text-xs text-[var(--app-muted)]" x-text="service.category"></span>
+                                            </span>
+                                            <span class="shrink-0 text-sm font-bold text-[var(--app-primary)]" x-text="service.display_price"></span>
+                                        </button>
+                                    </template>
+                                    <p x-show="visibleServices.length === 0" class="rounded-2xl px-3 py-4 text-sm text-[var(--app-muted)]">No matching service.</p>
+                                </div>
+                            </div>
+                        </label>
+                        <div x-show="isAdmin" class="mt-3 flex flex-wrap gap-2">
+                            <template x-for="service in visibleServices.slice(0, 6)" :key="`fav-${service.id}`">
+                                <button type="button" @click="toggleFavorite(service)" class="rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-xs font-semibold text-[var(--app-primary)]">
+                                    <span x-text="service.is_favourite ? 'Unstar' : 'Star'"></span>
+                                    <span x-text="service.name"></span>
+                                </button>
                             </template>
                         </div>
-                    </div>
-
-                    <input x-model="serviceQuery" type="search" class="mt-5 w-full rounded-3xl border border-[#c8a24a]/25 bg-[#090806] px-4 py-4 text-sm text-[#fff9ea] placeholder:text-[#8f7d5a] focus:border-[#f4d27a] focus:ring-2 focus:ring-[#f4d27a]/20 focus:outline-none" placeholder="Search services, packages or categories">
-
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                        <template x-for="service in visibleServices" :key="service.id">
-                            <label class="flex min-h-18 cursor-pointer flex-col justify-between gap-3 rounded-[28px] border p-4 transition" :class="isSelected(service) || isAdded(service) ? 'border-[#f4d27a] bg-[#11100d]' : 'border-[#c8a24a]/20 bg-[#090806] hover:border-[#f4d27a]'">
-                                <div class="min-w-0">
-                                    <p class="font-semibold text-[#fff9ea]" x-text="service.name"></p>
-                                    <p class="mt-1 text-xs text-[#a89567]">
-                                        <span x-text="service.category"></span>
-                                        <span x-show="service.is_package" class="ml-2 rounded-full bg-[#d5a93b] px-2 py-0.5 text-[10px] font-bold text-black">Smart Saver</span>
-                                        <span x-show="isAdded(service)" class="ml-2 text-emerald-300">Added</span>
-                                    </p>
-                                </div>
-                                <div class="flex items-center justify-between gap-3">
-                                                    <span class="font-semibold text-[#f4d27a]" x-text="service.display_price"></span>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" x-show="isAdmin" @click.stop="toggleFavorite(service)" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#c8a24a]/25 bg-[#090806] text-[#f4d27a] transition hover:border-[#f4d27a]">
-                                            <span x-text="service.is_favourite ? '★' : '☆'"></span>
-                                        </button>
-                                        <input type="checkbox" class="h-5 w-5 rounded border-[#c8a24a]/40 bg-[#090806] text-[#d5a93b]" :checked="isSelected(service)" :disabled="isAdded(service)" @change="toggleSelected(service)">
-                                    </div>
-                                </div>
-                            </label>
-                        </template>
-                    </div>
-
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <template x-for="service in selectedServices" :key="service.id">
-                            <button type="button" @click="toggleSelected(service)" class="rounded-full border border-[#c8a24a]/25 bg-[#090806] px-4 py-2 text-sm font-semibold text-[#f8efd8] transition hover:border-[#f4d27a]"> <span x-text="service.name"></span> ×</button>
-                        </template>
-                    </div>
-
-                    <div class="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
-                        <button type="button" @click="addSelectedServices" class="w-full rounded-[28px] bg-[#d5a93b] px-5 py-4 text-sm font-bold uppercase tracking-[0.14em] text-black transition hover:bg-[#f0c75e]">Add Selected Services</button>
-                        <button type="button" @click="selectedServices = []" class="rounded-[28px] border border-[#c8a24a]/25 px-4 py-4 text-sm font-semibold text-[#f8efd8] transition hover:border-[#f4d27a]">Clear</button>
                     </div>
                     <x-input-error :messages="$errors->get('items')" class="mt-3" />
                 </section>
 
-                <section class="rounded-[32px] border border-[#c8a24a]/15 bg-[#0c0a08]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+                <section class="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-5">
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.16em] text-[#a89567]">Billing Items</p>
-                            <p class="mt-1 text-sm text-[#d8c8a3]">Manage line items, prices, quantity and staff assignments with fast actions.</p>
+                            <p class="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--app-subtle)]">Selected Services</p>
+                            <p class="mt-1 text-sm text-[var(--app-muted)]">Quantity, performer and totals update instantly.</p>
                         </div>
-                        <p class="text-sm font-semibold text-[#f8efd8]" x-text="`${items.length} item${items.length === 1 ? '' : 's'}`"></p>
+                        <p class="text-sm font-semibold text-[var(--app-text)]" x-text="`${items.length} item${items.length === 1 ? '' : 's'}`"></p>
                     </div>
 
                     <div class="space-y-4">
@@ -257,7 +257,7 @@
                         </div>
 
                         <template x-for="(item, index) in items" :key="item.key">
-                            <div class="rounded-[28px] border border-[#c8a24a]/15 bg-[#090806] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
+                            <div class="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-bg)] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
                                 <input type="hidden" :name="`items[${index}][service_id]`" :value="item.id">
                                 <input type="hidden" :name="`items[${index}][quantity]`" :value="item.quantity">
                                 @if (! auth()->user()->isAdmin())
@@ -266,14 +266,14 @@
 
                                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                     <div class="min-w-0 space-y-2">
-                                        <p class="truncate text-lg font-semibold text-[#fff9ea]" x-text="item.name"></p>
-                                        <p class="text-xs uppercase tracking-[0.16em] text-[#a89567]">Staff: {{ auth()->user()->name }}</p>
+                                        <p class="truncate text-lg font-semibold text-[var(--app-text)]" x-text="item.name"></p>
+                                        <p class="text-xs uppercase tracking-[0.16em] text-[var(--app-subtle)]">Staff: <span x-text="performerName(item.service_performed_by)"></span></p>
                                     </div>
                                     <button type="button" @click="removeItem(index)" class="rounded-full border border-red-300/40 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/10">Remove</button>
                                 </div>
 
                                 @if (auth()->user()->isAdmin())
-                                    <select :name="`items[${index}][service_performed_by]`" x-model="item.service_performed_by" class="mt-4 w-full rounded-3xl border border-[#c8a24a]/25 bg-[#11100d] px-4 py-4 text-sm text-[#fff9ea] focus:border-[#f4d27a] focus:ring-2 focus:ring-[#f4d27a]/20 focus:outline-none">
+                                    <select :name="`items[${index}][service_performed_by]`" x-model="item.service_performed_by" class="mt-4 w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-4 py-4 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
                                         <option value="{{ auth()->id() }}">{{ auth()->user()->name }}</option>
                                         @foreach ($staff as $staffMember)
                                             <option value="{{ $staffMember->id }}">{{ $staffMember->name }}</option>
@@ -282,70 +282,98 @@
                                 @endif
 
                                 <label class="mt-4 block" x-show="item.estimated">
-                                    <span class="text-xs font-semibold uppercase tracking-[0.16em] text-[#a89567]">Confirmed Price</span>
-                                    <input type="number" min="0" step="0.01" x-model.number="item.confirmed_price" :name="`items[${index}][confirmed_price]`" class="mt-2 w-full rounded-3xl border border-[#c8a24a]/25 bg-[#11100d] px-4 py-4 text-sm text-[#fff9ea] focus:border-[#f4d27a] focus:ring-2 focus:ring-[#f4d27a]/20 focus:outline-none">
+                                    <span class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--app-subtle)]">Confirmed Price</span>
+                                    <input type="number" min="0" step="0.01" x-model.number="item.confirmed_price" :name="`items[${index}][confirmed_price]`" class="mt-2 w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-4 py-4 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
                                 </label>
 
                                 <div class="mt-5 grid grid-cols-[auto_1fr_auto_auto] items-center gap-3">
-                                    <button type="button" @click="decrease(item, index)" :aria-label="`Decrease quantity for ${item.name}`" class="h-12 w-12 rounded-full border border-[#c8a24a]/30 text-2xl font-semibold text-[#f4d27a] transition hover:border-[#f4d27a]">−</button>
-                                    <p class="text-center text-3xl font-bold text-[#fff9ea]" x-text="item.quantity"></p>
-                                    <button type="button" @click="increase(item)" :aria-label="`Increase quantity for ${item.name}`" class="h-12 w-12 rounded-full bg-[#d5a93b] text-2xl font-semibold text-black transition hover:bg-[#f0c75e]">+</button>
-                                    <p class="min-w-[90px] text-right text-xl font-bold text-[#f4d27a]" x-text="money(lineTotal(item))"></p>
+                                    <button type="button" @click="decrease(item, index)" :aria-label="`Decrease quantity for ${item.name}`" class="h-12 w-12 rounded-full border border-[var(--app-border)] text-2xl font-semibold text-[var(--app-primary)] transition hover:border-[var(--app-primary)]">−</button>
+                                    <p class="text-center text-3xl font-bold text-[var(--app-text)]" x-text="item.quantity"></p>
+                                    <button type="button" @click="increase(item)" :aria-label="`Increase quantity for ${item.name}`" class="h-12 w-12 rounded-full bg-[var(--app-primary-strong)] text-2xl font-semibold text-black transition hover:brightness-110">+</button>
+                                    <p class="min-w-[90px] text-right text-xl font-bold text-[var(--app-primary)]" x-text="money(lineTotal(item))"></p>
                                 </div>
                             </div>
                         </template>
 
-                        <p x-show="items.length === 0" class="rounded-[28px] border border-[#c8a24a]/20 bg-[#090806] p-5 text-sm text-[#d8c8a3]">No services added yet. Use the service selector above to build the bill.</p>
+                        <p x-show="items.length === 0" class="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-bg)] p-5 text-sm text-[var(--app-muted)]">No services added yet. Use favourites or search other services.</p>
                     </div>
                 </section>
 
-                <section class="rounded-[32px] border border-[#c8a24a]/15 bg-[#0c0a08]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-                    <div class="rounded-[28px] border border-[#c8a24a]/20 bg-[#090806] p-5">
-                        <p class="text-sm text-[#d8c8a3]">Grand Total</p>
-                        <p class="mt-3 text-4xl font-bold text-[#f4d27a]" x-text="money(grandTotal())"></p>
+                <div class="fixed inset-x-0 bottom-[82px] z-30 px-3 lg:hidden">
+                    <div class="mx-auto flex max-w-2xl items-center gap-3 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
+                        <div class="min-w-0 flex-1 pl-3">
+                            <p class="truncate text-xs font-semibold text-[var(--app-muted)]" x-text="`${items.length} Services`"></p>
+                            <p class="text-lg font-bold text-[var(--app-primary)]" x-text="money(grandTotal())"></p>
+                        </div>
+                        <button type="button" @click="openPayment()" :disabled="items.length === 0" class="rounded-full bg-[var(--app-primary-strong)] px-5 py-3 text-sm font-bold uppercase tracking-[0.12em] text-black shadow-[0_0_24px_var(--app-glow)] transition disabled:cursor-not-allowed disabled:opacity-50">Continue</button>
                     </div>
+                </div>
 
-                    <div class="mt-6">
-                        <p class="text-sm font-semibold uppercase tracking-[0.14em] text-[#f8efd8]">Payment Method</p>
-                        <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                            <template x-for="method in ['cash', 'upi', 'card', 'split', 'other']" :key="method">
-                                <label class="cursor-pointer rounded-[28px] border px-4 py-4 text-center text-sm font-semibold capitalize transition" :class="paymentMethod === method ? 'border-[#f4d27a] bg-[#d5a93b] text-black shadow-lg shadow-[#d5a93b]/20' : 'border-[#c8a24a]/25 bg-[#090806] text-[#f8efd8] hover:border-[#f4d27a] hover:text-[#f4d27a]'">
+                <div class="hidden lg:block">
+                    <button type="button" @click="openPayment()" :disabled="items.length === 0" class="w-full rounded-full bg-[var(--app-primary-strong)] px-5 py-4 text-sm font-bold uppercase tracking-[0.14em] text-black shadow-xl shadow-[var(--app-glow)] transition disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-110">
+                        Continue to Payment
+                    </button>
+                </div>
+
+                <div x-show="paymentOpen" x-cloak class="fixed inset-0 z-50" aria-modal="true" role="dialog">
+                    <div class="absolute inset-0 bg-black/70" @click="paymentOpen = false"></div>
+                    <section class="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-[32px] border-t border-[var(--app-border)] bg-[var(--app-surface)] p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[0_-24px_80px_rgba(0,0,0,0.55)] sm:left-1/2 sm:max-w-xl sm:-translate-x-1/2 sm:rounded-[32px] sm:border">
+                        <div class="mx-auto mb-4 h-1.5 w-12 rounded-full bg-[var(--app-border)]"></div>
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm text-[var(--app-muted)]">Total</p>
+                                <p class="mt-1 text-4xl font-bold text-[var(--app-primary)]" x-text="money(grandTotal())"></p>
+                            </div>
+                            <button type="button" @click="paymentOpen = false" class="h-11 w-11 rounded-full border border-[var(--app-border)] text-xl text-[var(--app-text)]">×</button>
+                        </div>
+
+                        <div class="mt-6 grid grid-cols-3 gap-2">
+                            <template x-for="method in ['cash', 'upi', 'card']" :key="method">
+                                <label class="cursor-pointer rounded-3xl border px-3 py-4 text-center text-sm font-bold uppercase transition" :class="paymentMethod === method ? 'border-[var(--app-primary)] bg-[var(--app-primary-strong)] text-black shadow-[0_0_24px_var(--app-glow)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]'">
+                                    <input type="radio" name="payment_method" class="sr-only" :value="method" x-model="paymentMethod">
+                                    <span x-text="method"></span>
+                                </label>
+                            </template>
+                        </div>
+                        <div class="mt-3 grid grid-cols-2 gap-2">
+                            <template x-for="method in ['split', 'other']" :key="method">
+                                <label class="cursor-pointer rounded-3xl border px-3 py-3 text-center text-sm font-semibold capitalize transition" :class="paymentMethod === method ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)] text-[var(--app-primary)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-muted)]'">
                                     <input type="radio" name="payment_method" class="sr-only" :value="method" x-model="paymentMethod">
                                     <span x-text="method === 'split' ? 'Split Payment' : method"></span>
                                 </label>
                             </template>
                         </div>
-                    </div>
 
-                    <input name="payment_note" x-model="paymentNote" class="mt-5 w-full rounded-3xl border border-[#c8a24a]/25 bg-[#090806] px-4 py-4 text-sm text-[#fff9ea] placeholder:text-[#8f7d5a] focus:border-[#f4d27a] focus:ring-2 focus:ring-[#f4d27a]/20 focus:outline-none" placeholder="Optional payment or billing note" :required="paymentMethod === 'other'">
+                        <input name="payment_note" x-model="paymentNote" class="mt-5 w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4 text-sm text-[var(--app-text)] placeholder:text-[var(--app-subtle)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none" placeholder="Optional payment note" :required="paymentMethod === 'other'">
 
-                    <div class="mt-5 space-y-4" x-show="paymentMethod === 'split'">
-                        <template x-for="(payment, index) in splitPayments" :key="index">
-                            <div class="grid gap-3 sm:grid-cols-[130px_1fr]">
-                                <select :name="paymentMethod === 'split' ? `split_payments[${index}][method]` : null" :disabled="paymentMethod !== 'split'" x-model="payment.method" class="rounded-[28px] border border-[#c8a24a]/25 bg-[#090806] px-4 py-4 text-sm text-[#fff9ea] focus:border-[#f4d27a] focus:ring-2 focus:ring-[#f4d27a]/20 focus:outline-none">
-                                    <option value="cash">Cash</option>
-                                    <option value="upi">UPI</option>
-                                    <option value="card">Card</option>
-                                    <option value="other">Other</option>
-                                </select>
-                                <input :name="paymentMethod === 'split' ? `split_payments[${index}][amount]` : null" :disabled="paymentMethod !== 'split'" x-model.number="payment.amount" type="number" step="0.01" min="0.01" class="rounded-[28px] border border-[#c8a24a]/25 bg-[#090806] px-4 py-4 text-sm text-[#fff9ea] placeholder:text-[#8f7d5a] focus:border-[#f4d27a] focus:ring-2 focus:ring-[#f4d27a]/20 focus:outline-none" placeholder="Amount">
+                        <div class="mt-5 space-y-4" x-show="paymentMethod === 'split'">
+                            <template x-for="(payment, index) in splitPayments" :key="index">
+                                <div class="grid grid-cols-[120px_1fr] gap-3">
+                                    <select :name="paymentMethod === 'split' ? `split_payments[${index}][method]` : null" :disabled="paymentMethod !== 'split'" x-model="payment.method" class="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-4 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
+                                        <option value="cash">Cash</option>
+                                        <option value="upi">UPI</option>
+                                        <option value="card">Card</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                    <input :name="paymentMethod === 'split' ? `split_payments[${index}][amount]` : null" :disabled="paymentMethod !== 'split'" x-model.number="payment.amount" type="number" step="0.01" min="0.01" class="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-4 text-sm text-[var(--app-text)] placeholder:text-[var(--app-subtle)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none" placeholder="Amount">
+                                </div>
+                            </template>
+                            <div class="flex flex-wrap gap-3">
+                                <button type="button" @click="addSplitPayment" class="rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3 text-sm font-semibold text-[var(--app-primary)]">Add split row</button>
+                                <button type="button" @click="fillSplitBalance" class="rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3 text-sm font-semibold text-[var(--app-primary)]">Fill balance</button>
                             </div>
-                        </template>
-                        <div class="flex flex-wrap gap-3">
-                            <button type="button" @click="addSplitPayment" class="rounded-full border border-[#c8a24a]/25 bg-[#090806] px-4 py-3 text-sm font-semibold text-[#f4d27a] transition hover:border-[#f4d27a]">Add split row</button>
-                            <button type="button" @click="fillSplitBalance" class="rounded-full border border-[#c8a24a]/25 bg-[#090806] px-4 py-3 text-sm font-semibold text-[#f4d27a] transition hover:border-[#f4d27a]">Fill balance</button>
+                            <x-input-error :messages="$errors->get('split_payments')" class="mt-2" />
                         </div>
-                        <x-input-error :messages="$errors->get('split_payments')" class="mt-2" />
-                    </div>
-                </section>
 
-                <button type="submit" :disabled="submitting || (items.length === 0 && selectedServices.length === 0)" class="sticky bottom-3 z-30 w-full rounded-full bg-[#d5a93b] px-5 py-4 text-sm font-bold uppercase tracking-[0.14em] text-black shadow-xl shadow-[#d5a93b]/25 transition disabled:cursor-not-allowed disabled:opacity-60 hover:bg-[#f0c75e]">
-                    <span x-show="!submitting">Complete Billing</span>
-                    <span x-show="submitting" class="inline-flex items-center justify-center gap-2">
-                        <span class="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black"></span>
-                        Creating Invoice…
-                    </span>
-                </button>
+                        <button type="submit" :disabled="submitting || items.length === 0" class="mt-6 w-full rounded-full bg-[var(--app-primary-strong)] px-5 py-4 text-sm font-bold uppercase tracking-[0.14em] text-black shadow-xl shadow-[var(--app-glow)] transition disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-110">
+                            <span x-show="!submitting">Generate Bill</span>
+                            <span x-show="submitting" class="inline-flex items-center justify-center gap-2">
+                                <span class="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black"></span>
+                                Creating Invoice...
+                            </span>
+                        </button>
+                    </section>
+                </div>
             </form>
 
             <aside class="sticky bottom-3 z-20 self-start lg:top-6">
@@ -392,27 +420,38 @@
             return {
                 services: config.services,
                 categories: config.categories || [],
+                staff: config.staff || [],
                 lookupUrl: config.lookupUrl,
+                isAdmin: Boolean(config.isAdmin),
+                now: new Date(),
+                customerQuery: [config.initialCustomerName, config.initialMobile].filter(Boolean).join(' · '),
                 mobile: String(config.initialMobile || '').replace(/\D/g, '').slice(-10),
                 customerName: config.initialCustomerName || '',
                 customerId: config.initialCustomerId || '',
-                customerFound: false,
-                customerStatus: 'New Customer',
+                customerFound: Boolean(config.initialCustomerId),
+                customerStatus: config.initialCustomerId ? 'Existing Customer' : 'New Customer',
                 lastVisit: '',
                 lookupLoading: false,
                 lookupController: null,
+                customerSuggestions: [],
+                customerSuggestionsOpen: false,
                 serviceQuery: '',
+                servicePickerOpen: false,
                 activeCategory: config.initialActiveCategory ?? null,
                 selectedServices: [],
                 items: config.initialItems || [],
                 undoItem: null,
                 paymentMethod: config.initialPaymentMethod || 'cash',
                 paymentNote: config.initialPaymentNote || '',
+                paymentOpen: false,
                 splitPayments: Array.isArray(config.initialSplitPayments) && config.initialSplitPayments.length
                     ? config.initialSplitPayments
                     : [{method: 'cash', amount: 0}, {method: 'upi', amount: 0}],
                 submitting: false,
                 submitError: '',
+                init() {
+                    setInterval(() => this.now = new Date(), 1000);
+                },
                 get filteredServices() {
                     const q = this.serviceQuery.trim().toLowerCase();
                     return this.services
@@ -420,10 +459,13 @@
                         .filter(service => this.activeCategory === null || Number(service.category_id) === Number(this.activeCategory));
                 },
                 get visibleServices() {
-                    return this.filteredServices;
+                    return this.filteredServices.slice(0, 12);
                 },
                 get favouriteServices() {
-                    return this.services.filter(service => service.is_favourite).slice(0, 8);
+                    return this.services
+                        .filter(service => service.is_favourite || this.isHairCut(service))
+                        .sort((a, b) => Number(this.isHairCut(b)) - Number(this.isHairCut(a)) || a.name.localeCompare(b.name))
+                        .slice(0, 8);
                 },
                 get canToggleFavorites() {
                     return this.isAdmin;
@@ -458,6 +500,10 @@
                 quickAdd(service) {
                     this.addService(service);
                 },
+                isHairCut(service) {
+                    const normalized = String(service.name || '').toLowerCase().replace(/\s+/g, '');
+                    return normalized === 'haircut';
+                },
                 addService(service) {
                     const existing = this.items.find(item => item.id === service.id);
 
@@ -478,37 +524,54 @@
                 sanitizeMobile() {
                     this.mobile = String(this.mobile || '').replace(/\D/g, '').slice(-10);
                 },
+                syncCustomerQueryFromFields() {
+                    if (this.mobile.length > 0) {
+                        this.customerQuery = this.mobile;
+                    } else if (this.customerName.length > 0) {
+                        this.customerQuery = this.customerName;
+                    }
+                },
                 lookupCustomer() {
-                    this.sanitizeMobile();
-                    const digits = this.mobile;
+                    const rawQuery = String(this.customerQuery || '').trim();
+                    const digits = rawQuery.replace(/\D/g, '').slice(-10);
                     if (this.lookupController) this.lookupController.abort();
-                    if (digits.length !== 10) {
+                    if (rawQuery.length < 2 && digits.length < 2) {
                         this.lookupLoading = false;
                         this.customerFound = false;
                         this.customerId = '';
                         this.lastVisit = '';
+                        this.customerSuggestions = [];
+                        this.customerSuggestionsOpen = false;
                         this.customerStatus = 'New Customer';
                         return;
                     }
                     this.lookupController = new AbortController();
                     this.lookupLoading = true;
-                    fetch(`${this.lookupUrl}?mobile=${encodeURIComponent(digits)}`, {
+                    fetch(`${this.lookupUrl}?q=${encodeURIComponent(rawQuery || digits)}`, {
                         headers: {'Accept': 'application/json'},
                         signal: this.lookupController.signal,
                     })
                         .then(response => response.ok ? response.json() : Promise.reject())
                         .then(data => {
-                            this.customerFound = data.found;
-                            this.customerStatus = data.found ? 'Existing Customer' : 'New Customer';
-                            this.customerId = data.customer?.id || '';
-                            this.lastVisit = data.customer?.last_visit_at || '';
-                            if (data.customer) this.customerName = data.customer.name;
+                            this.customerSuggestions = data.customers || [];
+                            this.customerSuggestionsOpen = true;
+                            const exact = digits.length === 10 ? this.customerSuggestions.find(customer => customer.mobile === digits) : null;
+                            if (exact) {
+                                this.selectCustomer(exact);
+                                return;
+                            }
+                            this.customerFound = false;
+                            this.customerStatus = this.customerSuggestions.length ? 'Select Customer' : 'New Customer';
+                            this.customerId = '';
+                            this.lastVisit = '';
                         })
                         .catch(error => {
                             if (error.name !== 'AbortError') {
                                 this.customerFound = false;
                                 this.customerId = '';
                                 this.lastVisit = '';
+                                this.customerSuggestions = [];
+                                this.customerSuggestionsOpen = false;
                                 this.customerStatus = 'New Customer';
                             }
                         })
@@ -516,19 +579,52 @@
                             this.lookupLoading = false;
                         });
                 },
+                selectCustomer(customer) {
+                    this.customerFound = true;
+                    this.customerStatus = 'Existing Customer';
+                    this.customerId = customer.id || '';
+                    this.customerName = customer.name || '';
+                    this.mobile = String(customer.mobile || '').replace(/\D/g, '').slice(-10);
+                    this.customerQuery = `${this.customerName} · ${this.mobile}`;
+                    this.lastVisit = customer.last_visit_at || '';
+                    this.customerSuggestionsOpen = false;
+                },
+                startNewCustomer() {
+                    const digits = String(this.customerQuery || '').replace(/\D/g, '').slice(-10);
+                    if (digits.length > 0) {
+                        this.mobile = digits;
+                    } else {
+                        this.customerName = String(this.customerQuery || '').replace(/[^A-Za-z ]/g, '').trim().slice(0, 50);
+                    }
+                    this.customerFound = false;
+                    this.customerId = '';
+                    this.lastVisit = '';
+                    this.customerStatus = 'New Customer';
+                    this.customerSuggestionsOpen = false;
+                },
+                maskMobile(mobile) {
+                    const digits = String(mobile || '').replace(/\D/g, '');
+                    if (digits.length < 10) return digits;
+                    return `${digits.slice(0, 4)}X XXXXX`;
+                },
+                billClock() {
+                    return this.now.toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata'})
+                        + ' • '
+                        + this.now.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata'});
+                },
+                openPayment() {
+                    if (this.items.length === 0) return;
+                    this.fillSplitBalance();
+                    this.paymentOpen = true;
+                },
                 async submitBilling(event) {
                     const form = event.target;
-                    if (this.submitting || (this.items.length === 0 && this.selectedServices.length === 0)) return;
+                    if (this.submitting || this.items.length === 0) return;
 
                     this.submitting = true;
                     this.submitError = '';
 
                     try {
-                        if (this.selectedServices.length > 0) {
-                            this.addSelectedServices();
-                            await new Promise(resolve => requestAnimationFrame(resolve));
-                        }
-
                         const response = await fetch(form.action, {
                             method: form.method || 'POST',
                             body: new FormData(form),
@@ -582,6 +678,7 @@
                         key: `service-${service.id}-${Date.now()}`,
                         quantity: 1,
                         confirmed_price: service.estimated ? '' : service.price,
+                        service_performed_by: this.staff[0]?.id || '',
                     }));
                 },
                 removeItem(index) {
@@ -611,6 +708,9 @@
                 },
                 grandTotal() {
                     return this.items.reduce((total, item) => total + this.lineTotal(item), 0);
+                },
+                performerName(id) {
+                    return this.staff.find(staff => Number(staff.id) === Number(id))?.name || @js(auth()->user()->name);
                 },
                 fillSplitBalance() {
                     const used = this.splitPayments.slice(0, -1).reduce((total, payment) => total + (Number(payment.amount) || 0), 0);

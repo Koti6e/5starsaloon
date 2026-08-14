@@ -44,7 +44,7 @@ class BillingController extends Controller
         $appointment = null;
         if ($request->filled('appointment_id')) {
             $appointment = Appointment::query()
-                ->with(['appointmentServices.service.category'])
+                ->with(['customer', 'appointmentServices.service.category'])
                 ->find($request->integer('appointment_id'));
         }
 
@@ -70,13 +70,45 @@ class BillingController extends Controller
 
     public function lookupCustomer(Request $request): JsonResponse
     {
-        $mobile = Customer::normalizeMobile((string) $request->query('mobile'));
-        abort_if(strlen($mobile) !== 10, 422, 'Enter a valid 10 digit mobile number.');
+        $query = trim((string) $request->query('q', $request->query('mobile', '')));
+        $mobile = Customer::normalizeMobile($query);
 
-        $customer = Customer::query()->where('mobile', $mobile)->first();
+        abort_if(strlen($query) < 2 && strlen($mobile) < 2, 422, 'Enter at least 2 characters to search customers.');
+
+        $customers = Customer::query()
+            ->where('status', 'active')
+            ->where(function ($builder) use ($query, $mobile): void {
+                if ($mobile !== '') {
+                    $builder->where('mobile', 'like', '%'.$mobile.'%')
+                        ->orWhere('alternate_mobile', 'like', '%'.$mobile.'%');
+                }
+
+                if ($query !== '' && ! ctype_digit($query)) {
+                    $builder->orWhere('name', 'like', '%'.$query.'%');
+
+                    if (strlen($query) >= 3) {
+                        $builder->orWhere('name', 'like', substr($query, 0, 3).'%');
+                    }
+                }
+            })
+            ->orderByRaw('CASE WHEN mobile = ? THEN 0 WHEN mobile LIKE ? THEN 1 ELSE 2 END', [$mobile, $mobile.'%'])
+            ->orderByDesc('last_visit_at')
+            ->orderBy('name')
+            ->limit(8)
+            ->get();
+
+        $customer = strlen($mobile) === 10
+            ? $customers->firstWhere('mobile', $mobile)
+            : $customers->first();
 
         return response()->json([
             'found' => (bool) $customer,
+            'customers' => $customers->map(fn (Customer $customer) => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'mobile' => $customer->mobile,
+                'last_visit_at' => $customer->last_visit_at?->format('d M Y'),
+            ])->values(),
             'customer' => $customer ? [
                 'id' => $customer->id,
                 'name' => $customer->name,
@@ -90,6 +122,7 @@ class BillingController extends Controller
     {
         $validated = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
+            'appointment_id' => ['nullable', 'exists:appointments,id'],
             'customer_mobile' => ['required', 'string', 'max:30'],
             'customer_name' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z]+(?: [A-Za-z]+)*$/'],
             'items' => ['required', 'array', 'min:1'],
@@ -119,6 +152,20 @@ class BillingController extends Controller
 
         try {
             $bill = DB::transaction(function () use ($request, $validated, $mobile, $customerName): Bill {
+                $appointment = null;
+                if (filled($validated['appointment_id'] ?? null)) {
+                    $appointment = Appointment::query()
+                        ->with('customer')
+                        ->lockForUpdate()
+                        ->findOrFail($validated['appointment_id']);
+
+                    if ($appointment->customer?->mobile !== $mobile) {
+                        throw ValidationException::withMessages([
+                            'customer_mobile' => 'The customer mobile must match the selected appointment.',
+                        ]);
+                    }
+                }
+
                 $customer = Customer::query()->firstOrCreate(
                     ['mobile' => $mobile],
                     [
@@ -172,6 +219,8 @@ class BillingController extends Controller
                 $bill = Bill::query()->create([
                     'invoice_number' => $this->nextInvoiceNumber(),
                     'customer_id' => $customer->id,
+                    'appointment_id' => $appointment?->id,
+                    'appointment_booking_number' => $appointment?->booking_number,
                     'billed_by' => $request->user()->id,
                     'created_by' => $request->user()->id,
                     'subtotal' => $this->fromCents($subtotalCents),
@@ -205,6 +254,10 @@ class BillingController extends Controller
                         'received_by' => $request->user()->id,
                         'paid_at' => now('Asia/Kolkata'),
                     ]);
+                }
+
+                if ($appointment && in_array($appointment->status, ['pending', 'confirmed', 'in_progress'], true)) {
+                    $appointment->update(['status' => 'completed']);
                 }
 
                 Customer::query()->whereKey($customer->id)->update([
