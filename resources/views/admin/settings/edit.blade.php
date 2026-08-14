@@ -1,12 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <h1 class="font-serif text-2xl text-[var(--app-primary)]">Settings</h1>
+        <h1 class="font-serif text-2xl text-[var(--app-text)]">Settings</h1>
     </x-slot>
 
     <div class="py-8">
         <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
             @if (session('status'))
-                <p class="mb-5 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-3 text-sm text-[var(--app-primary)]">{{ session('status') }}</p>
+                <p class="mb-5 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-3 text-sm text-[var(--app-text)]">{{ session('status') }}</p>
             @endif
 
             <form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" class="space-y-6">
@@ -35,7 +35,7 @@
                     ],
                 ] as $section => $fields)
                     <section class="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
-                        <h2 class="font-serif text-xl text-[var(--app-primary)]">{{ $section }}</h2>
+                        <h2 class="font-serif text-xl text-[var(--app-text)]">{{ $section }}</h2>
                         <div class="mt-5 grid gap-4 sm:grid-cols-2">
                             @foreach ($fields as [$key, $label, $type])
                                 <label class="block {{ $type === 'textarea' ? 'sm:col-span-2' : '' }}">
@@ -53,7 +53,7 @@
                 @endforeach
 
                 <section class="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
-                    <h2 class="font-serif text-xl text-[var(--app-primary)]">Appearance & Media</h2>
+                    <h2 class="font-serif text-xl text-[var(--app-text)]">Appearance & Media</h2>
                     <div class="mt-5 grid gap-4 sm:grid-cols-2">
                         <label class="block">
                             <span class="text-sm font-semibold text-[var(--app-text)]">Default Theme</span>

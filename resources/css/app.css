@@ -56,8 +56,8 @@ html.theme-light .theme-search {
 }
 
 html.theme-dark body {
-    background: #080705 !important;
-    color: #fff9ea !important;
+    background: var(--app-bg) !important;
+    color: var(--app-text) !important;
 }
 
 body {
@@ -81,13 +81,13 @@ table {
 
 /* ELITE design tokens and input system */
 :root {
-    --elite-charcoal: #0b0a09;
-    --elite-nearwhite: #fff9ea;
-    --elite-text-dark: #211a11;
-    --elite-text-light: #fff9ea;
-    --elite-muted: #8a7a5a;
-    --elite-gold: #32e875;
-    --elite-border-muted: rgba(57,255,136,0.18);
+    --elite-charcoal: var(--bg-input, #0b0d0c);
+    --elite-nearwhite: var(--text-primary, #f4f7f5);
+    --elite-text-dark: var(--text-primary, #1e2420);
+    --elite-text-light: var(--text-primary, #f4f7f5);
+    --elite-muted: var(--text-muted, #8f9a94);
+    --elite-gold: var(--accent, #47e88a);
+    --elite-border-muted: var(--border-default, rgba(226,232,240,0.11));
     --elite-error: #e04f4f;
 }
 
@@ -96,18 +96,18 @@ table {
     color: var(--elite-text-light);
     border-radius: 28px;
     padding: 0.9rem 1rem;
-    border: 1px solid rgba(0,0,0,0.12);
+    border: 1px solid var(--border-default);
     font-size: 0.95rem;
 }
 .elite-input::placeholder { color: var(--elite-muted); }
-.elite-input:focus { outline: none; box-shadow: 0 0 0 4px rgba(57,255,136,0.12); border-color: var(--elite-gold); }
+.elite-input:focus { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); border-color: var(--accent-border); }
 .elite-input--light { background-color: #fff; color: var(--elite-text-dark); }
 .elite-input--invalid { border-color: var(--elite-error); box-shadow: 0 0 0 4px rgba(224,79,79,0.08); }
 
 .elite-select { @apply appearance-none; }
 
 .elite-input-group { display: flex; align-items: center; gap: 0.5rem; border-radius: 28px; overflow: hidden; }
-.elite-input-group .elite-prefix { padding: 0.6rem 0.9rem; background: rgba(0,0,0,0.12); color: var(--elite-gold); font-weight:700; }
+.elite-input-group .elite-prefix { padding: 0.6rem 0.9rem; background: var(--app-surface-elevated); color: var(--app-muted); font-weight:700; }
 
 /* Autofill handling */
 input:-webkit-autofill, textarea:-webkit-autofill, select:-webkit-autofill {
@@ -122,7 +122,7 @@ html.theme-light input:-webkit-autofill, html.theme-light textarea:-webkit-autof
 }
 
 /* Selection and caret */
-::selection { background: rgba(57,255,136,0.28); color: #000; }
+::selection { background: var(--accent-soft); color: var(--app-text); }
 input, textarea, select { caret-color: var(--elite-text-light); }
 
 @media (max-width: 767px) {

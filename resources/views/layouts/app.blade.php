@@ -23,72 +23,130 @@
         </script>
         <style>
             :root {
-                --app-bg: #060503;
-                --app-surface: #0d0b08;
-                --app-surface-elevated: #11100d;
-                --app-text: #fff9ea;
-                --app-muted: #d8c8a3;
-                --app-subtle: #a89567;
-                --app-primary: #39ff88;
-                --app-primary-strong: #32e875;
-                --app-primary-soft: rgba(57, 255, 136, 0.12);
-                --app-border: rgba(57, 255, 136, 0.18);
-                --app-focus: rgba(57, 255, 136, 0.28);
-                --app-glow: rgba(57, 255, 136, 0.2);
-                --app-success: #34d399;
-                --app-warning: #fbbf24;
-                --app-danger: #f87171;
+                --bg-app: #070807;
+                --bg-surface: #101211;
+                --bg-surface-elevated: #171a18;
+                --bg-input: #0b0d0c;
+                --text-primary: #f4f7f5;
+                --text-secondary: #c6cec9;
+                --text-muted: #8f9a94;
+                --text-disabled: #5e6762;
+                --border-default: rgba(226, 232, 240, 0.11);
+                --border-strong: rgba(226, 232, 240, 0.2);
+                --shadow-card: 0 18px 50px rgba(0, 0, 0, 0.28);
+                --success: #34d399;
+                --success-soft: rgba(52, 211, 153, 0.13);
+                --danger: #fb7185;
+                --danger-soft: rgba(251, 113, 133, 0.13);
+                --warning: #fbbf24;
+                --warning-soft: rgba(251, 191, 36, 0.13);
+                --info: #38bdf8;
+                --info-soft: rgba(56, 189, 248, 0.13);
+                --accent: #47e88a;
+                --accent-hover: #59f39a;
+                --accent-active: #2fd875;
+                --accent-soft: rgba(71, 232, 138, 0.1);
+                --accent-border: rgba(71, 232, 138, 0.28);
+                --accent-glow: rgba(71, 232, 138, 0.14);
+                --focus-ring: rgba(71, 232, 138, 0.24);
+                --on-accent: #031008;
+                --app-bg: var(--bg-app);
+                --app-surface: var(--bg-surface);
+                --app-surface-elevated: var(--bg-surface-elevated);
+                --app-text: var(--text-primary);
+                --app-muted: var(--text-secondary);
+                --app-subtle: var(--text-muted);
+                --app-primary: var(--accent);
+                --app-primary-strong: var(--accent-active);
+                --app-primary-soft: var(--accent-soft);
+                --app-border: var(--border-default);
+                --app-focus: var(--focus-ring);
+                --app-glow: var(--accent-glow);
+                --app-success: var(--success);
+                --app-warning: var(--warning);
+                --app-danger: var(--danger);
             }
 
             html[data-theme="sapphire"] {
-                --app-primary: #38bdf8;
-                --app-primary-strong: #0ea5e9;
-                --app-primary-soft: rgba(56, 189, 248, 0.13);
-                --app-border: rgba(56, 189, 248, 0.2);
-                --app-focus: rgba(56, 189, 248, 0.28);
-                --app-glow: rgba(56, 189, 248, 0.2);
+                --accent: #60a5fa;
+                --accent-hover: #7dd3fc;
+                --accent-active: #3b82f6;
+                --accent-soft: rgba(96, 165, 250, 0.1);
+                --accent-border: rgba(96, 165, 250, 0.28);
+                --accent-glow: rgba(96, 165, 250, 0.14);
+                --focus-ring: rgba(96, 165, 250, 0.24);
             }
 
             html[data-theme="crimson"] {
-                --app-primary: #fb7185;
-                --app-primary-strong: #f43f5e;
-                --app-primary-soft: rgba(251, 113, 133, 0.13);
-                --app-border: rgba(251, 113, 133, 0.2);
-                --app-focus: rgba(251, 113, 133, 0.28);
-                --app-glow: rgba(251, 113, 133, 0.2);
+                --accent: #f47286;
+                --accent-hover: #fb8ea0;
+                --accent-active: #e84d68;
+                --accent-soft: rgba(244, 114, 134, 0.1);
+                --accent-border: rgba(244, 114, 134, 0.28);
+                --accent-glow: rgba(244, 114, 134, 0.14);
+                --focus-ring: rgba(244, 114, 134, 0.24);
             }
 
             html[data-theme="gold"] {
-                --app-primary: #f4d27a;
-                --app-primary-strong: #d5a93b;
-                --app-primary-soft: rgba(213, 169, 59, 0.14);
-                --app-border: rgba(200, 162, 74, 0.22);
-                --app-focus: rgba(244, 210, 122, 0.3);
-                --app-glow: rgba(213, 169, 59, 0.18);
+                --accent: #e9c46a;
+                --accent-hover: #f2d889;
+                --accent-active: #d6aa3a;
+                --accent-soft: rgba(233, 196, 106, 0.11);
+                --accent-border: rgba(233, 196, 106, 0.3);
+                --accent-glow: rgba(233, 196, 106, 0.14);
+                --focus-ring: rgba(233, 196, 106, 0.24);
             }
 
             html[data-theme="pearl"] {
-                --app-bg: #f5f2ec;
-                --app-surface: #fffaf0;
-                --app-surface-elevated: #ffffff;
-                --app-text: #211a11;
-                --app-muted: #62594a;
-                --app-subtle: #7b705e;
-                --app-primary: #0f8a52;
-                --app-primary-strong: #32e875;
-                --app-primary-soft: rgba(15, 138, 82, 0.12);
-                --app-border: rgba(15, 138, 82, 0.22);
-                --app-focus: rgba(15, 138, 82, 0.24);
-                --app-glow: rgba(15, 138, 82, 0.16);
+                --bg-app: #f4f1eb;
+                --bg-surface: #fffdf8;
+                --bg-surface-elevated: #ffffff;
+                --bg-input: #f8f5ef;
+                --text-primary: #1e2420;
+                --text-secondary: #4b5750;
+                --text-muted: #727d76;
+                --text-disabled: #9aa39d;
+                --border-default: rgba(30, 36, 32, 0.12);
+                --border-strong: rgba(30, 36, 32, 0.22);
+                --shadow-card: 0 18px 42px rgba(32, 27, 18, 0.1);
+                --accent: #167a4d;
+                --accent-hover: #1f9360;
+                --accent-active: #11683f;
+                --accent-soft: rgba(22, 122, 77, 0.1);
+                --accent-border: rgba(22, 122, 77, 0.3);
+                --accent-glow: rgba(22, 122, 77, 0.12);
+                --focus-ring: rgba(22, 122, 77, 0.22);
+                --on-accent: #ffffff;
             }
 
             html[data-theme="obsidian"] {
-                --app-primary: #d1d5db;
-                --app-primary-strong: #f3f4f6;
-                --app-primary-soft: rgba(209, 213, 219, 0.12);
-                --app-border: rgba(209, 213, 219, 0.18);
-                --app-focus: rgba(209, 213, 219, 0.24);
-                --app-glow: rgba(209, 213, 219, 0.14);
+                --bg-app: #050506;
+                --bg-surface: #0d0e10;
+                --bg-surface-elevated: #15171a;
+                --bg-input: #090a0c;
+                --accent: #cbd5e1;
+                --accent-hover: #e2e8f0;
+                --accent-active: #94a3b8;
+                --accent-soft: rgba(203, 213, 225, 0.09);
+                --accent-border: rgba(203, 213, 225, 0.24);
+                --accent-glow: rgba(203, 213, 225, 0.08);
+                --focus-ring: rgba(203, 213, 225, 0.2);
+            }
+
+            :root,
+            html[data-theme] {
+                --app-bg: var(--bg-app);
+                --app-surface: var(--bg-surface);
+                --app-surface-elevated: var(--bg-surface-elevated);
+                --app-text: var(--text-primary);
+                --app-muted: var(--text-secondary);
+                --app-subtle: var(--text-muted);
+                --app-primary: var(--accent);
+                --app-primary-strong: var(--accent-active);
+                --app-primary-soft: var(--accent-soft);
+                --app-border: var(--border-default);
+                --app-focus: var(--focus-ring);
+                --app-glow: var(--accent-glow);
             }
 
             .app-transition-mask {
@@ -110,7 +168,7 @@
                 background: var(--app-surface);
                 border: 1px solid var(--app-border);
                 border-radius: 999px;
-                box-shadow: 0 18px 50px rgba(0, 0, 0, 0.26), 0 0 22px var(--app-glow);
+                box-shadow: var(--shadow-card), 0 0 16px var(--app-glow);
                 color: var(--app-primary);
                 display: inline-flex;
                 gap: 0.7rem;
@@ -160,7 +218,7 @@
                     localStorage.setItem('salonos-sidebar-collapsed', this.collapsed ? '1' : '0');
                 }
             }"
-            class="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_var(--app-primary-soft),_transparent_35%),var(--app-bg)]"
+            class="min-h-screen overflow-x-hidden bg-[var(--app-bg)]"
         >
             @include('layouts.navigation')
 
@@ -174,7 +232,7 @@
                 <x-admin.flash />
 
                 <main class="mx-auto max-w-7xl pb-6 pt-2 sm:pb-10 sm:pt-4 {{ request()->routeIs('*.billing.create') ? 'px-2 sm:px-3 lg:px-4' : 'px-3 sm:px-6 lg:px-8' }}">
-                    <div class="{{ request()->routeIs('*.billing.create') ? 'rounded-2xl p-0 sm:p-2' : 'rounded-3xl p-3 sm:p-6 lg:rounded-[32px]' }} border border-[var(--app-border)] bg-[var(--app-surface)]/95 shadow-2xl shadow-black/30">
+                    <div class="{{ request()->routeIs('*.billing.create') ? 'rounded-2xl p-0 sm:p-2' : 'rounded-3xl p-3 sm:p-6 lg:rounded-[32px]' }} border border-[var(--app-border)] bg-[var(--app-surface)]/95 shadow-[var(--shadow-card)]">
                         {{ $slot }}
                     </div>
                 </main>

@@ -49,7 +49,7 @@
             @php($active = request()->routeIs(...$item['match']))
             <a
                 href="{{ route($item['route']) }}"
-                class="flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[11px] font-semibold transition {{ $active ? 'bg-[var(--app-primary-soft)] text-[var(--app-primary)] shadow-[0_0_20px_var(--app-glow)]' : 'text-[var(--app-muted)] hover:text-[var(--app-text)]' }}"
+                class="flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 text-[11px] font-semibold transition {{ $active ? 'border-[var(--accent-border)] bg-[var(--app-primary-soft)] text-[var(--app-primary)] shadow-sm shadow-[var(--app-glow)]' : 'border-transparent text-[var(--app-muted)] hover:text-[var(--app-text)]' }}"
                 aria-current="{{ $active ? 'page' : 'false' }}"
             >
                 <x-app-icon :name="$item['icon']" class="h-5 w-5" />
