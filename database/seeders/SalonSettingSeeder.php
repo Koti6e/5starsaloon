@@ -26,7 +26,7 @@ class SalonSettingSeeder extends Seeder
             'google_maps_url' => '',
             'currency' => 'INR',
             'invoice_prefix' => '5STAR',
-            'default_theme' => 'light',
+            'default_theme' => 'emerald',
             'next_invoice_number' => '1',
             'appointment_slot_duration' => '30',
             'default_home_visit_charge' => '0',

@@ -9,7 +9,7 @@ return new class extends Migration
     {
         $settings = [
             'invoice_prefix' => '5STAR',
-            'default_theme' => 'light',
+            'default_theme' => 'emerald',
             'whatsapp_floater_enabled' => '0',
             'whatsapp_default_message' => 'Hello, I would like to know more about your salon services.',
             'promotion_enabled' => '0',

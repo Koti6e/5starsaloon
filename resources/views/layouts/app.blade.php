@@ -9,11 +9,16 @@
         <link rel="icon" href="{{ asset('favicon.ico') }}">
         <script>
             (() => {
-                const storedDefaultTheme = @js(\App\Models\SalonSetting::getValue('default_theme', 'dark'));
-                document.documentElement.dataset.defaultTheme = storedDefaultTheme === 'light' ? 'dark' : storedDefaultTheme;
-                const theme = localStorage.getItem('salon-theme') || document.documentElement.dataset.defaultTheme || 'light';
-                document.documentElement.classList.toggle('theme-dark', theme === 'dark');
-                document.documentElement.classList.toggle('theme-light', theme !== 'dark');
+                const validThemes = ['emerald', 'sapphire', 'crimson', 'gold', 'pearl', 'obsidian'];
+                const storedDefaultTheme = @js(\App\Models\SalonSetting::getValue('default_theme', 'emerald'));
+                const normalizedDefault = storedDefaultTheme === 'light' || storedDefaultTheme === 'dark' ? 'emerald' : storedDefaultTheme;
+                const savedTheme = localStorage.getItem('salon-theme');
+                const normalizedSaved = savedTheme === 'light' || savedTheme === 'dark' ? null : savedTheme;
+                const theme = validThemes.includes(normalizedSaved) ? normalizedSaved : (validThemes.includes(normalizedDefault) ? normalizedDefault : 'emerald');
+                document.documentElement.dataset.defaultTheme = normalizedDefault;
+                document.documentElement.dataset.theme = theme;
+                document.documentElement.classList.toggle('theme-dark', theme !== 'pearl');
+                document.documentElement.classList.toggle('theme-light', theme === 'pearl');
             })();
         </script>
         <style>
@@ -35,19 +40,55 @@
                 --app-danger: #f87171;
             }
 
-            html.theme-light {
-                --app-bg: #060806;
-                --app-surface: #0d120f;
-                --app-surface-elevated: #121914;
-                --app-text: #f4fff8;
-                --app-muted: #b9c7bd;
-                --app-subtle: #839388;
-                --app-primary: #39ff88;
+            html[data-theme="sapphire"] {
+                --app-primary: #38bdf8;
+                --app-primary-strong: #0ea5e9;
+                --app-primary-soft: rgba(56, 189, 248, 0.13);
+                --app-border: rgba(56, 189, 248, 0.2);
+                --app-focus: rgba(56, 189, 248, 0.28);
+                --app-glow: rgba(56, 189, 248, 0.2);
+            }
+
+            html[data-theme="crimson"] {
+                --app-primary: #fb7185;
+                --app-primary-strong: #f43f5e;
+                --app-primary-soft: rgba(251, 113, 133, 0.13);
+                --app-border: rgba(251, 113, 133, 0.2);
+                --app-focus: rgba(251, 113, 133, 0.28);
+                --app-glow: rgba(251, 113, 133, 0.2);
+            }
+
+            html[data-theme="gold"] {
+                --app-primary: #f4d27a;
+                --app-primary-strong: #d5a93b;
+                --app-primary-soft: rgba(213, 169, 59, 0.14);
+                --app-border: rgba(200, 162, 74, 0.22);
+                --app-focus: rgba(244, 210, 122, 0.3);
+                --app-glow: rgba(213, 169, 59, 0.18);
+            }
+
+            html[data-theme="pearl"] {
+                --app-bg: #f5f2ec;
+                --app-surface: #fffaf0;
+                --app-surface-elevated: #ffffff;
+                --app-text: #211a11;
+                --app-muted: #62594a;
+                --app-subtle: #7b705e;
+                --app-primary: #0f8a52;
                 --app-primary-strong: #32e875;
-                --app-primary-soft: rgba(57, 255, 136, 0.12);
-                --app-border: rgba(57, 255, 136, 0.18);
-                --app-focus: rgba(57, 255, 136, 0.28);
-                --app-glow: rgba(57, 255, 136, 0.2);
+                --app-primary-soft: rgba(15, 138, 82, 0.12);
+                --app-border: rgba(15, 138, 82, 0.22);
+                --app-focus: rgba(15, 138, 82, 0.24);
+                --app-glow: rgba(15, 138, 82, 0.16);
+            }
+
+            html[data-theme="obsidian"] {
+                --app-primary: #d1d5db;
+                --app-primary-strong: #f3f4f6;
+                --app-primary-soft: rgba(209, 213, 219, 0.12);
+                --app-border: rgba(209, 213, 219, 0.18);
+                --app-focus: rgba(209, 213, 219, 0.24);
+                --app-glow: rgba(209, 213, 219, 0.14);
             }
 
             .app-transition-mask {

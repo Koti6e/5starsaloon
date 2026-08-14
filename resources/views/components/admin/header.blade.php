@@ -48,7 +48,7 @@
 
             <x-theme-toggle />
 
-            <x-dropdown align="right" width="56" contentClasses="py-1 bg-[#11100d] border border-[#c8a24a]/20">
+            <x-dropdown align="right" width="56" contentClasses="py-1 bg-[var(--app-surface-elevated)] border border-[var(--app-border)]">
                 <x-slot name="trigger">
                     <button type="button" class="flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-2 py-1.5 text-sm font-medium text-[var(--app-text)] transition hover:text-[var(--app-primary)] sm:px-3 sm:py-2">
                         @if ($user->profilePhotoUrl())
@@ -61,14 +61,14 @@
                 </x-slot>
 
                 <x-slot name="content">
-                    <div class="border-b border-[#c8a24a]/15 px-4 py-3">
-                        <p class="truncate text-sm font-semibold text-[#fff9ea]">{{ $user->name }}</p>
-                        <p class="truncate text-xs text-[#a89567]">{{ $user->username }}</p>
+                    <div class="border-b border-[var(--app-border)] px-4 py-3">
+                        <p class="truncate text-sm font-semibold text-[var(--app-text)]">{{ $user->name }}</p>
+                        <p class="truncate text-xs text-[var(--app-subtle)]">{{ $user->username }}</p>
                     </div>
-                    <x-dropdown-link :href="route('profile.edit')" class="text-[#f8efd8] hover:bg-[#1a150e]">Profile</x-dropdown-link>
+                    <x-dropdown-link :href="route('profile.edit')" class="text-[var(--app-text)] hover:bg-[var(--app-primary-soft)]">Profile</x-dropdown-link>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();" class="text-[#f8efd8] hover:bg-[#1a150e]">Log Out</x-dropdown-link>
+                        <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();" class="text-[var(--app-text)] hover:bg-[var(--app-primary-soft)]">Log Out</x-dropdown-link>
                     </form>
                 </x-slot>
             </x-dropdown>

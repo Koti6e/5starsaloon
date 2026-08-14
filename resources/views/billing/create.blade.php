@@ -101,8 +101,8 @@
             lookupUrl: '{{ route($routeRoot.'.billing.customer-lookup', [], false) }}',
             favoriteToggleBase: '{{ auth()->user()->isAdmin() ? url('admin/services') : '' }}',
             isAdmin: @js(auth()->user()->isAdmin()),
-        })" class="mx-auto grid max-w-7xl gap-3 px-0 sm:px-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-6">
-            <form method="POST" action="{{ route($routeRoot.'.billing.store', [], false) }}" class="space-y-3 pb-24 lg:pb-4" @submit.prevent="submitBilling($event)">
+        })" class="mx-auto max-w-4xl px-0 sm:px-3 lg:px-6">
+            <form method="POST" action="{{ route($routeRoot.'.billing.store', [], false) }}" class="space-y-2.5 pb-28 lg:pb-24" @submit.prevent="submitBilling($event)">
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
                 @if ($appointment)
@@ -125,7 +125,7 @@
                     </div>
                 @endif
 
-                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 px-3 py-2.5 shadow-[0_10px_34px_rgba(0,0,0,0.24)] sm:px-4">
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 px-3 py-2 shadow-[0_10px_26px_rgba(0,0,0,0.2)] sm:px-4">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h1 class="text-lg font-bold leading-tight text-[var(--app-text)]">Quick Billing</h1>
@@ -135,7 +135,7 @@
                     </div>
                 </section>
 
-                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-3 shadow-[0_10px_34px_rgba(0,0,0,0.24)] sm:p-4">
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2.5 shadow-[0_10px_26px_rgba(0,0,0,0.2)] sm:p-3">
                     <label class="block">
                         <span class="sr-only">Search customer by name or mobile number</span>
                         <div class="relative">
@@ -193,14 +193,14 @@
                     </div>
                 </section>
 
-                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-3 shadow-[0_10px_34px_rgba(0,0,0,0.24)] sm:p-4">
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2.5 shadow-[0_10px_26px_rgba(0,0,0,0.2)] sm:p-3">
                     <div class="flex items-center justify-between gap-3">
                         <p class="text-sm font-bold text-[var(--app-text)]">Favourites</p>
                         <span class="text-xs text-[var(--app-primary)]">Quick tap</span>
                     </div>
-                    <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <div class="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                         <template x-for="service in favouriteServices" :key="service.id">
-                            <button type="button" @click="quickAdd(service)" class="min-h-14 rounded-2xl border px-3 py-2 text-left transition active:scale-[0.98]" :class="[isAdded(service) ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)] shadow-[0_0_16px_var(--app-glow)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] hover:border-[var(--app-primary)]', isHairCut(service) ? 'ring-1 ring-[var(--app-primary)]/45' : '']">
+                            <button type="button" @click="quickAdd(service)" class="min-h-12 rounded-xl border px-2.5 py-1.5 text-left transition active:scale-[0.98]" :class="[isAdded(service) ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)] shadow-[0_0_16px_var(--app-glow)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] hover:border-[var(--app-primary)]', isHairCut(service) ? 'ring-1 ring-[var(--app-primary)]/45' : '']">
                                 <span class="block truncate text-sm font-bold text-[var(--app-text)]" x-text="isHairCut(service) ? `✂ ${service.name.toUpperCase()}` : service.name"></span>
                                 <span class="block text-xs font-semibold" :class="isAdded(service) ? 'text-emerald-300' : 'text-[var(--app-primary)]'" x-text="isAdded(service) ? 'Added' : service.display_price"></span>
                             </button>
@@ -208,7 +208,7 @@
                     </div>
                     <div x-show="!favouriteServices.length" class="mt-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-muted)]">No favourite services yet.</div>
 
-                    <div class="mt-3">
+                    <div class="mt-2.5">
                         <label class="block">
                             <span class="text-sm font-semibold text-[var(--app-text)]">Other Service</span>
                             <div class="relative mt-1.5">
@@ -239,7 +239,7 @@
                     <x-input-error :messages="$errors->get('items')" class="mt-3" />
                 </section>
 
-                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-3 shadow-[0_10px_34px_rgba(0,0,0,0.24)] sm:p-4">
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2.5 shadow-[0_10px_26px_rgba(0,0,0,0.2)] sm:p-3">
                     <div class="mb-2 flex items-center justify-between gap-3">
                         <div>
                             <p class="text-sm font-bold text-[var(--app-text)]">Selected</p>
@@ -254,7 +254,7 @@
                         </div>
 
                         <template x-for="(item, index) in items" :key="item.key">
-                            <div class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2.5 shadow-[0_10px_26px_rgba(0,0,0,0.16)]">
+                            <div class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 shadow-[0_8px_18px_rgba(0,0,0,0.14)]">
                                 <input type="hidden" :name="`items[${index}][service_id]`" :value="item.id">
                                 <input type="hidden" :name="`items[${index}][quantity]`" :value="item.quantity">
                                 @if (! auth()->user()->isAdmin())
@@ -298,20 +298,30 @@
                     </div>
                 </section>
 
-                <div class="fixed inset-x-0 bottom-[82px] z-30 px-3 lg:hidden">
+                <details class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2.5 text-sm text-[var(--app-text)]">
+                    <summary class="cursor-pointer font-semibold text-[var(--app-primary)]">Today’s Bills ({{ $todayBills->count() }})</summary>
+                    <div class="mt-2 space-y-1.5">
+                        @forelse ($todayBills as $todayBill)
+                            <a href="{{ route($routeRoot.'.billing.show', $todayBill, false) }}" class="flex items-center justify-between gap-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2">
+                                <span class="min-w-0">
+                                    <span class="block truncate text-xs font-semibold">{{ $todayBill->invoice_number }}</span>
+                                    <span class="block truncate text-xs text-[var(--app-muted)]">{{ $todayBill->customer->name }}</span>
+                                </span>
+                                <span class="shrink-0 text-xs font-bold text-[var(--app-primary)]">{{ \App\Support\Money::inr($todayBill->grand_total) }}</span>
+                            </a>
+                        @empty
+                            <p class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-[var(--app-muted)]">No bills created today.</p>
+                        @endforelse
+                    </div>
+                </details>
+
+                <div class="fixed inset-x-0 bottom-[82px] z-30 px-3 lg:bottom-5 lg:left-auto lg:right-6 lg:w-[360px]">
                     <div class="mx-auto flex max-w-2xl items-center gap-3 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
                         <div class="min-w-0 flex-1 pl-3">
-                            <p class="truncate text-xs font-semibold text-[var(--app-muted)]" x-text="`${items.length} Services`"></p>
-                            <p class="text-lg font-bold text-[var(--app-primary)]" x-text="money(grandTotal())"></p>
+                            <p class="truncate text-base font-bold text-[var(--app-primary)]" x-text="`${items.length} ${items.length === 1 ? 'Service' : 'Services'} • ${money(grandTotal())}`"></p>
                         </div>
                         <button type="button" @click="openPayment()" :disabled="items.length === 0" class="rounded-full bg-[var(--app-primary-strong)] px-5 py-3 text-sm font-bold uppercase tracking-[0.12em] text-black shadow-[0_0_24px_var(--app-glow)] transition disabled:cursor-not-allowed disabled:opacity-50">Continue</button>
                     </div>
-                </div>
-
-                <div class="hidden lg:block">
-                    <button type="button" @click="openPayment()" :disabled="items.length === 0" class="w-full rounded-full bg-[var(--app-primary-strong)] px-5 py-4 text-sm font-bold uppercase tracking-[0.14em] text-black shadow-xl shadow-[var(--app-glow)] transition disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-110">
-                        Continue to Payment
-                    </button>
                 </div>
 
                 <div x-show="paymentOpen" x-cloak class="fixed inset-0 z-50" aria-modal="true" role="dialog">
@@ -374,39 +384,6 @@
                     </section>
                 </div>
             </form>
-
-            <aside class="sticky bottom-3 z-20 self-start lg:top-4">
-                <div class="space-y-3">
-                    <div class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-semibold text-[var(--app-text)]">Quick Total</p>
-                            </div>
-                        </div>
-                        <dl class="mt-3 space-y-2 text-sm">
-                            <div class="flex justify-between"><dt class="text-[var(--app-muted)]">Items</dt><dd class="font-semibold text-[var(--app-text)]" x-text="items.length"></dd></div>
-                            <div class="flex justify-between"><dt class="text-[var(--app-muted)]">Grand Total</dt><dd class="font-bold text-[var(--app-primary)]" x-text="money(grandTotal())"></dd></div>
-                        </dl>
-                    </div>
-                    <div class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-base font-bold text-[var(--app-primary)]">Today’s Bills</h2>
-                            <span class="text-xs text-[var(--app-muted)]">{{ $todayBills->count() }}</span>
-                        </div>
-                        <div class="mt-3 space-y-2">
-                            @forelse ($todayBills as $todayBill)
-                                <a href="{{ route($routeRoot.'.billing.show', $todayBill, false) }}" class="block rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 transition hover:border-[var(--app-primary)]">
-                                    <p class="text-sm font-semibold text-[var(--app-text)]">{{ $todayBill->invoice_number }}</p>
-                                    <p class="mt-1 text-xs text-[var(--app-muted)]">{{ $todayBill->customer->name }} · {{ \App\Support\Money::inr($todayBill->grand_total) }}</p>
-                                    <p class="mt-1 text-xs text-[var(--app-subtle)]">{{ $todayBill->billed_at->timezone('Asia/Kolkata')->format('h:i A') }} · {{ Str::title($todayBill->payments->pluck('payment_method')->join(' + ')) }}</p>
-                                </a>
-                            @empty
-                                <p class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-muted)]">No bills created today.</p>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
-            </aside>
         </div>
     </div>
 
