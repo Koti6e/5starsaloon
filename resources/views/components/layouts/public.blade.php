@@ -541,10 +541,6 @@
 
                     <!-- Desktop Right Section -->
                     <div class="hidden shrink-0 lg:flex lg:items-center lg:gap-3">
-                        <a href="{{ $phoneHref }}" class="hidden rounded-full border px-4 py-2 text-xs font-semibold transition hover:opacity-80 xl:inline-flex" style="border-color: var(--border-clr); color: var(--text-secondary);">
-                            Call {{ strlen($phoneDigits) >= 10 ? substr($phoneDigits, -10) : 'Salon' }}
-                        </a>
-
                         <!-- Theme Selector -->
                         <div class="relative">
                             <button 
@@ -712,10 +708,7 @@
                            class="block rounded-2xl px-4 py-3.5 text-center text-base font-bold shadow-lg btn-primary">
                             Book Appointment
                         </a>
-                        <div class="grid grid-cols-2 gap-2 pt-2">
-                            <a href="{{ $phoneHref }}" class="rounded-2xl border px-4 py-3 text-center text-sm font-semibold" style="border-color: var(--border-clr); color: var(--text-main);">Call Salon</a>
-                            <a href="{{ $whatsappHref }}" class="rounded-2xl border px-4 py-3 text-center text-sm font-semibold" style="border-color: var(--border-clr); color: var(--text-main);">WhatsApp</a>
-                        </div>
+                        <a href="{{ $whatsappHref }}" class="block rounded-2xl border px-4 py-3 text-center text-sm font-semibold" style="border-color: var(--border-clr); color: var(--text-main);">WhatsApp</a>
                     </nav>
                 </div>
 

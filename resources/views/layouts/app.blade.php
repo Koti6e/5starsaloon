@@ -9,7 +9,8 @@
         <link rel="icon" href="{{ asset('favicon.ico') }}">
         <script>
             (() => {
-                document.documentElement.dataset.defaultTheme = @js(\App\Models\SalonSetting::getValue('default_theme', 'light'));
+                const storedDefaultTheme = @js(\App\Models\SalonSetting::getValue('default_theme', 'dark'));
+                document.documentElement.dataset.defaultTheme = storedDefaultTheme === 'light' ? 'dark' : storedDefaultTheme;
                 const theme = localStorage.getItem('salon-theme') || document.documentElement.dataset.defaultTheme || 'light';
                 document.documentElement.classList.toggle('theme-dark', theme === 'dark');
                 document.documentElement.classList.toggle('theme-light', theme !== 'dark');
@@ -35,18 +36,18 @@
             }
 
             html.theme-light {
-                --app-bg: #f8f4ea;
-                --app-surface: #fffaf0;
-                --app-surface-elevated: #ffffff;
-                --app-text: #211a11;
-                --app-muted: #6f6042;
-                --app-subtle: #8a7a5a;
-                --app-primary: #087a3f;
+                --app-bg: #060806;
+                --app-surface: #0d120f;
+                --app-surface-elevated: #121914;
+                --app-text: #f4fff8;
+                --app-muted: #b9c7bd;
+                --app-subtle: #839388;
+                --app-primary: #39ff88;
                 --app-primary-strong: #32e875;
-                --app-primary-soft: rgba(50, 232, 117, 0.16);
-                --app-border: rgba(8, 122, 63, 0.22);
-                --app-focus: rgba(50, 232, 117, 0.24);
-                --app-glow: rgba(50, 232, 117, 0.16);
+                --app-primary-soft: rgba(57, 255, 136, 0.12);
+                --app-border: rgba(57, 255, 136, 0.18);
+                --app-focus: rgba(57, 255, 136, 0.28);
+                --app-glow: rgba(57, 255, 136, 0.2);
             }
 
             .app-transition-mask {
@@ -131,8 +132,8 @@
 
                 <x-admin.flash />
 
-                <main class="mx-auto max-w-7xl px-3 pb-6 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
-                    <div class="rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-3 shadow-2xl shadow-black/30 sm:p-6 lg:rounded-[32px]">
+                <main class="mx-auto max-w-7xl pb-6 pt-2 sm:pb-10 sm:pt-4 {{ request()->routeIs('*.billing.create') ? 'px-2 sm:px-3 lg:px-4' : 'px-3 sm:px-6 lg:px-8' }}">
+                    <div class="{{ request()->routeIs('*.billing.create') ? 'rounded-2xl p-0 sm:p-2' : 'rounded-3xl p-3 sm:p-6 lg:rounded-[32px]' }} border border-[var(--app-border)] bg-[var(--app-surface)]/95 shadow-2xl shadow-black/30">
                         {{ $slot }}
                     </div>
                 </main>

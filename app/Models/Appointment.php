@@ -65,4 +65,9 @@ class Appointment extends Model
     {
         return $this->hasMany(AppointmentService::class);
     }
+
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Bill::class);
+    }
 }

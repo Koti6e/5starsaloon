@@ -11,6 +11,8 @@ class Bill extends Model
     protected $fillable = [
         'invoice_number',
         'customer_id',
+        'appointment_id',
+        'appointment_booking_number',
         'billed_by',
         'created_by',
         'subtotal',
@@ -38,6 +40,11 @@ class Bill extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function appointment(): BelongsTo
+    {
+        return $this->belongsTo(Appointment::class);
     }
 
     public function billedBy(): BelongsTo

@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class StaffPasswordController extends Controller
 {
@@ -23,7 +22,7 @@ class StaffPasswordController extends Controller
         abort_unless($staff->role === 'staff', 404);
 
         $validated = $request->validate([
-            'password' => ['required', 'confirmed', Password::min(10)->mixedCase()->numbers()->symbols()],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $staff->update([

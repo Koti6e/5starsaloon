@@ -12,7 +12,7 @@
     <div class="py-8">
         <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
             <x-admin.card>
-                <form method="POST" action="{{ route('admin.staff.update', $staff) }}" class="space-y-6">
+                <form method="POST" action="{{ route('admin.staff.update-password', $staff) }}" class="space-y-6">
                     @csrf
                     @method('PUT')
 

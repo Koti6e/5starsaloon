@@ -30,7 +30,7 @@
                             <div>
                                 <p class="text-xs uppercase text-[#a89567]">Appointment Date</p>
                                 <p class="mt-1 font-semibold text-[#fff9ea]">{{ $appointment->date?->format('d M Y') }}</p>
-                                <p class="text-sm text-[#d8c8a3]">{{ \Carbon\parse($appointment->start_time)->format('h:i A') }}</p>
+                                <p class="text-sm text-[#d8c8a3]">{{ \Illuminate\Support\Carbon::parse($appointment->start_time)->format('h:i A') }}</p>
                             </div>
                         </div>
                         <div class="grid gap-4 sm:grid-cols-2">
@@ -58,6 +58,43 @@
 
                 <x-admin.card>
                     <div class="space-y-4 text-sm text-[#d8c8a3]">
+                        @if ($errors->any())
+                            <div class="rounded-md border border-red-400/30 bg-red-500/10 p-3 text-xs text-red-100">
+                                @foreach ($errors->all() as $error)
+                                    <p>{{ $error }}</p>
+                                @endforeach
+                            </div>
+                        @endif
+                        @if (session('status'))
+                            <div class="rounded-md border border-[#c8a24a]/30 bg-black p-3 text-xs font-semibold text-[#f4d27a]">{{ session('status') }}</div>
+                        @endif
+                        <form method="POST" action="{{ route('admin.appointments.assign', $appointment) }}" class="space-y-2">
+                            @csrf
+                            @method('PATCH')
+                            <label class="text-xs uppercase text-[#a89567]" for="assigned_staff_id">Assign Staff</label>
+                            <div class="flex gap-2">
+                                <select id="assigned_staff_id" name="assigned_staff_id" class="w-full rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-[#fff9ea]">
+                                    <option value="">Assign staff</option>
+                                    @foreach ($activeStaff as $member)
+                                        <option value="{{ $member->id }}" @selected($appointment->assigned_staff_id === $member->id)>{{ $member->name }}</option>
+                                    @endforeach
+                                </select>
+                                <button class="rounded-md bg-[#d5a93b] px-4 py-2 text-xs font-semibold text-black">Save</button>
+                            </div>
+                        </form>
+                        <form method="POST" action="{{ route('admin.appointments.status.update', $appointment) }}" class="space-y-2">
+                            @csrf
+                            @method('PATCH')
+                            <label class="text-xs uppercase text-[#a89567]" for="status">Status</label>
+                            <div class="flex gap-2">
+                                <select id="status" name="status" class="w-full rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-[#fff9ea]">
+                                    @foreach ($statuses as $statusOption)
+                                        <option value="{{ $statusOption }}" @selected($appointment->status === $statusOption)>{{ ucfirst(str_replace('_', ' ', $statusOption)) }}</option>
+                                    @endforeach
+                                </select>
+                                <button class="rounded-md border border-[#c8a24a]/40 bg-black px-4 py-2 text-xs font-semibold text-[#f4d27a]">Update</button>
+                            </div>
+                        </form>
                         <div>
                             <p class="text-xs uppercase text-[#a89567]">Status</p>
                             <p class="mt-1 font-semibold text-[#fff9ea]">{{ ucfirst(str_replace('_', ' ', $appointment->status)) }}</p>

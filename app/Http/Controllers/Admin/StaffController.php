@@ -39,7 +39,7 @@ class StaffController extends Controller
             'specialization' => ['nullable', 'string', 'max:255'],
             'joining_date' => ['nullable', 'date'],
             'employment_type' => ['nullable', 'string', 'max:255'],
-            'password' => ['required', 'string', 'min:10'],
+            'password' => ['required', 'string', 'min:8'],
             'is_home_service_eligible' => ['nullable', 'boolean'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);

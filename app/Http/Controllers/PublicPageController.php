@@ -208,8 +208,31 @@ class PublicPageController extends Controller
         }
 
         $customerName = Str::title(Str::lower(preg_replace('/\s+/', ' ', trim($validated['customer_name']))));
+        $appointmentStart = Carbon::createFromFormat(
+            'Y-m-d H:i',
+            $validated['appointment_date'].' '.$validated['appointment_time'],
+            'Asia/Kolkata',
+        );
+        $durationMinutes = $service->duration_minutes ?: 30;
+        $appointmentEnd = $appointmentStart->copy()->addMinutes($durationMinutes);
 
-        $appointment = DB::transaction(function () use ($validated, $mobile, $customerName, $service): Appointment {
+        $this->validateAppointmentSlot($appointmentStart, $appointmentEnd);
+
+        $duplicate = Appointment::query()
+            ->where('appointment_type', $validated['appointment_type'])
+            ->whereDate('date', $validated['appointment_date'])
+            ->where('start_time', $appointmentStart->format('H:i:s'))
+            ->where('status', '!=', 'cancelled')
+            ->whereHas('customer', fn ($customer) => $customer->where('mobile', $mobile))
+            ->whereHas('appointmentServices', fn ($appointmentService) => $appointmentService->where('service_id', $service->id))
+            ->latest('id')
+            ->first();
+
+        if ($duplicate?->confirmation_token) {
+            return redirect()->route('appointments.confirmed', ['token' => $duplicate->confirmation_token]);
+        }
+
+        $appointment = DB::transaction(function () use ($validated, $mobile, $customerName, $service, $durationMinutes): Appointment {
             $customer = Customer::query()->firstOrCreate(
                 ['mobile' => $mobile],
                 [
@@ -229,7 +252,6 @@ class PublicPageController extends Controller
             $total = $unitPrice + $visitCharge;
 
             $startTime = $validated['appointment_time'];
-            $durationMinutes = $service->duration_minutes ?: 30;
             $estimatedEndTime = Carbon::parse($startTime)->addMinutes($durationMinutes)->format('H:i:s');
 
             $appointment = Appointment::query()->create([
@@ -318,5 +340,67 @@ class PublicPageController extends Controller
             ->orderBy('display_order')
             ->limit(4)
             ->get();
+    }
+
+    private function validateAppointmentSlot(Carbon $start, Carbon $end): void
+    {
+        if ($start->lte(now('Asia/Kolkata'))) {
+            throw ValidationException::withMessages([
+                'appointment_time' => 'Please choose a future appointment time.',
+            ]);
+        }
+
+        $slotDuration = max(15, (int) (SalonSetting::getValue('appointment_slot_duration', '30') ?: 30));
+        if (($start->hour * 60 + $start->minute) % $slotDuration !== 0) {
+            throw ValidationException::withMessages([
+                'appointment_time' => 'Please choose a valid appointment slot.',
+            ]);
+        }
+
+        [$opensAt, $closesAt] = $this->workingHoursFor($start);
+
+        if ($start->lt($opensAt) || $end->gt($closesAt)) {
+            throw ValidationException::withMessages([
+                'appointment_time' => 'Please choose a time within salon working hours.',
+            ]);
+        }
+    }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function workingHoursFor(Carbon $date): array
+    {
+        $workingHours = SalonSetting::getValue('working_hours', '') ?: '';
+        $open = '09:00';
+        $close = '20:00';
+
+        if (preg_match('/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:-|to|–|—)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i', $workingHours, $matches)) {
+            $open = $this->normalizeWorkingHour($matches[1], $matches[2] ?? '00', $matches[3] ?? null);
+            $close = $this->normalizeWorkingHour($matches[4], $matches[5] ?? '00', $matches[6] ?? null);
+        }
+
+        return [
+            $date->copy()->setTimeFromTimeString($open),
+            $date->copy()->setTimeFromTimeString($close),
+        ];
+    }
+
+    private function normalizeWorkingHour(string $hour, string $minute, ?string $meridian): string
+    {
+        $hourInt = (int) $hour;
+        $minuteInt = (int) $minute;
+
+        if ($meridian) {
+            $meridian = strtolower($meridian);
+            if ($meridian === 'pm' && $hourInt < 12) {
+                $hourInt += 12;
+            }
+            if ($meridian === 'am' && $hourInt === 12) {
+                $hourInt = 0;
+            }
+        }
+
+        return str_pad((string) $hourInt, 2, '0', STR_PAD_LEFT).':'.str_pad((string) $minuteInt, 2, '0', STR_PAD_LEFT);
     }
 }

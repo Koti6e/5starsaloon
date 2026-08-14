@@ -83,6 +83,12 @@
                                 @php
                                     $bill = $appointment->bills->sortByDesc('id')->first();
                                     $billingLabel = $bill ? ucfirst($bill->payment_status) : 'Unbilled';
+                                    $whatsappMessage = "Hi {$appointment->customer->name},\n\n".
+                                        "This is 5 Star New Look Salon regarding your appointment {$appointment->booking_number}.\n\n".
+                                        "Service: ".$appointment->appointmentServices->pluck('service_name_snapshot')->join(', ')."\n".
+                                        "Date: ".$appointment->date?->format('d M Y')."\n".
+                                        "Time: ".\Illuminate\Support\Carbon::parse($appointment->start_time)->format('h:i A')."\n\n".
+                                        "Please confirm your attendance or any changes.";
                                 @endphp
                                 <tr>
                                     <td class="px-4 py-4">
@@ -105,11 +111,32 @@
                                     </td>
                                     <td class="px-4 py-4">
                                         <div class="font-semibold text-[#fff9ea]">{{ $appointment->date?->format('d M Y') }}</div>
-                                        <div class="text-xs text-[#d8c8a3]">{{ \Carbon\parse($appointment->start_time)->format('h:i A') }}</div>
+                                        <div class="text-xs text-[#d8c8a3]">{{ \Illuminate\Support\Carbon::parse($appointment->start_time)->format('h:i A') }}</div>
                                     </td>
-                                    <td class="px-4 py-4 text-sm text-[#d8c8a3]">{{ $appointment->assignedStaff?->name ?? 'Not assigned' }}</td>
+                                    <td class="px-4 py-4 text-sm text-[#d8c8a3]">
+                                        <form method="POST" action="{{ route('admin.appointments.assign', $appointment) }}" class="flex min-w-[170px] gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <select name="assigned_staff_id" class="w-full rounded-md border border-[#c8a24a]/30 bg-black px-2 py-2 text-xs text-[#fff9ea]">
+                                                <option value="">Assign staff</option>
+                                                @foreach ($activeStaff as $member)
+                                                    <option value="{{ $member->id }}" @selected($appointment->assigned_staff_id === $member->id)>{{ $member->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <button class="rounded-md bg-[#d5a93b] px-3 py-2 text-xs font-semibold text-black">Save</button>
+                                        </form>
+                                    </td>
                                     <td class="px-4 py-4">
-                                        <span class="rounded-full bg-[#1f1a0f] px-3 py-1 text-xs {{ $appointment->status === 'completed' ? 'text-[#22c55e]' : ($appointment->status === 'cancelled' ? 'text-[#ef4444]' : 'text-[#f4d27a]') }}">{{ ucfirst(str_replace('_', ' ', $appointment->status)) }}</span>
+                                        <form method="POST" action="{{ route('admin.appointments.status.update', $appointment) }}" class="flex min-w-[160px] gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <select name="status" class="w-full rounded-md border border-[#c8a24a]/30 bg-black px-2 py-2 text-xs text-[#fff9ea]">
+                                                @foreach ($statuses as $statusOption)
+                                                    <option value="{{ $statusOption }}" @selected($appointment->status === $statusOption)>{{ ucfirst(str_replace('_', ' ', $statusOption)) }}</option>
+                                                @endforeach
+                                            </select>
+                                            <button class="rounded-md border border-[#c8a24a]/40 bg-black px-3 py-2 text-xs font-semibold text-[#f4d27a]">Update</button>
+                                        </form>
                                     </td>
                                     <td class="px-4 py-4 text-sm text-[#d8c8a3]">{{ $billingLabel }}</td>
                                     <td class="px-4 py-4 space-y-2">
@@ -119,7 +146,7 @@
                                         @else
                                             <a href="{{ route('admin.billing.create', ['appointment_id' => $appointment->id]) }}" class="inline-flex rounded-md bg-[#d5a93b] px-3 py-2 text-xs font-semibold text-black">Start Billing</a>
                                         @endif
-                                        <a href="https://wa.me/91{{ preg_replace('/\D+/', '', $appointment->customer->mobile) }}?text={{ rawurlencode('Hi '+$appointment->customer->name.'%2C%0A%0AThis is 5 Star New Look Salon regarding your appointment '+$appointment->booking_number+'.%0A%0APlease confirm your attendance or any changes.') }}" target="_blank" class="inline-flex rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-xs font-semibold text-[#f8efd8]">WhatsApp</a>
+                                        <a href="https://wa.me/91{{ preg_replace('/\D+/', '', $appointment->customer->mobile) }}?text={{ rawurlencode($whatsappMessage) }}" target="_blank" rel="noopener" class="inline-flex rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-xs font-semibold text-[#f8efd8]">WhatsApp</a>
                                     </td>
                                 </tr>
                             @endforeach

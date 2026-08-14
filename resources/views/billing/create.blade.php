@@ -1,13 +1,4 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-end justify-between gap-3">
-            <div>
-                <h1 class="font-serif text-2xl text-[#f4d27a]">Quick Billing</h1>
-                <p class="mt-1 text-sm text-[#d8c8a3]">Logged in: {{ $biller->name }}</p>
-            </div>
-        </div>
-    </x-slot>
-
     @php
         $routeRoot = auth()->user()->isAdmin() ? 'admin' : 'staff';
         $servicePayload = $services->map(fn ($service) => [
@@ -110,8 +101,8 @@
             lookupUrl: '{{ route($routeRoot.'.billing.customer-lookup', [], false) }}',
             favoriteToggleBase: '{{ auth()->user()->isAdmin() ? url('admin/services') : '' }}',
             isAdmin: @js(auth()->user()->isAdmin()),
-        })" class="mx-auto grid max-w-7xl gap-5 px-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
-            <form method="POST" action="{{ route($routeRoot.'.billing.store', [], false) }}" class="space-y-5 pb-28 lg:pb-5" @submit.prevent="submitBilling($event)">
+        })" class="mx-auto grid max-w-7xl gap-3 px-0 sm:px-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-6">
+            <form method="POST" action="{{ route($routeRoot.'.billing.store', [], false) }}" class="space-y-3 pb-24 lg:pb-4" @submit.prevent="submitBilling($event)">
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
                 @if ($appointment)
@@ -134,33 +125,33 @@
                     </div>
                 @endif
 
-                <section class="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-5">
-                    <div class="flex items-start justify-between gap-3">
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 px-3 py-2.5 shadow-[0_10px_34px_rgba(0,0,0,0.24)] sm:px-4">
+                    <div class="flex items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-xl font-bold text-[var(--app-primary)]">New Bill</h2>
-                            <p class="mt-1 text-sm text-[var(--app-muted)]" x-text="billClock()"></p>
+                            <h1 class="text-lg font-bold leading-tight text-[var(--app-text)]">Quick Billing</h1>
+                            <p class="text-xs font-semibold text-[var(--app-primary)]" x-text="billClock()"></p>
                         </div>
-                        <span class="rounded-full border border-[var(--app-border)] bg-[var(--app-primary-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--app-primary)]">POS</span>
+                        <span class="text-right text-[11px] font-semibold text-[var(--app-muted)]">{{ $biller->name }}</span>
                     </div>
                 </section>
 
-                <section class="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-5">
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-3 shadow-[0_10px_34px_rgba(0,0,0,0.24)] sm:p-4">
                     <label class="block">
-                        <span class="text-sm font-semibold text-[var(--app-text)]">Search customer by name or mobile number</span>
-                        <div class="relative mt-3">
+                        <span class="sr-only">Search customer by name or mobile number</span>
+                        <div class="relative">
                             <input
                                 x-model="customerQuery"
                                 @input.debounce.250ms="lookupCustomer()"
                                 @focus="customerSuggestionsOpen = customerSuggestions.length > 0"
                                 type="search"
                                 autocomplete="off"
-                                class="w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4 pr-12 text-base text-[var(--app-text)] placeholder:text-[var(--app-subtle)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]"
-                                placeholder="Koti or 9445"
+                                class="w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 pr-10 text-base text-[var(--app-text)] placeholder:text-[var(--app-muted)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]"
+                                placeholder="Search customer by name/mobile"
                             >
                             <span x-show="lookupLoading" class="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-[var(--app-primary)]"></span>
-                            <div x-show="customerSuggestionsOpen" x-cloak @click.outside="customerSuggestionsOpen = false" class="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-2 shadow-2xl shadow-black/40">
+                            <div x-show="customerSuggestionsOpen" x-cloak @click.outside="customerSuggestionsOpen = false" class="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-1.5 shadow-2xl shadow-black/40">
                                 <template x-for="customer in customerSuggestions" :key="customer.id">
-                                    <button type="button" @click="selectCustomer(customer)" class="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--app-primary-soft)]">
+                                    <button type="button" @click="selectCustomer(customer)" class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[var(--app-primary-soft)]">
                                         <span class="min-w-0">
                                             <span class="block truncate text-sm font-semibold text-[var(--app-text)]" x-text="customer.name"></span>
                                             <span class="mt-1 block text-xs text-[var(--app-muted)]" x-text="`+91 ${maskMobile(customer.mobile)}`"></span>
@@ -168,56 +159,63 @@
                                         <span class="shrink-0 text-xs font-bold text-[var(--app-primary)]">Select</span>
                                     </button>
                                 </template>
-                                <button type="button" x-show="customerQuery.trim().length >= 2 && customerSuggestions.length === 0 && !lookupLoading" @click="startNewCustomer()" class="w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-primary-soft)] px-3 py-3 text-left text-sm font-semibold text-[var(--app-primary)]">+ Create New Customer</button>
+                                <button type="button" x-show="customerQuery.trim().length >= 2 && customerSuggestions.length === 0 && !lookupLoading" @click="startNewCustomer()" class="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-primary-soft)] px-3 py-2.5 text-left text-sm font-semibold text-[var(--app-primary)]">+ New Customer</button>
                             </div>
                         </div>
                     </label>
 
-                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                        <label class="block">
+                    <input type="hidden" name="customer_mobile" :value="mobile">
+                    <input type="hidden" name="customer_name" :value="customerName">
+                    <input type="hidden" name="customer_id" :value="customerId">
+
+                    <div x-show="customerFound" x-cloak class="mt-2 flex items-center justify-between gap-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2">
+                        <p class="min-w-0 truncate text-sm font-semibold text-[var(--app-text)]">
+                            <span x-text="customerName"></span>
+                            <span class="text-[var(--app-muted)]"> · </span>
+                            <span class="text-[var(--app-muted)]" x-text="maskMobile(mobile)"></span>
+                        </p>
+                        <button type="button" @click="clearCustomer()" class="shrink-0 text-xs font-bold text-[var(--app-primary)]">Change</button>
+                    </div>
+
+                    <div x-show="newCustomerOpen" x-cloak class="mt-2 grid gap-2 sm:grid-cols-2">
+                        <label class="block min-w-0">
                             <span class="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--app-subtle)]">Mobile Number</span>
-                            <x-input-group prefix="+91" class="mt-2 w-full border border-[var(--app-border)] bg-[var(--app-bg)]">
-                                <input x-model="mobile" @input.debounce.250ms="sanitizeMobile(); syncCustomerQueryFromFields(); lookupCustomer()" name="customer_mobile" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" minlength="10" required class="elite-input min-w-0 flex-1 border-0 bg-transparent" placeholder="9876543210">
+                            <x-input-group prefix="+91" class="mt-1 w-full border border-[var(--app-border)] bg-[var(--app-bg)]">
+                                <input x-model="mobile" @input.debounce.250ms="sanitizeMobile(); syncCustomerQueryFromFields(); lookupCustomer()" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" minlength="10" class="elite-input min-w-0 flex-1 border-0 bg-transparent" placeholder="9876543210">
                             </x-input-group>
                             <x-input-error :messages="$errors->get('customer_mobile')" class="mt-2" />
                         </label>
-                        <label class="block">
+                        <label class="block min-w-0">
                             <span class="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--app-subtle)]">Customer Name</span>
-                            <input x-model="customerName" @input="sanitizeCustomerName(); syncCustomerQueryFromFields()" name="customer_name" type="text" maxlength="50" pattern="[A-Za-z]+( [A-Za-z]+)*" required class="mt-2 w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4 text-base text-[var(--app-text)] placeholder:text-[var(--app-subtle)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]" placeholder="Customer name">
+                            <input x-model="customerName" @input="sanitizeCustomerName(); syncCustomerQueryFromFields()" type="text" maxlength="50" pattern="[A-Za-z]+( [A-Za-z]+)*" class="mt-1 w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-base text-[var(--app-text)] placeholder:text-[var(--app-muted)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]" placeholder="Customer name">
                             <x-input-error :messages="$errors->get('customer_name')" class="mt-2" />
                         </label>
-                        <input type="hidden" name="customer_id" :value="customerId">
-                    </div>
-
-                    <div class="mt-4 flex flex-wrap items-center gap-2">
-                        <p class="inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase" :class="customerFound ? 'bg-emerald-500/15 text-emerald-300' : 'bg-[var(--app-primary-soft)] text-[var(--app-primary)]'" x-text="customerStatus"></p>
-                        <p x-show="lastVisit" class="text-xs text-[var(--app-muted)]">Last visit: <span x-text="lastVisit"></span></p>
                     </div>
                 </section>
 
-                <section class="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-5">
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-3 shadow-[0_10px_34px_rgba(0,0,0,0.24)] sm:p-4">
                     <div class="flex items-center justify-between gap-3">
-                        <p class="text-sm font-bold uppercase tracking-[0.16em] text-[var(--app-subtle)]">Favourites</p>
-                        <span class="text-xs text-[var(--app-muted)]" x-text="`${favouriteServices.length} quick`"></span>
+                        <p class="text-sm font-bold text-[var(--app-text)]">Favourites</p>
+                        <span class="text-xs text-[var(--app-primary)]">Quick tap</span>
                     </div>
-                    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                         <template x-for="service in favouriteServices" :key="service.id">
-                            <button type="button" @click="quickAdd(service)" class="min-h-20 rounded-3xl border px-3 py-3 text-left transition active:scale-[0.98]" :class="isAdded(service) ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)] shadow-[0_0_20px_var(--app-glow)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] hover:border-[var(--app-primary)]'">
-                                <span class="block truncate text-sm font-bold text-[var(--app-text)]" x-text="service.name"></span>
-                                <span class="mt-2 block text-xs font-semibold" :class="isAdded(service) ? 'text-emerald-300' : 'text-[var(--app-primary)]'" x-text="isAdded(service) ? 'Added' : service.display_price"></span>
+                            <button type="button" @click="quickAdd(service)" class="min-h-14 rounded-2xl border px-3 py-2 text-left transition active:scale-[0.98]" :class="[isAdded(service) ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)] shadow-[0_0_16px_var(--app-glow)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] hover:border-[var(--app-primary)]', isHairCut(service) ? 'ring-1 ring-[var(--app-primary)]/45' : '']">
+                                <span class="block truncate text-sm font-bold text-[var(--app-text)]" x-text="isHairCut(service) ? `✂ ${service.name.toUpperCase()}` : service.name"></span>
+                                <span class="block text-xs font-semibold" :class="isAdded(service) ? 'text-emerald-300' : 'text-[var(--app-primary)]'" x-text="isAdded(service) ? 'Added' : service.display_price"></span>
                             </button>
                         </template>
                     </div>
-                    <div x-show="!favouriteServices.length" class="mt-3 rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] p-4 text-sm text-[var(--app-muted)]">No favourite services yet.</div>
+                    <div x-show="!favouriteServices.length" class="mt-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-muted)]">No favourite services yet.</div>
 
-                    <div class="mt-5">
+                    <div class="mt-3">
                         <label class="block">
-                            <span class="text-sm font-semibold text-[var(--app-text)]">Search / Select Other Service</span>
-                            <div class="relative mt-3">
-                                <input x-model="serviceQuery" @focus="servicePickerOpen = true" @input="servicePickerOpen = true" type="search" class="w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4 text-base text-[var(--app-text)] placeholder:text-[var(--app-subtle)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]" placeholder="Search service">
-                                <div x-show="servicePickerOpen" x-cloak @click.outside="servicePickerOpen = false" class="absolute left-0 right-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-2 shadow-2xl shadow-black/40">
+                            <span class="text-sm font-semibold text-[var(--app-text)]">Other Service</span>
+                            <div class="relative mt-1.5">
+                                <input x-model="serviceQuery" @focus="servicePickerOpen = true" @input="servicePickerOpen = true" type="search" class="w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-base text-[var(--app-text)] placeholder:text-[var(--app-muted)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]" placeholder="Search / Select Service">
+                                <div x-show="servicePickerOpen" x-cloak @click.outside="servicePickerOpen = false" class="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-1.5 shadow-2xl shadow-black/40">
                                     <template x-for="service in visibleServices" :key="service.id">
-                                        <button type="button" @click="addService(service); servicePickerOpen = false; serviceQuery = ''" class="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-[var(--app-primary-soft)]">
+                                        <button type="button" @click="addService(service); servicePickerOpen = false; serviceQuery = ''" class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[var(--app-primary-soft)]">
                                             <span class="min-w-0">
                                                 <span class="block truncate text-sm font-semibold text-[var(--app-text)]" x-text="service.name"></span>
                                                 <span class="mt-1 block truncate text-xs text-[var(--app-muted)]" x-text="service.category"></span>
@@ -241,61 +239,62 @@
                     <x-input-error :messages="$errors->get('items')" class="mt-3" />
                 </section>
 
-                <section class="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-5">
-                    <div class="mb-4 flex items-center justify-between gap-3">
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-3 shadow-[0_10px_34px_rgba(0,0,0,0.24)] sm:p-4">
+                    <div class="mb-2 flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--app-subtle)]">Selected Services</p>
-                            <p class="mt-1 text-sm text-[var(--app-muted)]">Quantity, performer and totals update instantly.</p>
+                            <p class="text-sm font-bold text-[var(--app-text)]">Selected</p>
                         </div>
-                        <p class="text-sm font-semibold text-[var(--app-text)]" x-text="`${items.length} item${items.length === 1 ? '' : 's'}`"></p>
+                        <p class="text-xs font-semibold text-[var(--app-muted)]" x-text="`${items.length} item${items.length === 1 ? '' : 's'}`"></p>
                     </div>
 
-                    <div class="space-y-4">
-                        <div x-show="undoItem" class="rounded-3xl border border-[#c8a24a]/20 bg-[#11100d] p-4 text-sm text-[#f8efd8] shadow-inner shadow-black/20">
+                    <div class="space-y-2">
+                        <div x-show="undoItem" class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-text)] shadow-inner shadow-black/20">
                             Removed <span x-text="undoItem?.name"></span>.
-                            <button type="button" @click="restoreItem" class="ml-2 font-semibold text-[#f4d27a]">Undo</button>
+                            <button type="button" @click="restoreItem" class="ml-2 font-semibold text-[var(--app-primary)]">Undo</button>
                         </div>
 
                         <template x-for="(item, index) in items" :key="item.key">
-                            <div class="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-bg)] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
+                            <div class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2.5 shadow-[0_10px_26px_rgba(0,0,0,0.16)]">
                                 <input type="hidden" :name="`items[${index}][service_id]`" :value="item.id">
                                 <input type="hidden" :name="`items[${index}][quantity]`" :value="item.quantity">
                                 @if (! auth()->user()->isAdmin())
                                     <input type="hidden" :name="`items[${index}][service_performed_by]`" value="{{ auth()->id() }}">
                                 @endif
 
-                                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                    <div class="min-w-0 space-y-2">
-                                        <p class="truncate text-lg font-semibold text-[var(--app-text)]" x-text="item.name"></p>
-                                        <p class="text-xs uppercase tracking-[0.16em] text-[var(--app-subtle)]">Staff: <span x-text="performerName(item.service_performed_by)"></span></p>
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-bold text-[var(--app-text)]" x-text="item.name"></p>
+                                        <p class="text-xs font-semibold text-[var(--app-primary)]" x-text="money(lineTotal(item))"></p>
                                     </div>
-                                    <button type="button" @click="removeItem(index)" class="rounded-full border border-red-300/40 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/10">Remove</button>
+                                    <button type="button" @click="removeItem(index)" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-red-300/40 text-lg font-bold text-red-200 transition hover:bg-red-500/10" :aria-label="`Remove ${item.name}`">×</button>
                                 </div>
 
-                                @if (auth()->user()->isAdmin())
-                                    <select :name="`items[${index}][service_performed_by]`" x-model="item.service_performed_by" class="mt-4 w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-4 py-4 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
-                                        <option value="{{ auth()->id() }}">{{ auth()->user()->name }}</option>
-                                        @foreach ($staff as $staffMember)
-                                            <option value="{{ $staffMember->id }}">{{ $staffMember->name }}</option>
-                                        @endforeach
-                                    </select>
-                                @endif
+                                <div class="mt-2 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2">
+                                    @if (auth()->user()->isAdmin())
+                                        <select :name="`items[${index}][service_performed_by]`" x-model="item.service_performed_by" class="min-w-0 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-3 py-2.5 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
+                                            <option value="{{ auth()->id() }}">{{ auth()->user()->name }}</option>
+                                            @foreach ($staff as $staffMember)
+                                                <option value="{{ $staffMember->id }}">{{ $staffMember->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    @else
+                                        <p class="min-w-0 truncate rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-3 py-2.5 text-sm font-semibold text-[var(--app-text)]">{{ auth()->user()->name }}</p>
+                                    @endif
+                                    <div class="grid grid-cols-[2.25rem_2rem_2.25rem] items-center rounded-full border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-1">
+                                        <button type="button" @click="decrease(item, index)" :aria-label="`Decrease quantity for ${item.name}`" class="h-8 w-8 rounded-full text-xl font-semibold text-[var(--app-primary)]">−</button>
+                                        <p class="text-center text-sm font-bold text-[var(--app-text)]" x-text="item.quantity"></p>
+                                        <button type="button" @click="increase(item)" :aria-label="`Increase quantity for ${item.name}`" class="h-8 w-8 rounded-full bg-[var(--app-primary-strong)] text-xl font-semibold text-black">+</button>
+                                    </div>
+                                </div>
 
-                                <label class="mt-4 block" x-show="item.estimated">
+                                <label class="mt-2 block" x-show="item.estimated">
                                     <span class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--app-subtle)]">Confirmed Price</span>
-                                    <input type="number" min="0" step="0.01" x-model.number="item.confirmed_price" :name="`items[${index}][confirmed_price]`" class="mt-2 w-full rounded-3xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-4 py-4 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
+                                    <input type="number" min="0" step="0.01" x-model.number="item.confirmed_price" :name="`items[${index}][confirmed_price]`" class="mt-1 w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-3 py-2.5 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
                                 </label>
-
-                                <div class="mt-5 grid grid-cols-[auto_1fr_auto_auto] items-center gap-3">
-                                    <button type="button" @click="decrease(item, index)" :aria-label="`Decrease quantity for ${item.name}`" class="h-12 w-12 rounded-full border border-[var(--app-border)] text-2xl font-semibold text-[var(--app-primary)] transition hover:border-[var(--app-primary)]">−</button>
-                                    <p class="text-center text-3xl font-bold text-[var(--app-text)]" x-text="item.quantity"></p>
-                                    <button type="button" @click="increase(item)" :aria-label="`Increase quantity for ${item.name}`" class="h-12 w-12 rounded-full bg-[var(--app-primary-strong)] text-2xl font-semibold text-black transition hover:brightness-110">+</button>
-                                    <p class="min-w-[90px] text-right text-xl font-bold text-[var(--app-primary)]" x-text="money(lineTotal(item))"></p>
-                                </div>
                             </div>
                         </template>
 
-                        <p x-show="items.length === 0" class="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-bg)] p-5 text-sm text-[var(--app-muted)]">No services added yet. Use favourites or search other services.</p>
+                        <p x-show="items.length === 0" class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-muted)]">No services added yet.</p>
                     </div>
                 </section>
 
@@ -376,35 +375,33 @@
                 </div>
             </form>
 
-            <aside class="sticky bottom-3 z-20 self-start lg:top-6">
-                <div class="space-y-4">
-                    <div class="rounded-[32px] border border-[#c8a24a]/15 bg-[#0c0a08]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+            <aside class="sticky bottom-3 z-20 self-start lg:top-4">
+                <div class="space-y-3">
+                    <div class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="text-sm font-semibold uppercase tracking-[0.16em] text-[#a89567]">Quick Total</p>
-                                <p class="mt-1 text-sm text-[#d8c8a3]">Review the final amount before checkout.</p>
+                                <p class="text-sm font-semibold text-[var(--app-text)]">Quick Total</p>
                             </div>
                         </div>
-                        <dl class="mt-5 space-y-3 text-sm">
-                            <div class="flex justify-between"><dt class="text-[#d8c8a3]">Items</dt><dd class="font-semibold text-[#fff9ea]" x-text="items.length"></dd></div>
-                            <div class="flex justify-between"><dt class="text-[#d8c8a3]">Subtotal</dt><dd class="font-semibold text-[#fff9ea]" x-text="money(grandTotal())"></dd></div>
-                            <div class="flex justify-between"><dt class="text-[#d8c8a3]">Grand Total</dt><dd class="font-bold text-[#f4d27a]" x-text="money(grandTotal())"></dd></div>
+                        <dl class="mt-3 space-y-2 text-sm">
+                            <div class="flex justify-between"><dt class="text-[var(--app-muted)]">Items</dt><dd class="font-semibold text-[var(--app-text)]" x-text="items.length"></dd></div>
+                            <div class="flex justify-between"><dt class="text-[var(--app-muted)]">Grand Total</dt><dd class="font-bold text-[var(--app-primary)]" x-text="money(grandTotal())"></dd></div>
                         </dl>
                     </div>
-                    <div class="rounded-[32px] border border-[#c8a24a]/15 bg-[#0c0a08]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+                    <div class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
                         <div class="flex items-center justify-between">
-                            <h2 class="font-serif text-xl text-[#f4d27a]">Today’s Bills</h2>
-                            <span class="text-xs text-[#a89567]">{{ $todayBills->count() }}</span>
+                            <h2 class="text-base font-bold text-[var(--app-primary)]">Today’s Bills</h2>
+                            <span class="text-xs text-[var(--app-muted)]">{{ $todayBills->count() }}</span>
                         </div>
-                        <div class="mt-4 space-y-3">
+                        <div class="mt-3 space-y-2">
                             @forelse ($todayBills as $todayBill)
-                                <a href="{{ route($routeRoot.'.billing.show', $todayBill, false) }}" class="block rounded-[24px] border border-[#c8a24a]/15 bg-[#090806] p-4 transition hover:border-[#f4d27a]">
-                                    <p class="text-sm font-semibold text-[#fff9ea]">{{ $todayBill->invoice_number }}</p>
-                                    <p class="mt-1 text-xs text-[#d8c8a3]">{{ $todayBill->customer->name }} · {{ \App\Support\Money::inr($todayBill->grand_total) }}</p>
-                                    <p class="mt-2 text-xs text-[#a89567]">{{ $todayBill->billed_at->timezone('Asia/Kolkata')->format('h:i A') }} · {{ Str::title($todayBill->payments->pluck('payment_method')->join(' + ')) }}</p>
+                                <a href="{{ route($routeRoot.'.billing.show', $todayBill, false) }}" class="block rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 transition hover:border-[var(--app-primary)]">
+                                    <p class="text-sm font-semibold text-[var(--app-text)]">{{ $todayBill->invoice_number }}</p>
+                                    <p class="mt-1 text-xs text-[var(--app-muted)]">{{ $todayBill->customer->name }} · {{ \App\Support\Money::inr($todayBill->grand_total) }}</p>
+                                    <p class="mt-1 text-xs text-[var(--app-subtle)]">{{ $todayBill->billed_at->timezone('Asia/Kolkata')->format('h:i A') }} · {{ Str::title($todayBill->payments->pluck('payment_method')->join(' + ')) }}</p>
                                 </a>
                             @empty
-                                <p class="rounded-[24px] border border-[#c8a24a]/15 bg-[#090806] p-4 text-sm text-[#d8c8a3]">No bills created today.</p>
+                                <p class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-muted)]">No bills created today.</p>
                             @endforelse
                         </div>
                     </div>
@@ -435,6 +432,7 @@
                 lookupController: null,
                 customerSuggestions: [],
                 customerSuggestionsOpen: false,
+                newCustomerOpen: false,
                 serviceQuery: '',
                 servicePickerOpen: false,
                 activeCategory: config.initialActiveCategory ?? null,
@@ -459,12 +457,14 @@
                         .filter(service => this.activeCategory === null || Number(service.category_id) === Number(this.activeCategory));
                 },
                 get visibleServices() {
-                    return this.filteredServices.slice(0, 12);
+                    return this.filteredServices
+                        .filter(service => ! this.favouriteServices.some(favourite => favourite.id === service.id))
+                        .slice(0, 12);
                 },
                 get favouriteServices() {
                     return this.services
-                        .filter(service => service.is_favourite || this.isHairCut(service))
-                        .sort((a, b) => Number(this.isHairCut(b)) - Number(this.isHairCut(a)) || a.name.localeCompare(b.name))
+                        .filter(service => service.is_favourite || this.favouriteRank(service) < 99)
+                        .sort((a, b) => this.favouriteRank(a) - this.favouriteRank(b) || a.name.localeCompare(b.name))
                         .slice(0, 8);
                 },
                 get canToggleFavorites() {
@@ -503,6 +503,23 @@
                 isHairCut(service) {
                     const normalized = String(service.name || '').toLowerCase().replace(/\s+/g, '');
                     return normalized === 'haircut';
+                },
+                favouriteRank(service) {
+                    const normalized = String(service.name || '').toLowerCase().replace(/[&+]/g, 'and').replace(/\s+/g, ' ').trim();
+                    const preferred = [
+                        'hair cut',
+                        'haircut',
+                        'hair cut and shaving',
+                        'haircut and shaving',
+                        'shaving',
+                        'beard trim',
+                        'hair wash',
+                        'facial',
+                    ];
+                    const index = preferred.indexOf(normalized);
+                    if (index >= 0) return index;
+
+                    return service.is_favourite ? 50 : 99;
                 },
                 addService(service) {
                     const existing = this.items.find(item => item.id === service.id);
@@ -564,6 +581,7 @@
                             this.customerStatus = this.customerSuggestions.length ? 'Select Customer' : 'New Customer';
                             this.customerId = '';
                             this.lastVisit = '';
+                            this.newCustomerOpen = false;
                         })
                         .catch(error => {
                             if (error.name !== 'AbortError') {
@@ -588,6 +606,7 @@
                     this.customerQuery = `${this.customerName} · ${this.mobile}`;
                     this.lastVisit = customer.last_visit_at || '';
                     this.customerSuggestionsOpen = false;
+                    this.newCustomerOpen = false;
                 },
                 startNewCustomer() {
                     const digits = String(this.customerQuery || '').replace(/\D/g, '').slice(-10);
@@ -601,6 +620,19 @@
                     this.lastVisit = '';
                     this.customerStatus = 'New Customer';
                     this.customerSuggestionsOpen = false;
+                    this.newCustomerOpen = true;
+                },
+                clearCustomer() {
+                    this.customerFound = false;
+                    this.customerId = '';
+                    this.customerName = '';
+                    this.mobile = '';
+                    this.customerQuery = '';
+                    this.lastVisit = '';
+                    this.customerStatus = 'New Customer';
+                    this.customerSuggestions = [];
+                    this.customerSuggestionsOpen = false;
+                    this.newCustomerOpen = false;
                 },
                 maskMobile(mobile) {
                     const digits = String(mobile || '').replace(/\D/g, '');

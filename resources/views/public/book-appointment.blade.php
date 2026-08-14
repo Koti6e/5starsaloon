@@ -4,7 +4,7 @@
             <h1 class="font-serif text-4xl text-[#f4d27a]">Book Appointment</h1>
             <p class="mt-3 text-[#d8c8a3]">Select your preferred service, date, and visit type. Our team will prepare for your session.</p>
 
-            <form method="POST" action="{{ route('appointments.store') }}" x-data="{ appointmentType: '{{ old('appointment_type', request('type') === 'home' ? 'home_service' : 'salon_visit') }}' }" class="mt-8 grid gap-5 rounded-lg border border-[#c8a24a]/20 bg-[#11100d] p-6 sm:grid-cols-2">
+            <form method="POST" action="{{ route('appointments.store') }}" x-data="{ appointmentType: '{{ old('appointment_type', request('type') === 'home' ? 'home_service' : 'salon_visit') }}', submitting: false }" @submit="submitting = true" class="mt-8 grid gap-5 rounded-lg border border-[#c8a24a]/20 bg-[#11100d] p-6 sm:grid-cols-2">
                 @csrf
 
                 <!-- Appointment Type -->
@@ -137,8 +137,9 @@
 
                 <!-- Submit Button -->
                 <div class="sm:col-span-2 mt-2">
-                    <button type="submit" class="w-full rounded-md bg-[#d5a93b] px-6 py-3.5 text-center font-bold tracking-wide text-[#111] shadow-lg shadow-[#d5a93b]/20 transition hover:bg-[#f0c75e]">
-                        Confirm & Reserve Appointment
+                    <button type="submit" :disabled="submitting" class="w-full rounded-md bg-[#d5a93b] px-6 py-3.5 text-center font-bold tracking-wide text-[#111] shadow-lg shadow-[#d5a93b]/20 transition hover:bg-[#f0c75e] disabled:cursor-not-allowed disabled:opacity-70">
+                        <span x-show="!submitting">Confirm & Reserve Appointment</span>
+                        <span x-show="submitting">Reserving Appointment...</span>
                     </button>
                 </div>
             </form>

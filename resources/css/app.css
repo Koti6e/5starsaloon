@@ -12,8 +12,8 @@ html.theme-dark {
 }
 
 html.theme-light body {
-    background: #f8f4ea !important;
-    color: #211a11 !important;
+    background: var(--app-bg) !important;
+    color: var(--app-text) !important;
 }
 
 html.theme-light [class*="bg-[#080705]"],
@@ -21,38 +21,38 @@ html.theme-light [class*="bg-[#0d0b08]"],
 html.theme-light [class*="bg-[#11100d]"],
 html.theme-light [class*="bg-[#1b1711]"],
 html.theme-light [class*="bg-black"] {
-    background-color: #fffaf0 !important;
+    background-color: var(--app-surface) !important;
 }
 
 html.theme-light header[class*="bg-[#080705]"],
 html.theme-light nav[class*="bg-black"],
 html.theme-light footer[class*="bg-black"] {
-    background-color: rgba(255, 250, 240, 0.96) !important;
+    background-color: color-mix(in srgb, var(--app-surface) 96%, transparent) !important;
 }
 
 html.theme-light [class*="text-[#fff9ea]"],
 html.theme-light [class*="text-[#f8efd8]"] {
-    color: #211a11 !important;
+    color: var(--app-text) !important;
 }
 
 html.theme-light [class*="text-[#d8c8a3]"],
 html.theme-light [class*="text-[#a89567]"] {
-    color: #6f6042 !important;
+    color: var(--app-muted) !important;
 }
 
 html.theme-light [class*="border-[#c8a24a]"] {
-    border-color: rgba(138, 102, 22, 0.28) !important;
+    border-color: var(--app-border) !important;
 }
 
 html.theme-light input,
 html.theme-light select,
 html.theme-light textarea {
-    background-color: #fff !important;
-    color: #211a11 !important;
+    background-color: var(--app-bg) !important;
+    color: var(--app-text) !important;
 }
 
 html.theme-light .theme-search {
-    background-color: rgba(248, 244, 234, 0.96) !important;
+    background-color: color-mix(in srgb, var(--app-surface) 96%, transparent) !important;
 }
 
 html.theme-dark body {
@@ -116,9 +116,9 @@ input:-webkit-autofill, textarea:-webkit-autofill, select:-webkit-autofill {
     caret-color: var(--elite-text-light) !important;
 }
 html.theme-light input:-webkit-autofill, html.theme-light textarea:-webkit-autofill, html.theme-light select:-webkit-autofill {
-    -webkit-box-shadow: 0 0 0px 1000px #fff inset !important;
-    -webkit-text-fill-color: var(--elite-text-dark) !important;
-    caret-color: var(--elite-text-dark) !important;
+    -webkit-box-shadow: 0 0 0px 1000px var(--app-bg) inset !important;
+    -webkit-text-fill-color: var(--app-text) !important;
+    caret-color: var(--app-text) !important;
 }
 
 /* Selection and caret */

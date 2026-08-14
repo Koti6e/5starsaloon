@@ -26,6 +26,17 @@
 
 @if ($enabled && strlen($digits) >= 11)
     <a
+        href="tel:9003866903"
+        aria-label="Call 5 Star New Look Salon"
+        title="Call 5 Star New Look Salon"
+        class="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-white/60 bg-[var(--accent)] text-white shadow-2xl ring-4 ring-white/70 transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[var(--glow)] md:bottom-[6.5rem]"
+    >
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="h-7 w-7 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.9.66 2.8a2 2 0 0 1-.45 2.11L8.05 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.31 1.84.53 2.8.66A2 2 0 0 1 22 16.92Z"/>
+        </svg>
+    </a>
+
+    <a
         href="https://wa.me/{{ $digits }}?text={{ rawurlencode($message) }}"
         aria-label="Chat on WhatsApp"
         title="Chat on WhatsApp"

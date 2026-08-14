@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Database\Seeders\InternalStaffSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,6 +44,27 @@ class AuthenticationTest extends TestCase
         $admin = auth()->user();
         $this->assertEquals('admin', $admin->username);
         $this->assertEquals('admin', $admin->role);
+    }
+
+    public function test_internal_staff_accounts_authenticate_and_reach_billing(): void
+    {
+        $this->seed(InternalStaffSeeder::class);
+
+        foreach (['staff1', 'staff2'] as $username) {
+            auth()->logout();
+
+            $response = $this->post('/login', [
+                'username' => $username,
+                'password' => 'password',
+            ]);
+
+            $this->assertAuthenticated();
+            $response->assertRedirect(route('staff.dashboard', absolute: false));
+
+            $this->get(route('staff.billing.create'))
+                ->assertOk()
+                ->assertSee('Quick Billing');
+        }
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

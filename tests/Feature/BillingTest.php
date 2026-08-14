@@ -25,7 +25,8 @@ class BillingTest extends TestCase
             ->assertOk()
             ->assertSee('Quick Billing')
             ->assertSee('Search customer by name or mobile number')
-            ->assertSee('Search / Select Other Service')
+            ->assertSee('Other Service')
+            ->assertSee('Search / Select Service')
             ->assertSee('Generate Bill');
     }
 
@@ -43,7 +44,7 @@ class BillingTest extends TestCase
             ->assertDontSee('action="http://localhost/staff/billing"', false)
             ->assertSee(':disabled="paymentMethod !== \'split\'"', false)
             ->assertSee('openPayment()', false)
-            ->assertSee('Search / Select Other Service')
+            ->assertSee('Search / Select Service')
             ->assertDontSee('Add Selected Services')
             ->assertSee('window.location.assign(response.url)', false)
             ->assertSee("! response.url.includes('/billing/create')", false);

@@ -5,7 +5,7 @@
     @click="theme = theme === 'dark' ? 'light' : 'dark'"
     :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
     :title="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
-    class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#c8a24a]/35 text-[#f4d27a] transition hover:border-[#f4d27a] focus:outline-none focus:ring-2 focus:ring-[#f4d27a]"
+    class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--app-border)] text-[var(--app-primary)] transition hover:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-primary)]"
 >
     <svg x-show="theme !== 'dark'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>

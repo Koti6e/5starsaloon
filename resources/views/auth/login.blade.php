@@ -17,13 +17,9 @@
         <div>
             <x-input-label for="username" :value="__('Username or Email')" class="sr-only" />
             <div class="relative">
-                <svg class="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--auth-primary-strong)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="M20 21a8 8 0 0 0-16 0"/>
-                    <circle cx="12" cy="7" r="4"/>
-                </svg>
                 <x-text-input
                     id="username"
-                    class="auth-input block w-full rounded-[1.35rem] py-4 pl-14 pr-5 text-base outline-none transition"
+                    class="auth-input block w-full rounded-[1.35rem] py-4 pl-5 pr-5 text-base outline-none transition"
                     type="text"
                     name="username"
                     :value="old('username')"
@@ -39,13 +35,9 @@
         <div>
             <div class="relative">
                 <x-input-label for="password" :value="__('Password')" class="sr-only" />
-                <svg class="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--auth-primary-strong)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <rect x="5" y="10" width="14" height="10" rx="2"/>
-                    <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
-                </svg>
                 <x-text-input
                     id="password"
-                    class="auth-input block w-full rounded-[1.35rem] py-4 pl-14 pr-14 text-base outline-none transition"
+                    class="auth-input block w-full rounded-[1.35rem] py-4 pl-5 pr-14 text-base outline-none transition"
                     type="password"
                     name="password"
                     required

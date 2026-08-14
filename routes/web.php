@@ -77,6 +77,8 @@ Route::prefix('admin')
         Route::get('/billing/{bill}/whatsapp', [BillingController::class, 'whatsapp'])->name('billing.whatsapp');
         Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
         Route::get('/appointments/{appointment}', [AppointmentController::class, 'show'])->name('appointments.show');
+        Route::patch('/appointments/{appointment}/assign', [AppointmentController::class, 'assign'])->name('appointments.assign');
+        Route::patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status.update');
         Route::get('/attendance', [AdminAttendanceController::class, 'index'])->name('attendance.index');
         Route::post('/attendance', [AdminAttendanceController::class, 'update'])->name('attendance.update');
         Route::resource('customers', AdminCustomerController::class)->only(['index', 'create', 'store', 'show']);
