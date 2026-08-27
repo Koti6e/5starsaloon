@@ -33,6 +33,10 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('password.force.edit');
         }
 
+        if ($request->user()->requiresLoginSelfie()) {
+            return redirect()->intended(route('staff.selfie.create', absolute: false));
+        }
+
         if ($request->user()->isStaff()) {
             StaffAttendance::query()->firstOrCreate(
                 [
@@ -59,15 +63,20 @@ class AuthenticatedSessionController extends Controller
         $user = $request->user();
 
         if ($user?->isStaff()) {
+            $logoutUpdates = [
+                'check_out_time' => now('Asia/Kolkata')->format('H:i:s'),
+            ];
+
+            if (! $user->requiresLoginSelfie()) {
+                $logoutUpdates['source'] = 'automatic_logout';
+            }
+
             StaffAttendance::query()
                 ->where('staff_id', $user->id)
                 ->whereDate('attendance_date', now('Asia/Kolkata')->toDateString())
                 ->whereNull('check_out_time')
                 ->whereNot('source', 'manual_admin')
-                ->update([
-                    'check_out_time' => now('Asia/Kolkata')->format('H:i:s'),
-                    'source' => 'automatic_logout',
-                ]);
+                ->update($logoutUpdates);
         }
 
         Auth::guard('web')->logout();

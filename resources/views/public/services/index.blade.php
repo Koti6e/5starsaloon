@@ -34,14 +34,17 @@
                     <a href="{{ route('services.index') }}" class="text-[#f4d27a]">Clear filters</a>
                 </div>
             </form>
-            <div class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div id="service-grid" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 @forelse ($services as $service)
                     <x-service-card :service="$service" />
                 @empty
                     <div class="rounded-lg border border-[#c8a24a]/25 bg-[#11100d] p-8 text-[#d8c8a3] md:col-span-2 xl:col-span-3">
-                        No active services match your filters.
+                        No services found.
                     </div>
                 @endforelse
+            </div>
+            <div id="service-no-results" hidden class="mt-8 rounded-lg border border-[#c8a24a]/25 bg-[#11100d] p-8 text-[#d8c8a3]">
+                No services found.
             </div>
             <div class="mt-8">{{ $services->links() }}</div>
         </div>
@@ -49,9 +52,14 @@
     <script>
         window.filterServiceCards = function (value) {
             const query = String(value || '').trim().toLowerCase();
+            let visible = 0;
             document.querySelectorAll('[data-service-card]').forEach((card) => {
-                card.hidden = query !== '' && !card.dataset.search.includes(query);
+                const matched = query === '' || card.dataset.search.includes(query);
+                card.hidden = !matched;
+                if (matched) visible++;
             });
+            const noResults = document.getElementById('service-no-results');
+            if (noResults) noResults.hidden = visible > 0;
         };
     </script>
 </x-layouts.public>

@@ -15,6 +15,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
+use App\Http\Controllers\Staff\SelfieAttendanceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicPageController::class, 'home'])->name('home');
@@ -45,6 +46,9 @@ Route::post('/book-appointment', [PublicPageController::class, 'storeAppointment
     ->middleware('throttle:10,1')
     ->name('appointments.store');
 Route::get('/appointment-confirmed/{token}', [PublicPageController::class, 'appointmentConfirmed'])->name('appointments.confirmed');
+Route::get('/invoices/{token}', [BillingController::class, 'publicInvoice'])
+    ->whereUuid('token')
+    ->name('invoice.public');
 
 Route::get('/dashboard', function () {
     $user = request()->user();
@@ -89,6 +93,7 @@ Route::prefix('admin')
         Route::patch('/services/{service}/toggle', [AdminServiceController::class, 'toggle'])->name('services.toggle');
         Route::delete('/services/{service}/images/{image}', [AdminServiceController::class, 'destroyImage'])->name('services.images.destroy');
         Route::resource('staff', AdminStaffController::class)->only(['index', 'create', 'store']);
+        Route::get('/attendance/{attendance}/selfie', [AdminStaffController::class, 'selfie'])->name('attendance.selfie');
         Route::get('/staff/{staff}/edit-password', [StaffPasswordController::class, 'edit'])->name('staff.edit-password');
         Route::put('/staff/{staff}/password', [StaffPasswordController::class, 'update'])->name('staff.update-password');
     });
@@ -96,6 +101,14 @@ Route::prefix('admin')
 Route::prefix('staff')
     ->name('staff.')
     ->middleware(['auth', 'active', 'password.changed', 'role:staff'])
+    ->group(function (): void {
+        Route::get('/login-selfie', [SelfieAttendanceController::class, 'create'])->name('selfie.create');
+        Route::post('/login-selfie', [SelfieAttendanceController::class, 'store'])->name('selfie.store');
+    });
+
+Route::prefix('staff')
+    ->name('staff.')
+    ->middleware(['auth', 'active', 'password.changed', 'role:staff', 'staff.selfie'])
     ->group(function (): void {
         Route::get('/dashboard', StaffDashboardController::class)->name('dashboard');
         Route::get('/search', SearchController::class)->name('search');

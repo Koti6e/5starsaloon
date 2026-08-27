@@ -25,8 +25,9 @@ class BillingTest extends TestCase
             ->assertOk()
             ->assertSee('Quick Billing')
             ->assertSee('Search customer by name or mobile number')
-            ->assertSee('Other Service')
-            ->assertSee('Search / Select Service')
+            ->assertSee('Favourites')
+            ->assertSee('Search services')
+            ->assertSee('Custom')
             ->assertSee('Generate Bill');
     }
 
@@ -44,7 +45,8 @@ class BillingTest extends TestCase
             ->assertDontSee('action="http://localhost/staff/billing"', false)
             ->assertSee(':disabled="paymentMethod !== \'split\'"', false)
             ->assertSee('openPayment()', false)
-            ->assertSee('Search / Select Service')
+            ->assertSee('Search services')
+            ->assertDontSee('Search / Select Service')
             ->assertDontSee('Add Selected Services')
             ->assertSee('window.location.assign(response.url)', false)
             ->assertSee("! response.url.includes('/billing/create')", false);
@@ -549,6 +551,67 @@ class BillingTest extends TestCase
         ])->assertSessionHasErrors('items.0.confirmed_price');
     }
 
+    public function test_hair_colour_highlight_price_must_stay_inside_catalog_range(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
+        $service = $this->service([
+            'name' => 'Hair Colour Highlight',
+            'slug' => 'hair-colour-highlight',
+            'price_type' => 'range',
+            'price' => null,
+            'minimum_price' => '250.00',
+            'maximum_price' => '400.00',
+        ]);
+
+        $this->actingAs($staff)->from(route('staff.billing.create'))->post(route('staff.billing.store'), [
+            'customer_mobile' => '9876543210',
+            'customer_name' => 'Asha Customer',
+            'items' => [[
+                'service_id' => $service->id,
+                'quantity' => 1,
+                'confirmed_price' => '249',
+            ]],
+            'payment_method' => 'cash',
+            'idempotency_key' => 'highlight-too-low',
+        ])->assertSessionHasErrors('items.0.confirmed_price');
+
+        $this->actingAs($staff)->post(route('staff.billing.store'), [
+            'customer_mobile' => '9876543210',
+            'customer_name' => 'Asha Customer',
+            'items' => [[
+                'service_id' => $service->id,
+                'quantity' => 1,
+                'confirmed_price' => '400',
+            ]],
+            'payment_method' => 'cash',
+            'idempotency_key' => 'highlight-valid',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('400.00', Bill::query()->firstOrFail()->grand_total);
+    }
+
+    public function test_custom_favorite_line_item_is_billed_from_manual_name_and_price(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
+
+        $this->actingAs($staff)->post(route('staff.billing.store'), [
+            'customer_mobile' => '9876543210',
+            'customer_name' => 'Asha Customer',
+            'items' => [[
+                'custom_name' => 'Threading Touch Up',
+                'custom_price' => '175',
+                'quantity' => 2,
+            ]],
+            'payment_method' => 'cash',
+            'idempotency_key' => 'custom-line',
+        ])->assertSessionHasNoErrors();
+
+        $bill = Bill::query()->with('items')->firstOrFail();
+        $this->assertSame('350.00', $bill->grand_total);
+        $this->assertNull($bill->items->first()->service_id);
+        $this->assertSame('Threading Touch Up', $bill->items->first()->service_name_snapshot);
+    }
+
     public function test_split_payment_must_match_grand_total(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
@@ -661,11 +724,12 @@ class BillingTest extends TestCase
 
         $response->assertRedirect();
         $this->assertStringStartsWith('https://wa.me/919876543210?text=', $location);
-        $this->assertStringContainsString("Invoice:\n".$bill->invoice_number, rawurldecode($location));
-        $this->assertStringContainsString("Amount Paid:\n₹120", rawurldecode($location));
-        $this->assertStringContainsString('Please find your invoice attached.', rawurldecode($location));
+        $this->assertStringContainsString('Invoice: '.$bill->invoice_number, rawurldecode($location));
+        $this->assertStringContainsString('Amount Paid: ₹120', rawurldecode($location));
+        $this->assertStringContainsString(route('invoice.public', $bill->invoice_public_token), rawurldecode($location));
+        $this->assertStringContainsString('secure link', rawurldecode($location));
         $this->assertStringContainsString('Thank you.', rawurldecode($location));
-        $this->assertStringContainsString('Staff will manually attach the PDF.', rawurldecode($location));
+        $this->assertStringNotContainsString('Staff will manually attach the PDF.', rawurldecode($location));
     }
 
     public function test_payment_note_saves_without_transaction_reference(): void

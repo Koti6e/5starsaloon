@@ -14,6 +14,9 @@ class StaffAttendance extends Model
         'check_in_time',
         'check_out_time',
         'source',
+        'login_session_id',
+        'selfie_path',
+        'selfie_captured_at',
         'notes',
         'marked_by',
         'corrected_by',
@@ -25,6 +28,7 @@ class StaffAttendance extends Model
     {
         return [
             'attendance_date' => 'date',
+            'selfie_captured_at' => 'datetime',
             'corrected_at' => 'datetime',
         ];
     }

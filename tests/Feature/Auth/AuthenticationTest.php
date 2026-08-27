@@ -46,7 +46,7 @@ class AuthenticationTest extends TestCase
         $this->assertEquals('admin', $admin->role);
     }
 
-    public function test_internal_staff_accounts_authenticate_and_reach_billing(): void
+    public function test_internal_staff_accounts_authenticate_and_require_selfie_before_billing(): void
     {
         $this->seed(InternalStaffSeeder::class);
 
@@ -59,11 +59,10 @@ class AuthenticationTest extends TestCase
             ]);
 
             $this->assertAuthenticated();
-            $response->assertRedirect(route('staff.dashboard', absolute: false));
+            $response->assertRedirect(route('staff.selfie.create', absolute: false));
 
             $this->get(route('staff.billing.create'))
-                ->assertOk()
-                ->assertSee('Quick Billing');
+                ->assertRedirect(route('staff.selfie.create'));
         }
     }
 

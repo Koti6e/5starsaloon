@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -38,6 +39,7 @@ class BillingController extends Controller
 
         $categories = ServiceCategory::query()
             ->whereIn('id', $services->pluck('category_id')->filter()->unique())
+            ->orderBy('display_order')
             ->orderBy('name')
             ->get();
 
@@ -126,7 +128,9 @@ class BillingController extends Controller
             'customer_mobile' => ['required', 'string', 'max:30'],
             'customer_name' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z]+(?: [A-Za-z]+)*$/'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.service_id' => ['required', 'exists:services,id'],
+            'items.*.service_id' => ['nullable', 'exists:services,id'],
+            'items.*.custom_name' => ['nullable', 'string', 'max:80'],
+            'items.*.custom_price' => ['nullable', 'numeric', 'min:0.01', 'max:200000'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:20'],
             'items.*.confirmed_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.service_performed_by' => ['nullable', 'exists:users,id'],
@@ -178,8 +182,8 @@ class BillingController extends Controller
 
                 $subtotalCents = 0;
                 $items = [];
-                $serviceIds = collect($validated['items'])->pluck('service_id')->unique()->values();
-                if ($serviceIds->count() !== count($validated['items'])) {
+                $serviceIds = collect($validated['items'])->pluck('service_id')->filter()->map(fn ($id) => (int) $id)->values();
+                if ($serviceIds->unique()->count() !== $serviceIds->count()) {
                     throw ValidationException::withMessages(['items' => 'A service can only be added once. Use quantity buttons for repeats.']);
                 }
 
@@ -190,12 +194,22 @@ class BillingController extends Controller
                     ->keyBy('id');
 
                 foreach ($validated['items'] as $index => $item) {
-                    $service = $services->get((int) $item['service_id']);
-                    if (! $service || $service->status !== 'active') {
+                    $service = filled($item['service_id'] ?? null) ? $services->get((int) $item['service_id']) : null;
+                    if (filled($item['service_id'] ?? null) && (! $service || $service->status !== 'active')) {
                         throw ValidationException::withMessages(["items.$index.service_id" => 'Selected service is not billable.']);
                     }
 
-                    $unitCents = $this->billableUnitCents($service, $item['confirmed_price'] ?? null, $index);
+                    if (! $service && blank($item['custom_name'] ?? null)) {
+                        throw ValidationException::withMessages(["items.$index.custom_name" => 'Custom service name is required.']);
+                    }
+
+                    if (! $service && blank($item['custom_price'] ?? null)) {
+                        throw ValidationException::withMessages(["items.$index.custom_price" => 'Custom service price is required.']);
+                    }
+
+                    $unitCents = $service
+                        ? $this->billableUnitCents($service, $item['confirmed_price'] ?? null, $index)
+                        : $this->toCents($item['custom_price'] ?? null);
                     $quantity = (int) $item['quantity'];
                     $lineCents = $unitCents * $quantity;
                     $subtotalCents += $lineCents;
@@ -203,7 +217,14 @@ class BillingController extends Controller
                         ? ($item['service_performed_by'] ?? $request->user()->id)
                         : $request->user()->id;
 
-                    $items[] = compact('service', 'quantity', 'unitCents', 'lineCents', 'performerId');
+                    $items[] = [
+                        'service' => $service,
+                        'custom_name' => $item['custom_name'] ?? null,
+                        'quantity' => $quantity,
+                        'unitCents' => $unitCents,
+                        'lineCents' => $lineCents,
+                        'performerId' => $performerId,
+                    ];
                 }
 
                 $discountCents = $this->toCents($validated['discount_amount'] ?? 0);
@@ -230,21 +251,22 @@ class BillingController extends Controller
                     'payment_status' => 'paid',
                     'status' => 'completed',
                     'idempotency_key' => $validated['idempotency_key'],
+                    'invoice_public_token' => (string) Str::uuid(),
                     'billed_at' => now('Asia/Kolkata'),
                 ]);
 
                 foreach ($items as $item) {
                     $bill->items()->create([
-                        'service_id' => $item['service']->id,
+                        'service_id' => $item['service']?->id,
                         'service_performed_by' => $item['performerId'],
-                        'service_name_snapshot' => $item['service']->name,
-                        'service_code_snapshot' => $item['service']->service_code,
-                        'category_name_snapshot' => $item['service']->publicCategoryName(),
-                        'is_package_snapshot' => $item['service']->is_package,
+                        'service_name_snapshot' => $item['service']?->name ?? $item['custom_name'],
+                        'service_code_snapshot' => $item['service']?->service_code ?? 'CUSTOM',
+                        'category_name_snapshot' => $item['service']?->publicCategoryName() ?? 'Custom',
+                        'is_package_snapshot' => (bool) ($item['service']?->is_package ?? false),
                         'quantity' => $item['quantity'],
                         'unit_price' => $this->fromCents($item['unitCents']),
                         'line_total' => $this->fromCents($item['lineCents']),
-                        'price_was_confirmed' => $item['service']->hasEstimatedPrice(),
+                        'price_was_confirmed' => $item['service']?->hasEstimatedPrice() ?? true,
                     ]);
                 }
 
@@ -296,6 +318,8 @@ class BillingController extends Controller
                 ->withErrors(['billing' => 'Billing could not be completed. No invoice was created. Please try again.']);
         }
 
+        $this->ensureInvoicePdf($bill);
+
         return $this->redirectToSuccess($request, $bill);
     }
 
@@ -325,9 +349,13 @@ class BillingController extends Controller
         $this->authorizeBill($request, $bill);
 
         try {
-            $pdf = Pdf::loadView('billing.invoice-pdf', $this->invoiceData($bill))->setPaper('a4');
+            $this->ensureInvoicePdf($bill);
 
-            return $pdf->download(str_replace(['/', '\\'], '-', $bill->invoice_number).'.pdf');
+            return Storage::disk('local')->download(
+                $bill->invoice_pdf_path,
+                str_replace(['/', '\\'], '-', $bill->invoice_number).'.pdf',
+                ['Content-Type' => 'application/pdf'],
+            );
         } catch (\Throwable $exception) {
             Log::error('Invoice PDF could not be generated.', [
                 'bill_id' => $bill->id,
@@ -342,10 +370,26 @@ class BillingController extends Controller
     public function whatsapp(Request $request, Bill $bill): RedirectResponse
     {
         $this->authorizeBill($request, $bill);
+        $this->ensureInvoicePdf($bill);
         $bill->load('customer', 'payments');
-        $message = "Hello {$bill->customer->name},\n\nThank you for visiting 5 Star New Look Salon.\n\nInvoice:\n{$bill->invoice_number}\n\nAmount Paid:\n".Money::inr($bill->grand_total)."\n\nPlease find your invoice attached.\n\nThank you.\n\nStaff will manually attach the PDF.";
+        $message = "Hello {$bill->customer->name},\n\nThank you for visiting 5 Star New Look Salon.\n\nInvoice: {$bill->invoice_number}\nAmount Paid: ".Money::inr($bill->grand_total)."\nInvoice PDF: ".route('invoice.public', $bill->invoice_public_token)."\n\nYou can open or download your invoice from the secure link above.\n\nThank you.";
 
         return redirect()->away('https://wa.me/91'.$bill->customer->mobile.'?text='.rawurlencode($message));
+    }
+
+    public function publicInvoice(string $token)
+    {
+        $bill = Bill::query()
+            ->where('invoice_public_token', $token)
+            ->firstOrFail();
+
+        $this->ensureInvoicePdf($bill);
+
+        return Storage::disk('local')->response(
+            $bill->invoice_pdf_path,
+            str_replace(['/', '\\'], '-', $bill->invoice_number).'.pdf',
+            ['Content-Type' => 'application/pdf'],
+        );
     }
 
     private function invoiceData(Bill $bill): array
@@ -386,7 +430,19 @@ class BillingController extends Controller
                 throw ValidationException::withMessages(["items.$index.confirmed_price" => 'Confirmed Price is required for this service.']);
             }
 
-            return $this->toCents($confirmedPrice);
+            $confirmedCents = $this->toCents($confirmedPrice);
+            $minimumCents = $service->minimum_price !== null ? $this->toCents($service->minimum_price) : null;
+            $maximumCents = $service->maximum_price !== null ? $this->toCents($service->maximum_price) : null;
+
+            if ($minimumCents !== null && $confirmedCents < $minimumCents) {
+                throw ValidationException::withMessages(["items.$index.confirmed_price" => $service->name.' price must be at least '.Money::inr($service->minimum_price).'.']);
+            }
+
+            if ($maximumCents !== null && $confirmedCents > $maximumCents) {
+                throw ValidationException::withMessages(["items.$index.confirmed_price" => $service->name.' price must not exceed '.Money::inr($service->maximum_price).'.']);
+            }
+
+            return $confirmedCents;
         }
 
         return $this->toCents($service->discounted_price ?: $service->price);
@@ -476,5 +532,22 @@ class BillingController extends Controller
         }
 
         return 'data:image/png;base64,'.base64_encode(File::get($path));
+    }
+
+    private function ensureInvoicePdf(Bill $bill): void
+    {
+        if (filled($bill->invoice_pdf_path) && Storage::disk('local')->exists($bill->invoice_pdf_path)) {
+            return;
+        }
+
+        if (blank($bill->invoice_public_token)) {
+            $bill->forceFill(['invoice_public_token' => (string) Str::uuid()])->save();
+        }
+
+        $pdf = Pdf::loadView('billing.invoice-pdf', $this->invoiceData($bill))->setPaper('a4');
+        $path = 'invoices/'.$bill->invoice_public_token.'.pdf';
+
+        Storage::disk('local')->put($path, $pdf->output());
+        $bill->forceFill(['invoice_pdf_path' => $path])->save();
     }
 }

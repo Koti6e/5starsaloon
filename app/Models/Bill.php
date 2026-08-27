@@ -22,6 +22,8 @@ class Bill extends Model
         'payment_status',
         'status',
         'idempotency_key',
+        'invoice_public_token',
+        'invoice_pdf_path',
         'notes',
         'billed_at',
     ];

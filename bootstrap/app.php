@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\EnsurePasswordWasChanged;
+use App\Http\Middleware\EnsureStaffLoginSelfieCaptured;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\EnsureUserRole;
 
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => EnsureUserIsActive::class,
             'password.changed' => EnsurePasswordWasChanged::class,
+            'staff.selfie' => EnsureStaffLoginSelfieCaptured::class,
             'role' => EnsureUserRole::class,
         ]);
     })

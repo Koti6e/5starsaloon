@@ -52,6 +52,11 @@ class User extends Authenticatable
         return $this->role === 'staff';
     }
 
+    public function requiresLoginSelfie(): bool
+    {
+        return $this->isStaff() && in_array(Str::lower((string) $this->username), ['staff1', 'staff2'], true);
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';

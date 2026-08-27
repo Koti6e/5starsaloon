@@ -9,11 +9,14 @@
             'name' => $service->name,
             'category' => $service->publicCategoryName(),
             'price' => $service->discounted_price ?: $service->price,
+            'minimum_price' => $service->minimum_price,
+            'maximum_price' => $service->maximum_price,
             'display_price' => $service->displayPrice(),
             'duration' => $service->duration_minutes,
             'estimated' => $service->hasEstimatedPrice(),
             'is_package' => $service->is_package,
             'is_favourite' => $service->is_featured,
+            'image' => asset($service->coverImageUrl()),
             'search' => Str::lower($service->name.' '.$service->publicCategoryName()),
         ])->values();
 
@@ -41,11 +44,14 @@
                     'category_slug' => $service->category?->slug,
                     'category' => $service->publicCategoryName(),
                     'price' => $service->discounted_price ?: $service->price,
+                    'minimum_price' => $service->minimum_price,
+                    'maximum_price' => $service->maximum_price,
                     'display_price' => $service->displayPrice(),
                     'duration' => $service->duration_minutes,
                     'estimated' => $service->hasEstimatedPrice(),
                     'is_package' => $service->is_package,
                     'is_favourite' => $service->is_featured,
+                    'image' => asset($service->coverImageUrl()),
                     'search' => Str::lower($service->name.' '.$service->publicCategoryName()),
                     'quantity' => 1,
                     'confirmed_price' => $service->hasEstimatedPrice() ? '' : ($service->discounted_price ?: $service->price),
@@ -70,11 +76,14 @@
                 'category_slug' => $service->category?->slug,
                 'category' => $service->publicCategoryName(),
                 'price' => $service->discounted_price ?: $service->price,
+                'minimum_price' => $service->minimum_price,
+                'maximum_price' => $service->maximum_price,
                 'display_price' => $service->displayPrice(),
                 'duration' => $service->duration_minutes,
                 'estimated' => $service->hasEstimatedPrice(),
                 'is_package' => $service->is_package,
                 'is_favourite' => $service->is_featured,
+                'image' => asset($service->coverImageUrl()),
                 'search' => Str::lower($service->name.' '.$service->publicCategoryName()),
                 'quantity' => max(1, (int) ($item['quantity'] ?? 1)),
                 'confirmed_price' => $item['confirmed_price'] ?? ($service->hasEstimatedPrice() ? '' : ($service->discounted_price ?: $service->price)),
@@ -200,43 +209,47 @@
                     </div>
                     <div class="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                         <template x-for="service in favouriteServices" :key="service.id">
-                            <button type="button" @click="quickAdd(service)" class="min-h-12 rounded-xl border px-2.5 py-1.5 text-left transition active:scale-[0.98]" :class="[isAdded(service) ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)] shadow-[0_0_16px_var(--app-glow)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] hover:border-[var(--app-primary)]', isHairCut(service) ? 'ring-1 ring-[var(--app-primary)]/45' : '']">
-                                <span class="block truncate text-sm font-bold text-[var(--app-text)]" x-text="isHairCut(service) ? `✂ ${service.name.toUpperCase()}` : service.name"></span>
-                                <span class="block text-xs font-semibold" :class="isAdded(service) ? 'text-emerald-300' : 'text-[var(--app-primary)]'" x-text="isAdded(service) ? 'Added' : service.display_price"></span>
+                            <button type="button" @click="quickAdd(service)" class="min-h-14 rounded-xl border px-2.5 py-2 text-left transition active:scale-[0.98]" :class="service.custom ? 'border-emerald-300/50 bg-emerald-950/70' : (isAdded(service) ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)] shadow-[0_0_16px_var(--app-glow)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] hover:border-[var(--app-primary)]')">
+                                <span class="block text-sm font-bold text-[var(--app-text)]" x-text="service.favorite_label || service.name"></span>
+                                <span class="block text-xs font-semibold text-[var(--app-primary)]" x-text="service.custom ? 'Manual name + price' : service.display_price"></span>
                             </button>
                         </template>
                     </div>
-                    <div x-show="!favouriteServices.length" class="mt-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-muted)]">No favourite services yet.</div>
 
-                    <div class="mt-2.5">
-                        <label class="block">
-                            <span class="text-sm font-semibold text-[var(--app-text)]">Other Service</span>
-                            <div class="relative mt-1.5">
-                                <input x-model="serviceQuery" @focus="servicePickerOpen = true" @input="servicePickerOpen = true" type="search" class="w-full rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-base text-[var(--app-text)] placeholder:text-[var(--app-muted)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]" placeholder="Search / Select Service">
-                                <div x-show="servicePickerOpen" x-cloak @click.outside="servicePickerOpen = false" class="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-1.5 shadow-2xl shadow-black/40">
-                                    <template x-for="service in visibleServices" :key="service.id">
-                                        <button type="button" @click="addService(service); servicePickerOpen = false; serviceQuery = ''" class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[var(--app-primary-soft)]">
-                                            <span class="min-w-0">
-                                                <span class="block truncate text-sm font-semibold text-[var(--app-text)]" x-text="service.name"></span>
-                                                <span class="mt-1 block truncate text-xs text-[var(--app-muted)]" x-text="service.category"></span>
-                                            </span>
-                                            <span class="shrink-0 text-sm font-bold text-[var(--app-primary)]" x-text="service.display_price"></span>
-                                        </button>
-                                    </template>
-                                    <p x-show="visibleServices.length === 0" class="rounded-2xl px-3 py-4 text-sm text-[var(--app-muted)]">No matching service.</p>
-                                </div>
-                            </div>
-                        </label>
-                        <div x-show="isAdmin" class="mt-3 flex flex-wrap gap-2">
-                            <template x-for="service in visibleServices.slice(0, 6)" :key="`fav-${service.id}`">
-                                <button type="button" @click="toggleFavorite(service)" class="rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-xs font-semibold text-[var(--app-primary)]">
-                                    <span x-text="service.is_favourite ? 'Unstar' : 'Star'"></span>
-                                    <span x-text="service.name"></span>
-                                </button>
-                            </template>
+                    <div x-show="customOpen" x-cloak class="mt-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3">
+                        <div class="grid gap-2 sm:grid-cols-[1fr_140px_auto]">
+                            <input x-model="customName" maxlength="80" class="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-3 py-3 text-sm text-[var(--app-text)]" placeholder="Service Name">
+                            <input x-model.number="customPrice" type="number" min="1" step="1" class="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-3 py-3 text-sm text-[var(--app-text)]" placeholder="Price">
+                            <button type="button" @click="addCustomService()" class="rounded-xl bg-[var(--app-primary-strong)] px-4 py-3 text-sm font-bold text-black">Add</button>
                         </div>
+                        <p x-show="customError" class="mt-2 text-sm text-red-200" x-text="customError"></p>
                     </div>
                     <x-input-error :messages="$errors->get('items')" class="mt-3" />
+                </section>
+
+                <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2.5 shadow-[0_10px_26px_rgba(0,0,0,0.2)] sm:p-3">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm font-bold text-[var(--app-text)]">Services</p>
+                        <input x-model="serviceQuery" type="search" class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-text)] placeholder:text-[var(--app-muted)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]" placeholder="Search services">
+                    </div>
+                    <div class="mt-3 flex gap-2 overflow-x-auto pb-1">
+                        <button type="button" @click="activeCategory = null" class="shrink-0 rounded-full border px-3 py-2 text-xs font-bold" :class="activeCategory === null ? 'border-[var(--app-primary)] bg-[var(--app-primary-strong)] text-black' : 'border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]'">All</button>
+                        <template x-for="category in categories" :key="category.id">
+                            <button type="button" @click="activeCategory = category.id" class="shrink-0 rounded-full border px-3 py-2 text-xs font-bold" :class="Number(activeCategory) === Number(category.id) ? 'border-[var(--app-primary)] bg-[var(--app-primary-strong)] text-black' : 'border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]'" x-text="category.name"></button>
+                        </template>
+                    </div>
+                    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                        <template x-for="service in filteredServices" :key="service.id">
+                            <button type="button" @click="addService(service)" class="group overflow-hidden rounded-xl border text-left transition active:scale-[0.98]" :class="isAdded(service) ? 'border-[var(--app-primary)] bg-[var(--app-primary-soft)]' : 'border-[var(--app-border)] bg-[var(--app-bg)] hover:border-[var(--app-primary)]'">
+                                <img :src="service.image" :alt="service.name" class="h-20 w-full object-cover transition duration-300 group-hover:scale-105">
+                                <span class="block min-h-[4.75rem] p-2">
+                                    <span class="line-clamp-2 text-sm font-bold leading-snug text-[var(--app-text)]" x-text="service.name"></span>
+                                    <span class="mt-1 block text-sm font-extrabold text-[var(--app-primary)]" x-text="service.display_price"></span>
+                                </span>
+                            </button>
+                        </template>
+                    </div>
+                    <p x-show="filteredServices.length === 0" class="mt-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-4 text-sm text-[var(--app-muted)]">No services found.</p>
                 </section>
 
                 <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2.5 shadow-[0_10px_26px_rgba(0,0,0,0.2)] sm:p-3">
@@ -255,7 +268,9 @@
 
                         <template x-for="(item, index) in items" :key="item.key">
                             <div class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 shadow-[0_8px_18px_rgba(0,0,0,0.14)]">
-                                <input type="hidden" :name="`items[${index}][service_id]`" :value="item.id">
+                                <input type="hidden" :name="`items[${index}][service_id]`" :value="item.custom ? '' : item.id">
+                                <input type="hidden" x-show="item.custom" :name="item.custom ? `items[${index}][custom_name]` : null" :value="item.name">
+                                <input type="hidden" x-show="item.custom" :name="item.custom ? `items[${index}][custom_price]` : null" :value="item.price">
                                 <input type="hidden" :name="`items[${index}][quantity]`" :value="item.quantity">
                                 @if (! auth()->user()->isAdmin())
                                     <input type="hidden" :name="`items[${index}][service_performed_by]`" value="{{ auth()->id() }}">
@@ -289,7 +304,8 @@
 
                                 <label class="mt-2 block" x-show="item.estimated">
                                     <span class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--app-subtle)]">Confirmed Price</span>
-                                    <input type="number" min="0" step="0.01" x-model.number="item.confirmed_price" :name="`items[${index}][confirmed_price]`" class="mt-1 w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-3 py-2.5 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
+                                    <input type="number" :min="item.minimum_price || 0" :max="item.maximum_price || null" step="1" x-model.number="item.confirmed_price" :name="`items[${index}][confirmed_price]`" class="mt-1 w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-3 py-2.5 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:ring-2 focus:ring-[var(--app-focus)] focus:outline-none">
+                                    <span x-show="item.minimum_price && item.maximum_price" class="mt-1 block text-xs text-[var(--app-muted)]" x-text="`Allowed: ${money(item.minimum_price)} to ${money(item.maximum_price)}`"></span>
                                 </label>
                             </div>
                         </template>
@@ -412,6 +428,10 @@
                 newCustomerOpen: false,
                 serviceQuery: '',
                 servicePickerOpen: false,
+                customOpen: false,
+                customName: '',
+                customPrice: '',
+                customError: '',
                 activeCategory: config.initialActiveCategory ?? null,
                 selectedServices: [],
                 items: config.initialItems || [],
@@ -439,10 +459,22 @@
                         .slice(0, 12);
                 },
                 get favouriteServices() {
-                    return this.services
-                        .filter(service => service.is_favourite || this.favouriteRank(service) < 99)
-                        .sort((a, b) => this.favouriteRank(a) - this.favouriteRank(b) || a.name.localeCompare(b.name))
-                        .slice(0, 8);
+                    const favourites = this.services
+                        .filter(service => this.favouriteRank(service) < 99)
+                        .sort((a, b) => this.favouriteRank(a) - this.favouriteRank(b))
+                        .map(service => Object.assign({}, service, {
+                            favorite_label: this.isHairCutAndShaving(service) ? 'Hair Cut + Shave' : service.name,
+                        }));
+
+                    favourites.push({
+                        id: 'custom',
+                        name: 'Custom',
+                        favorite_label: 'Custom',
+                        display_price: 'Manual name + price',
+                        custom: true,
+                    });
+
+                    return favourites;
                 },
                 get canToggleFavorites() {
                     return this.isAdmin;
@@ -475,28 +507,33 @@
                     service.is_favourite = payload.is_favourite;
                 },
                 quickAdd(service) {
+                    if (service.custom) {
+                        this.customOpen = ! this.customOpen;
+                        return;
+                    }
+
                     this.addService(service);
                 },
                 isHairCut(service) {
-                    const normalized = String(service.name || '').toLowerCase().replace(/\s+/g, '');
-                    return normalized === 'haircut';
+                    return this.normalizedServiceName(service) === 'hair cut';
+                },
+                isHairCutAndShaving(service) {
+                    return this.normalizedServiceName(service) === 'hair cut and shaving';
+                },
+                normalizedServiceName(service) {
+                    return String(service.name || '')
+                        .toLowerCase()
+                        .replace(/&/g, ' and ')
+                        .replace(/\+/g, ' and ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
                 },
                 favouriteRank(service) {
-                    const normalized = String(service.name || '').toLowerCase().replace(/[&+]/g, 'and').replace(/\s+/g, ' ').trim();
-                    const preferred = [
-                        'hair cut',
-                        'haircut',
-                        'hair cut and shaving',
-                        'haircut and shaving',
-                        'shaving',
-                        'beard trim',
-                        'hair wash',
-                        'facial',
-                    ];
-                    const index = preferred.indexOf(normalized);
-                    if (index >= 0) return index;
+                    const normalized = this.normalizedServiceName(service);
+                    if (normalized === 'hair cut and shaving') return 0;
+                    if (normalized === 'hair cut') return 1;
 
-                    return service.is_favourite ? 50 : 99;
+                    return 99;
                 },
                 addService(service) {
                     const existing = this.items.find(item => item.id === service.id);
@@ -689,6 +726,38 @@
                         confirmed_price: service.estimated ? '' : service.price,
                         service_performed_by: this.staff[0]?.id || '',
                     }));
+                },
+                addCustomService() {
+                    this.customError = '';
+                    const name = String(this.customName || '').replace(/\s+/g, ' ').trim();
+                    const price = Number(this.customPrice);
+
+                    if (!name) {
+                        this.customError = 'Enter a custom service name.';
+                        return;
+                    }
+
+                    if (!Number.isFinite(price) || price <= 0) {
+                        this.customError = 'Enter a valid numeric price.';
+                        return;
+                    }
+
+                    this.items.push({
+                        id: `custom-${Date.now()}`,
+                        key: `custom-${Date.now()}`,
+                        name,
+                        category: 'Custom',
+                        price,
+                        display_price: this.money(price),
+                        estimated: false,
+                        custom: true,
+                        quantity: 1,
+                        confirmed_price: price,
+                        service_performed_by: this.staff[0]?.id || '',
+                    });
+                    this.customName = '';
+                    this.customPrice = '';
+                    this.customOpen = false;
                 },
                 removeItem(index) {
                     this.items.splice(index, 1);

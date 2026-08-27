@@ -1,6 +1,6 @@
 @props(['service'])
-<article class="group service-card overflow-hidden rounded-lg border border-[#c8a24a]/20 bg-[#11100d] shadow-xl shadow-black/25" data-service-card data-search="{{ Str::lower($service->name.' '.$service->publicCategoryName().' '.$service->short_description) }}">
-    <div class="aspect-[4/3] bg-[#1b1711]">
+<article class="group service-card overflow-hidden rounded-lg border border-[#c8a24a]/20 bg-[#11100d] shadow-xl shadow-black/25 transition duration-300 hover:-translate-y-1 hover:border-[#f4d27a]/50 hover:shadow-[#c8a24a]/10" data-service-card data-search="{{ Str::lower($service->name.' '.$service->publicCategoryName().' '.$service->short_description) }}">
+    <div class="aspect-[4/3] overflow-hidden bg-[#1b1711]">
         <img src="{{ asset($service->coverImageUrl()) }}" alt="{{ $service->coverImage()?->alt_text ?? $service->name }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
     </div>
     <div class="space-y-4 p-5">
