@@ -2,22 +2,31 @@
 
 @php
     $searchServices = \App\Models\Service::query()
-        ->with('category')
+        ->with(['category', 'images'])
         ->publiclyVisible()
         ->orderBy('display_order')
         ->orderBy('name')
         ->get()
-        ->map(fn ($service) => [
-            'name' => $service->name,
-            'category' => $service->publicCategoryName(),
-            'description' => $service->short_description,
-            'price' => $service->displayPrice(),
-            'image' => asset($service->coverImageUrl()),
-            'url' => route('services.show', $service),
-            'book_url' => route('appointments.book', ['service' => $service->slug]),
-            'button' => $service->publicBookingLabel(),
-            'haystack' => Str::lower($service->name.' '.$service->publicCategoryName().' '.$service->short_description),
-        ]);
+        ->map(function ($service) {
+            $serviceImage = (string) $service->image;
+            $coverPath = filled($serviceImage)
+                && Str::endsWith(Str::lower($serviceImage), '.webp')
+                && \Illuminate\Support\Facades\File::exists(public_path($serviceImage))
+                    ? $serviceImage
+                    : $service->coverImageUrl();
+
+            return [
+                'name' => $service->name,
+                'category' => $service->publicCategoryName(),
+                'description' => $service->short_description,
+                'price' => $service->displayPrice(),
+                'image' => asset($coverPath),
+                'url' => route('services.show', $service),
+                'book_url' => route('appointments.book', ['service' => $service->slug]),
+                'button' => $service->publicBookingLabel(),
+                'haystack' => Str::lower($service->name.' '.$service->publicCategoryName().' '.$service->short_description),
+            ];
+        });
     
     $themeNames = [
         'emerald' => 'Neon Emerald',

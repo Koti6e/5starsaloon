@@ -145,8 +145,8 @@
 
     <!-- Featured Services by Category Loops -->
     @foreach ([
-        'Hair & Grooming' => [$hairServices, 'haircuts-grooming', '✂️'],
-        'Facial Care' => [$facialServices, 'facial-cleanup', '✨'],
+        'Hair Cuts' => [$hairServices, 'hair-cuts', '✂️'],
+        'Facial with Bleach' => [$facialServices, 'facial-with-bleach', '✨'],
         'Hair Colouring' => [$colourServices, 'hair-colouring', '🎨'],
         'Oil Massage' => [$oilServices, 'oil-massage', '💆'],
     ] as $heading => [$collection, $categorySlug, $icon])

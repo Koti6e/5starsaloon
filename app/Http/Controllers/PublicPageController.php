@@ -51,8 +51,8 @@ class PublicPageController extends Controller
                 ->orderBy('display_order')
                 ->limit(6)
                 ->get(),
-            'hairServices' => $this->servicesForCategory('haircuts-grooming'),
-            'facialServices' => $this->servicesForCategory('facial-cleanup'),
+            'hairServices' => $this->servicesForCategory('hair-cuts'),
+            'facialServices' => $this->servicesForCategory('facial-with-bleach'),
             'colourServices' => $this->servicesForCategory('hair-colouring'),
             'oilServices' => $this->servicesForCategory('oil-massage'),
         ]);
@@ -95,9 +95,16 @@ class PublicPageController extends Controller
             default => $query->orderBy('display_order')->orderBy('name'),
         };
 
+        $services = $query->get();
+        $categories = ServiceCategory::query()
+            ->where('is_active', true)
+            ->orderBy('display_order')
+            ->get();
+
         return view('public.services.index', [
-            'services' => $query->paginate(12)->withQueryString(),
-            'categories' => ServiceCategory::query()->where('is_active', true)->orderBy('display_order')->get(),
+            'services' => $services,
+            'groupedServices' => $services->groupBy('category_id'),
+            'categories' => $categories,
             'settings' => SalonSetting::cached(),
         ]);
     }
@@ -338,7 +345,6 @@ class PublicPageController extends Controller
             ->where('is_package', false)
             ->whereHas('category', fn ($category) => $category->where('slug', $slug))
             ->orderBy('display_order')
-            ->limit(4)
             ->get();
     }
 

@@ -1,42 +1,35 @@
 @props(['service'])
-<article class="group service-card overflow-hidden rounded-lg border border-[#c8a24a]/20 bg-[#11100d] shadow-xl shadow-black/25 transition duration-300 hover:-translate-y-1 hover:border-[#f4d27a]/50 hover:shadow-[#c8a24a]/10" data-service-card data-search="{{ Str::lower($service->name.' '.$service->publicCategoryName().' '.$service->short_description) }}">
-    <div class="aspect-[4/3] overflow-hidden bg-[#1b1711]">
-        <img src="{{ asset($service->coverImageUrl()) }}" alt="{{ $service->coverImage()?->alt_text ?? $service->name }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+@php
+    $serviceImage = (string) $service->image;
+    $coverPath = filled($serviceImage)
+        && Str::endsWith(Str::lower($serviceImage), '.webp')
+        && \Illuminate\Support\Facades\File::exists(public_path($serviceImage))
+            ? $serviceImage
+            : $service->coverImageUrl();
+@endphp
+<article class="group service-card overflow-hidden rounded-lg border border-[#c8a24a]/20 bg-[#11100d] shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-[#f4d27a]/50 hover:shadow-[#c8a24a]/10" data-service-card data-search="{{ Str::lower($service->name.' '.$service->publicCategoryName().' '.$service->short_description) }}">
+    <div class="aspect-square overflow-hidden bg-[#1b1711] sm:aspect-[4/3]">
+        <img src="{{ asset($coverPath) }}" alt="{{ $service->coverImage()?->alt_text ?? $service->name }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
     </div>
-    <div class="space-y-4 p-5">
+    <div class="space-y-2.5 p-3">
         <div>
             <div class="flex flex-wrap items-center gap-2">
-                <p class="text-xs font-semibold uppercase text-[#c8a24a]">{{ $service->publicCategoryName() }}</p>
+                <p class="truncate text-[10px] font-semibold uppercase tracking-wide text-[#c8a24a]">{{ $service->publicCategoryName() }}</p>
                 @if ($service->is_package)
-                    <span class="rounded-sm bg-[#d5a93b] px-2 py-1 text-[10px] font-bold uppercase text-black">{{ $service->packageBadge() }}</span>
+                    <span class="rounded-sm bg-[#d5a93b] px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">{{ $service->packageBadge() }}</span>
                 @endif
             </div>
-            <h3 class="mt-1 font-serif text-2xl text-[#fff9ea]">{{ $service->name }}</h3>
-            <p class="mt-2 line-clamp-3 text-sm leading-6 text-[#d8c8a3]">{{ $service->short_description }}</p>
+            <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-5 text-[#fff9ea] sm:text-base">{{ $service->name }}</h3>
         </div>
-        <div class="flex flex-wrap items-center gap-3 text-sm text-[#f8efd8]">
-            @if ($service->duration_minutes)
-                <span>{{ $service->duration_minutes }} min</span>
-                <span aria-hidden="true">·</span>
-            @endif
-            <span class="font-semibold">{{ $service->displayPrice() }}</span>
-            <span class="rounded-sm border border-[#c8a24a]/30 px-2 py-1 text-[11px] font-semibold uppercase text-[#f4d27a]">{{ $service->is_package ? $service->packageBadge() : $service->priceBadge() }}</span>
+        <div class="flex flex-wrap items-center gap-2 text-sm text-[#f8efd8]">
+            <span class="text-base font-extrabold text-[#f4d27a]">{{ $service->displayPrice() }}</span>
             @if ($service->discounted_price && $service->price && $service->discounted_price < $service->price)
                 <span class="text-[#a89567] line-through">₹{{ number_format((float) $service->price, 2) }}</span>
             @endif
         </div>
-        @if ($service->pricing_note)
-            <p class="text-xs leading-5 text-[#a89567]">{{ $service->pricing_note }}</p>
-        @endif
-        @if ($service->savings_amount)
-            <p class="text-xs font-semibold text-[#f4d27a]">Savings: {{ \App\Support\Money::inr($service->savings_amount) }}</p>
-        @endif
-        <p class="text-xs font-medium {{ $service->is_home_service_available ? 'text-[#f4d27a]' : 'text-[#a89567]' }}">
-            {{ $service->is_home_service_available ? 'Available for Elite Home Service' : 'Salon visit only' }}
-        </p>
-        <div class="grid grid-cols-2 gap-3">
-            <a href="{{ route('appointments.book', ['service' => $service->slug]) }}" class="rounded-md bg-[#d5a93b] px-3 py-2 text-center text-sm font-semibold text-[#111]">{{ $service->publicBookingLabel() }}</a>
-            <a href="{{ route('services.show', $service) }}" class="rounded-md border border-[#c8a24a]/40 px-3 py-2 text-center text-sm font-semibold text-[#f8efd8] hover:border-[#f4d27a]">Details</a>
+        <div class="grid grid-cols-2 gap-2">
+            <a href="{{ route('appointments.book', ['service' => $service->slug]) }}" class="rounded-md bg-[#d5a93b] px-2 py-2 text-center text-xs font-semibold text-[#111]">{{ $service->is_package ? 'Book' : 'Book' }}</a>
+            <a href="{{ route('services.show', $service) }}" class="rounded-md border border-[#c8a24a]/40 px-2 py-2 text-center text-xs font-semibold text-[#f8efd8] hover:border-[#f4d27a]">Details</a>
         </div>
     </div>
 </article>

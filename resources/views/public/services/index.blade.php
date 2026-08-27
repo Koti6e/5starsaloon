@@ -34,11 +34,25 @@
                     <a href="{{ route('services.index') }}" class="text-[#f4d27a]">Clear filters</a>
                 </div>
             </form>
-            <div id="service-grid" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                @forelse ($services as $service)
-                    <x-service-card :service="$service" />
+            <div id="service-grid" class="mt-8 space-y-10">
+                @forelse ($categories as $category)
+                    @php($categoryServices = $groupedServices->get($category->id, collect()))
+                    @continue($categoryServices->isEmpty())
+                    <section data-service-category>
+                        <div class="mb-4 flex items-end justify-between gap-4 border-b border-[#c8a24a]/15 pb-3">
+                            <div>
+                                <h2 class="font-serif text-2xl text-[#f4d27a]">{{ $category->name }}</h2>
+                                <p class="mt-1 text-sm text-[#a89567]">{{ $categoryServices->count() }} services</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                            @foreach ($categoryServices as $service)
+                                <x-service-card :service="$service" />
+                            @endforeach
+                        </div>
+                    </section>
                 @empty
-                    <div class="rounded-lg border border-[#c8a24a]/25 bg-[#11100d] p-8 text-[#d8c8a3] md:col-span-2 xl:col-span-3">
+                    <div class="rounded-lg border border-[#c8a24a]/25 bg-[#11100d] p-8 text-[#d8c8a3]">
                         No services found.
                     </div>
                 @endforelse
@@ -46,7 +60,6 @@
             <div id="service-no-results" hidden class="mt-8 rounded-lg border border-[#c8a24a]/25 bg-[#11100d] p-8 text-[#d8c8a3]">
                 No services found.
             </div>
-            <div class="mt-8">{{ $services->links() }}</div>
         </div>
     </section>
     <script>
@@ -57,6 +70,9 @@
                 const matched = query === '' || card.dataset.search.includes(query);
                 card.hidden = !matched;
                 if (matched) visible++;
+            });
+            document.querySelectorAll('[data-service-category]').forEach((section) => {
+                section.hidden = !Array.from(section.querySelectorAll('[data-service-card]')).some(card => !card.hidden);
             });
             const noResults = document.getElementById('service-no-results');
             if (noResults) noResults.hidden = visible > 0;
