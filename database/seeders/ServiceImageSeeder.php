@@ -13,14 +13,14 @@ class ServiceImageSeeder extends Seeder
             ->with('images')
             ->orderBy('id')
             ->each(function (Service $service): void {
-                $coverPath = $service->image ?: $service->placeholderImagePath();
+                $coverPath = $service->placeholderImagePath();
                 $existingPlaceholder = $service->images->first();
 
                 if ($existingPlaceholder) {
                     $existingPlaceholder->update([
                         'image_path' => $coverPath,
                         'thumbnail_path' => $coverPath,
-                        'alt_text' => $service->name.' service image',
+                        'alt_text' => 'Premium salon photography for '.$service->name,
                         'is_cover' => true,
                     ]);
 
@@ -34,7 +34,7 @@ class ServiceImageSeeder extends Seeder
                 $service->images()->create([
                     'image_path' => $coverPath,
                     'thumbnail_path' => $coverPath,
-                    'alt_text' => $service->name.' service image',
+                    'alt_text' => 'Premium salon photography for '.$service->name,
                     'is_cover' => true,
                     'sort_order' => 1,
                 ]);

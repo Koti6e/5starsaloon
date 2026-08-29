@@ -23,7 +23,7 @@ Route::middleware('guest')->group(function (): void {
         ->middleware('throttle:5,1');
 });
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'auth.no-store'])->group(function (): void {
     Route::get('/password/change', [ForcedPasswordController::class, 'edit'])
         ->name('password.force.edit');
 

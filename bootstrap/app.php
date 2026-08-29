@@ -5,9 +5,11 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\EnsurePasswordWasChanged;
+use App\Http\Middleware\EnsureStaffSessionBeforeDailyCutoff;
 use App\Http\Middleware\EnsureStaffLoginSelfieCaptured;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\EnsureUserRole;
+use App\Http\Middleware\PreventAuthenticatedBackHistory;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,7 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'active' => EnsureUserIsActive::class,
+            'auth.no-store' => PreventAuthenticatedBackHistory::class,
             'password.changed' => EnsurePasswordWasChanged::class,
+            'staff.cutoff' => EnsureStaffSessionBeforeDailyCutoff::class,
             'staff.selfie' => EnsureStaffLoginSelfieCaptured::class,
             'role' => EnsureUserRole::class,
         ]);

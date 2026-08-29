@@ -13,10 +13,45 @@ use App\Http\Controllers\Admin\StaffPasswordController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicPageController;
+use App\Http\Controllers\PushDeviceController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
 use App\Http\Controllers\Staff\SelfieAttendanceController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/firebase-messaging-sw.js', function () {
+    $config = [
+        'apiKey' => config('services.firebase.web_api_key'),
+        'authDomain' => config('services.firebase.auth_domain'),
+        'projectId' => config('services.firebase.project_id'),
+        'messagingSenderId' => config('services.firebase.messaging_sender_id'),
+        'appId' => config('services.firebase.app_id'),
+    ];
+
+    $script = "importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js');\n"
+        ."importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js');\n"
+        .'firebase.initializeApp('.json_encode($config).");\n"
+        ."const messaging = firebase.messaging();\n"
+        ."messaging.onBackgroundMessage((payload) => {\n"
+        ."  const notification = payload.notification || {};\n"
+        ."  const data = payload.data || {};\n"
+        ."  self.registration.showNotification(notification.title || 'SalonOS', {\n"
+        ."    body: notification.body || '',\n"
+        ."    icon: '/images/brand/logo-small.webp',\n"
+        ."    data: { url: data.url || '/' }\n"
+        ."  });\n"
+        ."});\n"
+        ."self.addEventListener('notificationclick', (event) => {\n"
+        ."  event.notification.close();\n"
+        ."  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/admin/appointments';\n"
+        ."  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {\n"
+        ."    for (const client of clientList) { if (client.url === url && 'focus' in client) return client.focus(); }\n"
+        ."    return clients.openWindow(url);\n"
+        ."  }));\n"
+        ."});\n";
+
+    return response($script, 200)->header('Content-Type', 'application/javascript');
+})->name('firebase.messaging-sw');
 
 Route::get('/', [PublicPageController::class, 'home'])->name('home');
 Route::get('/services', [PublicPageController::class, 'services'])->name('services.index');
@@ -54,17 +89,19 @@ Route::get('/dashboard', function () {
     $user = request()->user();
 
     return redirect()->route($user->isAdmin() ? 'admin.dashboard' : 'staff.dashboard');
-})->middleware(['auth', 'active', 'password.changed'])->name('dashboard');
+})->middleware(['auth', 'active', 'password.changed', 'auth.no-store'])->name('dashboard');
 
-Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
+Route::middleware(['auth', 'active', 'password.changed', 'auth.no-store'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/push-device-tokens', [PushDeviceController::class, 'store'])->name('push-device-tokens.store');
+    Route::delete('/push-device-tokens', [PushDeviceController::class, 'destroy'])->name('push-device-tokens.destroy');
 });
 
 Route::prefix('admin')
     ->name('admin.')
-    ->middleware(['auth', 'active', 'password.changed', 'role:admin'])
+    ->middleware(['auth', 'active', 'password.changed', 'auth.no-store', 'role:admin'])
     ->group(function (): void {
         Route::get('/dashboard', AdminDashboardController::class)->name('dashboard');
         Route::get('/search', SearchController::class)->name('search');
@@ -85,6 +122,7 @@ Route::prefix('admin')
         Route::patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status.update');
         Route::get('/attendance', [AdminAttendanceController::class, 'index'])->name('attendance.index');
         Route::post('/attendance', [AdminAttendanceController::class, 'update'])->name('attendance.update');
+        Route::get('/customers/{customer}/whatsapp', [AdminCustomerController::class, 'whatsapp'])->name('customers.whatsapp');
         Route::resource('customers', AdminCustomerController::class)->only(['index', 'create', 'store', 'show']);
         Route::resource('services', AdminServiceController::class)->except(['show', 'destroy']);
         Route::patch('/services/{service}/favorite', [AdminServiceController::class, 'toggleFavorite'])->name('services.favorite.toggle');
@@ -100,7 +138,7 @@ Route::prefix('admin')
 
 Route::prefix('staff')
     ->name('staff.')
-    ->middleware(['auth', 'active', 'password.changed', 'role:staff'])
+    ->middleware(['auth', 'active', 'password.changed', 'auth.no-store', 'role:staff', 'staff.cutoff'])
     ->group(function (): void {
         Route::get('/login-selfie', [SelfieAttendanceController::class, 'create'])->name('selfie.create');
         Route::post('/login-selfie', [SelfieAttendanceController::class, 'store'])->name('selfie.store');
@@ -108,7 +146,7 @@ Route::prefix('staff')
 
 Route::prefix('staff')
     ->name('staff.')
-    ->middleware(['auth', 'active', 'password.changed', 'role:staff', 'staff.selfie'])
+    ->middleware(['auth', 'active', 'password.changed', 'auth.no-store', 'role:staff', 'staff.cutoff', 'staff.selfie'])
     ->group(function (): void {
         Route::get('/dashboard', StaffDashboardController::class)->name('dashboard');
         Route::get('/search', SearchController::class)->name('search');

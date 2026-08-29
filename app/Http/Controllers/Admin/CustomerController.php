@@ -73,6 +73,15 @@ class CustomerController extends Controller
         ]);
     }
 
+    public function whatsapp(Customer $customer): RedirectResponse
+    {
+        if ($customer->whatsapp_status === 'not_contacted') {
+            $customer->forceFill(['whatsapp_status' => 'whatsapp_sent'])->save();
+        }
+
+        return redirect()->away('https://wa.me/91'.$customer->mobile);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $mobile = Customer::normalizeMobile((string) $request->input('mobile'));
@@ -99,6 +108,7 @@ class CustomerController extends Controller
             'mobile' => $mobile,
             'customer_code' => $this->nextCustomerCode(),
             'status' => 'active',
+            'whatsapp_status' => 'not_contacted',
         ]);
 
         return redirect()->route('admin.customers.index')->with('status', 'Customer added.');

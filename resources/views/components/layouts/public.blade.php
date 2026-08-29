@@ -28,22 +28,10 @@
             ];
         });
     
-    $themeNames = [
-        'emerald' => 'Neon Emerald',
-        'sapphire' => 'Neon Sapphire',
-        'crimson' => 'Neon Crimson',
-        'gold' => 'Neon Gold',
-        'pearl' => 'Neon Pearl',
-        'obsidian' => 'Neon Obsidian',
-    ];
+    $themeNames = ['gold' => 'Luxury Gold'];
 
     // Set default values with fallbacks. Legacy light/dark settings map into the public theme system.
-    $storedTheme = $settings['default_theme'] ?? 'emerald';
-    $defaultTheme = match ($storedTheme) {
-        'light' => 'pearl',
-        'dark' => 'obsidian',
-        default => array_key_exists($storedTheme, $themeNames) ? $storedTheme : 'emerald',
-    };
+    $defaultTheme = 'gold';
     $salonName = $settings['salon_name'] ?? '5 Star New Look Salon';
     $tagline = $settings['tagline'] ?? 'Look Good. Feel Great. Be Confident.';
     $metaDescription = $description ?? ($settings['meta_description'] ?? 'Premium salon, spa, hair and grooming services in Chengalpattu by 5 Star New Look Salon.');
@@ -86,9 +74,8 @@
         <script>
             // Initialize theme before page render to prevent flash
             (function() {
-                const savedTheme = localStorage.getItem('salon-color-theme');
                 const defaultTheme = @json($defaultTheme);
-                const theme = savedTheme || defaultTheme;
+                const theme = defaultTheme;
                 document.documentElement.dataset.defaultTheme = defaultTheme;
                 document.documentElement.setAttribute('data-theme', theme);
             })();
@@ -96,24 +83,24 @@
         
         <style>
             :root,
-            [data-theme="emerald"] {
-                --bg-main: #07120d;
-                --bg-secondary: #0b1b14;
-                --bg-card: #10231a;
-                --bg-input: #0d1f17;
-                --text-main: #f2fff8;
-                --text-secondary: #c7f0da;
-                --text-muted: #85aa97;
-                --accent: #19c987;
-                --accent-light: #7af5bd;
-                --accent-dark: #0f9f6d;
-                --border-clr: rgba(122, 245, 189, 0.2);
-                --border-hover: rgba(122, 245, 189, 0.38);
-                --header-bg: rgba(7, 18, 13, 0.92);
-                --footer-bg: #08140f;
-                --shadow: rgba(25, 201, 135, 0.16);
-                --glow: rgba(25, 201, 135, 0.28);
-                --overlay: rgba(7, 18, 13, 0.86);
+            [data-theme] {
+                --bg-main: #080706;
+                --bg-secondary: #0f0d0a;
+                --bg-card: #15120d;
+                --bg-input: #0c0a08;
+                --text-main: #fff9ea;
+                --text-secondary: #eadfca;
+                --text-muted: #bba980;
+                --accent: #d5a93b;
+                --accent-light: #f4d27a;
+                --accent-dark: #b88a20;
+                --border-clr: rgba(244, 210, 122, 0.2);
+                --border-hover: rgba(244, 210, 122, 0.38);
+                --header-bg: rgba(8, 7, 6, 0.92);
+                --footer-bg: #0b0907;
+                --shadow: rgba(213, 169, 59, 0.14);
+                --glow: rgba(213, 169, 59, 0.24);
+                --overlay: rgba(8, 7, 6, 0.86);
             }
 
             [data-theme="sapphire"] {
@@ -475,6 +462,27 @@
                 }
 
             }
+
+            .call-pulse::before {
+                border: 1px solid rgba(244, 210, 122, 0.7);
+                border-radius: 999px;
+                content: "";
+                inset: -0.45rem;
+                opacity: 0;
+                position: absolute;
+            }
+
+            @media (prefers-reduced-motion: no-preference) {
+                .call-pulse::before {
+                    animation: callSoftRing 2.4s ease-out infinite;
+                }
+            }
+
+            @keyframes callSoftRing {
+                0% { opacity: 0.65; transform: scale(0.82); }
+                70% { opacity: 0; transform: scale(1.35); }
+                100% { opacity: 0; transform: scale(1.35); }
+            }
         </style>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -489,7 +497,7 @@
                 searchOpen: false,
                 query: '',
                 services: @js($searchServices),
-                currentTheme: localStorage.getItem('salon-color-theme') || @js($defaultTheme),
+                currentTheme: @js($defaultTheme),
                 themeNames: @js($themeNames),
                 themeDropdown: false,
                 mobileThemeMenu: false,
@@ -501,7 +509,6 @@
                 
                 setTheme(themeName) {
                     this.currentTheme = themeName;
-                    localStorage.setItem('salon-color-theme', themeName);
                     document.documentElement.setAttribute('data-theme', themeName);
                     this.themeDropdown = false;
                     this.mobileThemeMenu = false;
@@ -571,29 +578,9 @@
                                  style="background: var(--bg-card); border-color: var(--border-clr);"
                                  @click.away="themeDropdown = false">
                                 <div class="space-y-1 text-sm">
-                                    <button @click="setTheme('emerald')" class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/10">
-                                        <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
-                                        <span class="font-medium" style="color: var(--text-main);">Neon Emerald</span>
-                                    </button>
-                                    <button @click="setTheme('sapphire')" class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/10">
-                                        <span class="h-3 w-3 rounded-full bg-blue-500"></span>
-                                        <span class="font-medium" style="color: var(--text-main);">Neon Sapphire</span>
-                                    </button>
-                                    <button @click="setTheme('crimson')" class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/10">
-                                        <span class="h-3 w-3 rounded-full bg-rose-500"></span>
-                                        <span class="font-medium" style="color: var(--text-main);">Neon Crimson</span>
-                                    </button>
                                     <button @click="setTheme('gold')" class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/10">
                                         <span class="h-3 w-3 rounded-full bg-amber-400"></span>
-                                        <span class="font-medium" style="color: var(--text-main);">Neon Gold</span>
-                                    </button>
-                                    <button @click="setTheme('pearl')" class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/10">
-                                        <span class="h-3 w-3 rounded-full bg-stone-100 ring-1 ring-stone-300"></span>
-                                        <span class="font-medium" style="color: var(--text-main);">Neon Pearl</span>
-                                    </button>
-                                    <button @click="setTheme('obsidian')" aria-label="Switch to dark mode with Neon Obsidian" class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/10">
-                                        <span class="h-3 w-3 rounded-full bg-gray-400"></span>
-                                        <span class="font-medium" style="color: var(--text-main);">Neon Obsidian</span>
+                                        <span class="font-medium" style="color: var(--text-main);">Luxury Gold</span>
                                     </button>
                                 </div>
                             </div>
@@ -651,12 +638,7 @@
                                  class="absolute right-0 top-full mt-2 w-44 rounded-2xl border p-2 shadow-xl backdrop-blur-lg"
                                  style="background: var(--bg-card); border-color: var(--border-clr);">
                                 <div class="space-y-1 text-xs">
-                                    <button @click="setTheme('emerald')" class="w-full rounded-xl px-3 py-2 text-left font-medium hover:bg-white/10 text-emerald-400">Emerald</button>
-                                    <button @click="setTheme('sapphire')" class="w-full rounded-xl px-3 py-2 text-left font-medium hover:bg-white/10 text-blue-400">Sapphire</button>
-                                    <button @click="setTheme('crimson')" class="w-full rounded-xl px-3 py-2 text-left font-medium hover:bg-white/10 text-rose-400">Crimson</button>
-                                    <button @click="setTheme('gold')" class="w-full rounded-xl px-3 py-2 text-left font-medium hover:bg-white/10 text-amber-400">Gold</button>
-                                    <button @click="setTheme('pearl')" class="w-full rounded-xl px-3 py-2 text-left font-medium hover:bg-white/10 text-stone-300">Pearl</button>
-                                    <button @click="setTheme('obsidian')" aria-label="Switch to dark mode with Neon Obsidian" class="w-full rounded-xl px-3 py-2 text-left font-medium hover:bg-white/10 text-gray-200">Obsidian</button>
+                                    <button @click="setTheme('gold')" class="w-full rounded-xl px-3 py-2 text-left font-medium hover:bg-white/10 text-amber-400">Luxury Gold</button>
                                 </div>
                             </div>
                         </div>
@@ -795,51 +777,26 @@
             <!-- ========================================== -->
             <!-- FOOTER                                     -->
             <!-- ========================================== -->
-            <footer class="border-t footer-theme pb-24 md:pb-12">
-                <div class="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
-                    <div class="space-y-4">
-                        <img src="{{ asset('images/brand/logo-full.webp') }}" alt="{{ $salonName }} full logo" class="h-24 w-auto object-contain">
-                        <p class="max-w-md text-sm leading-6 theme-text-secondary">{{ $tagline }}</p>
-                        <a href="{{ route('appointments.book') }}" 
-                           class="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold shadow-lg transition btn-primary">
-                            Book a premium service
-                        </a>
-                    </div>
-                    <div>
-                        <h2 class="font-serif text-lg" style="color: var(--accent-light);">Quick Links</h2>
-                        <div class="mt-4 grid gap-1.5 text-sm">
-                            @foreach ($navLinks as $link)
-                                <a href="{{ route($link['route']) }}" 
-                                   class="rounded-2xl px-3 py-1.5 transition hover:bg-white/10 link-theme">
-                                    {{ $link['label'] }}
-                                </a>
-                            @endforeach
-                            <a href="{{ route('login') }}" 
-                               class="rounded-2xl px-3 py-1.5 transition hover:bg-white/10 link-theme">
-                                Staff Login
-                            </a>
+            <footer class="border-t footer-theme pb-24 md:pb-8">
+                <div class="mx-auto grid max-w-7xl gap-5 px-4 py-7 sm:px-6 md:grid-cols-[1fr_1.2fr_auto] md:items-center lg:px-8">
+                    <div class="flex items-center gap-3">
+                        <img src="{{ asset('images/brand/logo-small.webp') }}" alt="{{ $salonName }} logo" class="h-12 w-12 rounded-lg object-contain">
+                        <div>
+                            <p class="font-serif text-base" style="color: var(--accent-light);">{{ $salonName }}</p>
+                            <p class="text-xs theme-text-muted">{{ $tagline }}</p>
                         </div>
                     </div>
-                    <div>
-                        <h2 class="font-serif text-lg" style="color: var(--accent-light);">Contact</h2>
-                        <dl class="mt-4 space-y-3 text-sm theme-text-secondary">
-                            <div>
-                                <dt class="font-semibold theme-accent">Phone</dt>
-                                <dd>{{ $settings['primary_phone'] ?? 'Available from salon reception' }}</dd>
-                            </div>
-                            <div>
-                                <dt class="font-semibold theme-accent">Location</dt>
-                                <dd>{{ $settings['address'] ?? 'Chengalpattu' }}</dd>
-                            </div>
-                            <div>
-                                <dt class="font-semibold theme-accent">Hours</dt>
-                                <dd>{{ $settings['working_hours'] ?? 'Open daily by appointment' }}</dd>
-                            </div>
-                        </dl>
+                    <address class="not-italic text-sm leading-6 theme-text-secondary">
+                        4/123, Grand Southern Trunk Road<br>
+                        Ottery, main road, Vandalur, Tamil Nadu 600048
+                    </address>
+                    <div class="flex flex-wrap gap-3 text-sm md:justify-end">
+                        <a href="https://share.google/IiDmKg4shunbfTDYh" target="_blank" rel="noopener" class="rounded-md border px-3 py-2 font-semibold link-theme" style="border-color: var(--border-clr);">Get Directions</a>
+                        <a href="{{ route('login') }}" class="rounded-md border px-3 py-2 link-theme" style="border-color: var(--border-clr);">Staff Login</a>
                     </div>
                 </div>
-                <div class="border-t px-4 py-5 text-center text-xs theme-text-muted sm:px-6 lg:px-8" style="border-color: var(--border-clr);">
-                    <p>&copy; {{ now('Asia/Kolkata')->year }} {{ $salonName }}. Premium salon care in Chengalpattu.</p>
+                <div class="border-t px-4 py-3 text-center text-xs theme-text-muted sm:px-6 lg:px-8" style="border-color: var(--border-clr);">
+                    <p>&copy; {{ now('Asia/Kolkata')->year }} {{ $salonName }}. Powered by <a href="https://sushako.in" target="_blank" rel="noopener" class="font-semibold link-theme">Sushako Tech</a> · sushako.in</p>
                 </div>
             </footer>
 

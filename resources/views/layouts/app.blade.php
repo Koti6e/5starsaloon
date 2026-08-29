@@ -194,6 +194,63 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @auth
+            @if (auth()->user()->isAdmin() && config('services.firebase.vapid_key') && config('services.firebase.project_id'))
+                <script type="module">
+                    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
+                    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js';
+
+                    const firebaseConfig = @json([
+                        'apiKey' => config('services.firebase.web_api_key'),
+                        'authDomain' => config('services.firebase.auth_domain'),
+                        'projectId' => config('services.firebase.project_id'),
+                        'messagingSenderId' => config('services.firebase.messaging_sender_id'),
+                        'appId' => config('services.firebase.app_id'),
+                    ]);
+                    const vapidKey = @json(config('services.firebase.vapid_key'));
+
+                    async function registerCaptainPush() {
+                        if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+                        if (Notification.permission === 'denied') return;
+
+                        const permission = Notification.permission === 'granted'
+                            ? 'granted'
+                            : await Notification.requestPermission();
+                        if (permission !== 'granted') return;
+
+                        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                        const messaging = getMessaging(initializeApp(firebaseConfig));
+                        const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+                        if (!token) return;
+
+                        await fetch(@json(route('push-device-tokens.store')), {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify({ token, platform: 'web' }),
+                        });
+
+                        onMessage(messaging, payload => {
+                            const notification = payload.notification || {};
+                            if (!notification.title) return;
+                            new Notification(notification.title, {
+                                body: notification.body || '',
+                                icon: '/images/brand/logo-small.webp',
+                                data: { url: payload.data?.url || @json(route('admin.appointments.index')) },
+                            }).onclick = event => {
+                                event.preventDefault();
+                                window.location.href = event.target.data.url;
+                            };
+                        });
+                    }
+
+                    registerCaptainPush().catch(() => {});
+                </script>
+            @endif
+        @endauth
     </head>
     <body class="bg-[var(--app-bg)] font-sans text-[var(--app-text)] antialiased">
         <div

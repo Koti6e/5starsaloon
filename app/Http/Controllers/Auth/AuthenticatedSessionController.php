@@ -28,6 +28,7 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        $request->session()->put('staff_login_date', now('Asia/Kolkata')->toDateString());
 
         if ($request->user()->must_change_password) {
             return redirect()->route('password.force.edit');
@@ -85,6 +86,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('login');
     }
 }

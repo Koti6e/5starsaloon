@@ -5,7 +5,7 @@
                 <h1 class="font-serif text-2xl text-[#f4d27a]">{{ $customer->name }}</h1>
                 <p class="mt-1 text-sm text-[#d8c8a3]">+91 {{ $customer->mobile }} · {{ $customer->customer_code }}</p>
             </div>
-            <a href="https://wa.me/91{{ $customer->mobile }}" target="_blank" rel="noopener" class="rounded-md bg-[#d5a93b] px-4 py-3 text-center text-sm font-semibold text-black">Open WhatsApp</a>
+            <a href="{{ route('admin.customers.whatsapp', $customer) }}" target="_blank" rel="noopener" class="rounded-md bg-[#d5a93b] px-4 py-3 text-center text-sm font-semibold text-black">Open WhatsApp</a>
         </div>
     </x-slot>
 
@@ -20,6 +20,10 @@
                     ['Favourite Service', $favouriteService ?: '-'],
                     ['Last Staff', $lastStaff ?: '-'],
                     ['Birthday', $customer->date_of_birth ? $customer->date_of_birth->format('d M') : '-'],
+                    ['Gender', $customer->gender ? Str::title($customer->gender) : '-'],
+                    ['Membership ID', $customer->membership_id ?: '-'],
+                    ['Branch', $customer->branch ?: '-'],
+                    ['WhatsApp Intent', Str::headline($customer->whatsapp_status ?? 'not_contacted')],
                     ['Status', Str::title($customer->status)],
                 ] as [$label, $value])
                     <div class="rounded-lg border border-[#c8a24a]/20 bg-[#11100d] p-4">

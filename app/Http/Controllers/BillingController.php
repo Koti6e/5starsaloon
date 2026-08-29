@@ -86,11 +86,14 @@ class BillingController extends Controller
                 }
 
                 if ($query !== '' && ! ctype_digit($query)) {
-                    $builder->orWhere('name', 'like', '%'.$query.'%');
+                    $builder->orWhere('name', 'like', '%'.$query.'%')
+                        ->orWhere('customer_code', 'like', '%'.$query.'%');
 
                     if (strlen($query) >= 3) {
                         $builder->orWhere('name', 'like', substr($query, 0, 3).'%');
                     }
+                } elseif ($query !== '') {
+                    $builder->orWhere('customer_code', 'like', '%'.$query.'%');
                 }
             })
             ->orderByRaw('CASE WHEN mobile = ? THEN 0 WHEN mobile LIKE ? THEN 1 ELSE 2 END', [$mobile, $mobile.'%'])
@@ -371,8 +374,8 @@ class BillingController extends Controller
     {
         $this->authorizeBill($request, $bill);
         $this->ensureInvoicePdf($bill);
-        $bill->load('customer', 'payments');
-        $message = "Hello {$bill->customer->name},\n\nThank you for visiting 5 Star New Look Salon.\n\nInvoice: {$bill->invoice_number}\nAmount Paid: ".Money::inr($bill->grand_total)."\nInvoice PDF: ".route('invoice.public', $bill->invoice_public_token)."\n\nYou can open or download your invoice from the secure link above.\n\nThank you.";
+        $bill->load('customer', 'items', 'payments');
+        $message = $this->luxuryWhatsAppBillMessage($bill);
 
         return redirect()->away('https://wa.me/91'.$bill->customer->mobile.'?text='.rawurlencode($message));
     }
@@ -506,6 +509,65 @@ class BillingController extends Controller
     private function nextCustomerCode(): string
     {
         return (new \App\Services\CustomerCodeGenerator)->generate();
+    }
+
+    private function luxuryWhatsAppBillMessage(Bill $bill): string
+    {
+        $payments = $bill->payments
+            ->pluck('payment_method')
+            ->filter()
+            ->map(fn (string $method) => Str::headline($method))
+            ->unique()
+            ->join(' + ');
+
+        $lines = [
+            "{$bill->customer->name}, your 5 Star experience is complete.",
+            '',
+            '5 STAR NEW LOOK SALON',
+            '',
+            'VISIT DETAILS',
+            'Name: '.$bill->customer->name,
+            'Mobile: +91 '.$bill->customer->mobile,
+            'Visit Date: '.$bill->billed_at?->timezone('Asia/Kolkata')->format('d M Y, h:i A'),
+            'Services:',
+        ];
+
+        foreach ($bill->items as $item) {
+            $quantity = $item->quantity > 1 ? ' x'.$item->quantity : '';
+            $lines[] = '- '.$item->service_name_snapshot.$quantity.' - '.Money::inr($item->line_total);
+        }
+
+        $lines = array_merge($lines, [
+            '',
+            'BILL DETAILS',
+            'Invoice No: '.$bill->invoice_number,
+        ]);
+
+        if ($payments !== '') {
+            $lines[] = 'Payment: '.$payments;
+        }
+
+        $lines[] = 'Subtotal: '.Money::inr($bill->subtotal);
+
+        if ((float) $bill->discount_amount > 0) {
+            $lines[] = 'Discount: '.Money::inr($bill->discount_amount);
+        }
+
+        if ((float) $bill->home_visit_charge > 0) {
+            $lines[] = 'Visit Charge: '.Money::inr($bill->home_visit_charge);
+        }
+
+        $lines = array_merge($lines, [
+            'Grand Total: '.Money::inr($bill->grand_total),
+            '',
+            'View / Download Your Bill',
+            route('invoice.public', $bill->invoice_public_token),
+            '',
+            'Thank you for choosing 5 Star New Look Salon.',
+            'Where every visit becomes an experience.',
+        ]);
+
+        return collect($lines)->filter(fn ($line) => $line !== null)->join("\n");
     }
 
     private function toCents(mixed $value): int

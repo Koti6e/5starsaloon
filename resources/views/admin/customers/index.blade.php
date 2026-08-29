@@ -34,22 +34,22 @@
                 <div class="overflow-x-auto">
                     <table class="hidden min-w-full divide-y divide-[#c8a24a]/15 text-sm md:table">
                     <thead class="text-left text-[#f4d27a]">
-                        <tr><th class="px-4 py-3">Customer</th><th>Mobile</th><th>Visits</th><th>Spent</th><th>Last visit</th><th>Status</th><th>Actions</th></tr>
+                        <tr><th class="px-4 py-3">Customer Name</th><th>Customer ID</th><th>Mobile</th><th>Visits</th><th>Total Spent</th><th>Last Visit</th><th>View</th><th>WhatsApp</th></tr>
                     </thead>
                     <tbody class="divide-y divide-[#c8a24a]/10 text-[#f8efd8]">
                         @foreach ($customers as $customer)
                             <tr>
-                                <td class="px-4 py-3"><p class="font-semibold">{{ $customer->name }}</p><p class="text-xs text-[#a89567]">{{ $customer->customer_code }}</p></td>
+                                <td class="px-4 py-3"><p class="font-semibold">{{ $customer->name }}</p></td>
+                                <td>{{ $customer->customer_code }}</td>
                                 <td>+91 {{ $customer->mobile }}</td>
                                 <td>{{ $customer->total_visits }}</td>
                                 <td>{{ \App\Support\Money::inr($customer->total_spent) }}</td>
                                 <td>{{ $customer->last_visit_at ? \Illuminate\Support\Carbon::parse($customer->last_visit_at)->format('d M Y') : '-' }}</td>
-                                <td>{{ Str::title($customer->status) }}</td>
                                 <td class="py-3">
-                                    <div class="flex flex-wrap gap-2">
-                                        <a href="{{ route('admin.customers.show', $customer) }}" class="rounded-md border border-[#c8a24a]/40 px-3 py-2 text-xs font-semibold text-[#f8efd8]">View</a>
-                                        <a href="https://wa.me/91{{ $customer->mobile }}" target="_blank" rel="noopener" class="rounded-md border border-[#c8a24a]/40 px-3 py-2 text-xs font-semibold text-[#f4d27a]">WhatsApp</a>
-                                    </div>
+                                    <a href="{{ route('admin.customers.show', $customer) }}" class="rounded-md border border-[#c8a24a]/40 px-3 py-2 text-xs font-semibold text-[#f8efd8]">View</a>
+                                </td>
+                                <td class="py-3">
+                                    <a href="{{ route('admin.customers.whatsapp', $customer) }}" target="_blank" rel="noopener" class="rounded-md border border-[#c8a24a]/40 px-3 py-2 text-xs font-semibold text-[#f4d27a]">WhatsApp</a>
                                 </td>
                             </tr>
                         @endforeach
@@ -63,7 +63,7 @@
                                     <p class="font-semibold text-[#fff9ea]">{{ $customer->name }}</p>
                                     <p class="text-xs text-[#a89567]">{{ $customer->customer_code }} · +91 {{ $customer->mobile }}</p>
                                 </div>
-                                <span class="text-xs uppercase text-[#a89567]">{{ $customer->status }}</span>
+                                <span class="text-xs uppercase text-[#a89567]">{{ Str::headline($customer->whatsapp_status ?? 'not_contacted') }}</span>
                             </div>
                             <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
                                 <div><span class="block text-[#a89567]">Visits</span><span class="font-semibold text-[#fff9ea]">{{ $customer->total_visits }}</span></div>
@@ -72,7 +72,7 @@
                             </div>
                             <div class="mt-3 flex gap-2">
                                 <a href="{{ route('admin.customers.show', $customer) }}" class="flex-1 rounded-md border border-[#c8a24a]/40 px-3 py-2 text-center text-xs font-semibold text-[#f8efd8]">View</a>
-                                <a href="https://wa.me/91{{ $customer->mobile }}" target="_blank" rel="noopener" class="flex-1 rounded-md border border-[#c8a24a]/40 px-3 py-2 text-center text-xs font-semibold text-[#f4d27a]">WhatsApp</a>
+                                <a href="{{ route('admin.customers.whatsapp', $customer) }}" target="_blank" rel="noopener" class="flex-1 rounded-md border border-[#c8a24a]/40 px-3 py-2 text-center text-xs font-semibold text-[#f4d27a]">WhatsApp</a>
                             </div>
                         </div>
                     @endforeach

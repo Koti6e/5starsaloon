@@ -15,6 +15,8 @@ class Customer extends Model
         'customer_code',
         'name',
         'mobile',
+        'membership_id',
+        'branch',
         'alternate_mobile',
         'email',
         'gender',
@@ -32,6 +34,10 @@ class Customer extends Model
         'total_spent',
         'last_visit_at',
         'status',
+        'whatsapp_status',
+        'source',
+        'source_reference',
+        'imported_at',
     ];
 
     public static function normalizeMobile(string $mobile): string
@@ -52,6 +58,7 @@ class Customer extends Model
             'anniversary_date' => 'date',
             'last_visit_at' => 'datetime',
             'total_spent' => 'decimal:2',
+            'imported_at' => 'datetime',
         ];
     }
 }

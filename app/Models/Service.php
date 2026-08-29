@@ -108,20 +108,14 @@ class Service extends Model
         $name = Str::lower($this->name.' '.$this->category?->name);
 
         return match (true) {
-            $this->is_package => 'images/services/svg/package.svg',
-            str_contains($name, 'home') => 'images/services/svg/elite-home-service.svg',
-            str_contains($name, 'beard'), str_contains($name, 'shave') => 'images/services/svg/beard-trim.svg',
-            str_contains($name, 'wash') => 'images/services/svg/hair-wash.svg',
-            str_contains($name, 'colour'), str_contains($name, 'color'), str_contains($name, 'henna'), str_contains($name, 'garnier'), str_contains($name, 'loreal'), str_contains($name, 'l’oréal') => 'images/services/svg/hair-colour.svg',
-            str_contains($name, 'spa'), str_contains($name, 'dandruff'), str_contains($name, 'growth') => 'images/services/svg/hair-spa.svg',
-            str_contains($name, 'gold') => 'images/services/svg/gold-facial.svg',
-            str_contains($name, 'diamond') => 'images/services/svg/diamond-facial.svg',
-            str_contains($name, 'facial'), str_contains($name, 'cleanup'), str_contains($name, 'skin') => 'images/services/svg/facial.svg',
-            str_contains($name, 'massage'), str_contains($name, 'oil') => 'images/services/svg/oil-massage.svg',
-            str_contains($name, 'tan'), str_contains($name, 'bleach') => 'images/services/svg/de-tan.svg',
-            str_contains($name, 'piercing') => 'images/services/svg/ear-piercing.svg',
-            str_contains($name, 'interior') => 'images/services/svg/salon-interior.svg',
-            default => 'images/services/svg/haircut.svg',
+            $this->is_package => 'images/services/combo-packages.webp',
+            str_contains($name, 'home') => 'images/salon/premium-salon-hero.webp',
+            str_contains($name, 'beard'), str_contains($name, 'shave') => 'images/services/generated/luxury-haircut.webp',
+            str_contains($name, 'colour'), str_contains($name, 'color'), str_contains($name, 'henna'), str_contains($name, 'garnier'), str_contains($name, 'loreal'), str_contains($name, 'l’oréal') => 'images/services/generated/luxury-hair-colour.webp',
+            str_contains($name, 'spa'), str_contains($name, 'dandruff'), str_contains($name, 'growth') => 'images/services/generated/luxury-oil-massage.webp',
+            str_contains($name, 'facial'), str_contains($name, 'cleanup'), str_contains($name, 'skin'), str_contains($name, 'tan'), str_contains($name, 'bleach') => 'images/services/generated/luxury-facial.webp',
+            str_contains($name, 'massage'), str_contains($name, 'oil') => 'images/services/generated/luxury-oil-massage.webp',
+            default => 'images/services/generated/luxury-haircut.webp',
         };
     }
 

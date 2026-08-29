@@ -11,12 +11,14 @@ use App\Models\SalonSetting;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Services\AppointmentNumberGenerator;
+use App\Services\AppointmentNotificationService;
 use App\Services\CustomerCodeGenerator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -288,6 +290,15 @@ class PublicPageController extends Controller
 
             return $appointment;
         });
+
+        try {
+            app(AppointmentNotificationService::class)->notifyCaptain($appointment);
+        } catch (\Throwable $exception) {
+            Log::warning('Captain appointment notification failed after booking was saved.', [
+                'appointment_id' => $appointment->id,
+                'exception' => $exception,
+            ]);
+        }
 
         return redirect()->route('appointments.confirmed', ['token' => $appointment->confirmation_token]);
     }

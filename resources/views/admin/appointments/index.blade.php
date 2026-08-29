@@ -63,95 +63,122 @@
                     </div>
                 </x-admin.card>
             @else
-                <div class="overflow-x-auto rounded-lg border border-[#c8a24a]/20 bg-[#11100d]">
-                    <table class="min-w-full divide-y divide-[#c8a24a]/15 text-sm text-[#f8efd8]">
-                        <thead class="bg-black text-left text-xs uppercase tracking-[0.18em] text-[#a89567]">
-                            <tr>
-                                <th class="px-4 py-3">Appointment</th>
-                                <th class="px-4 py-3">Customer</th>
-                                <th class="px-4 py-3">Services</th>
-                                <th class="px-4 py-3">Type</th>
-                                <th class="px-4 py-3">When</th>
-                                <th class="px-4 py-3">Staff</th>
-                                <th class="px-4 py-3">Status</th>
-                                <th class="px-4 py-3">Billing</th>
-                                <th class="px-4 py-3">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-[#c8a24a]/10">
-                            @foreach ($appointments as $appointment)
-                                @php
-                                    $bill = $appointment->bills->sortByDesc('id')->first();
-                                    $billingLabel = $bill ? ucfirst($bill->payment_status) : 'Unbilled';
-                                    $whatsappMessage = "Hi {$appointment->customer->name},\n\n".
-                                        "This is 5 Star New Look Salon regarding your appointment {$appointment->booking_number}.\n\n".
-                                        "Service: ".$appointment->appointmentServices->pluck('service_name_snapshot')->join(', ')."\n".
-                                        "Date: ".$appointment->date?->format('d M Y')."\n".
-                                        "Time: ".\Illuminate\Support\Carbon::parse($appointment->start_time)->format('h:i A')."\n\n".
-                                        "Please confirm your attendance or any changes.";
-                                @endphp
-                                <tr>
-                                    <td class="px-4 py-4">
-                                        <div class="font-semibold text-[#fff9ea]">{{ $appointment->booking_number }}</div>
-                                        <div class="text-xs text-[#a89567]">{{ ucfirst(str_replace('_', ' ', $appointment->status)) }}</div>
-                                    </td>
-                                    <td class="px-4 py-4">
-                                        <div class="font-semibold text-[#fff9ea]">{{ $appointment->customer->name }}</div>
-                                        <div class="text-xs text-[#d8c8a3]">+91 {{ $appointment->customer->mobile }}</div>
-                                    </td>
-                                    <td class="px-4 py-4 max-w-[260px]">
-                                        <div class="space-y-1 text-xs text-[#d8c8a3]">
-                                            @foreach ($appointment->appointmentServices as $service)
-                                                <div>{{ $service->service_name_snapshot }}</div>
-                                            @endforeach
+                <div class="grid gap-4">
+                    @foreach ($appointments as $appointment)
+                        @php
+                            $bill = $appointment->bills->sortByDesc('id')->first();
+                            $services = $appointment->appointmentServices->pluck('service_name_snapshot')->filter()->join(', ');
+                            $dateLabel = $appointment->date?->format('d M Y');
+                            $timeLabel = \Illuminate\Support\Carbon::parse($appointment->start_time)->format('h:i A');
+                            $mobile = preg_replace('/\D+/', '', $appointment->customer->mobile);
+                            $whatsappMessage = "{$appointment->customer->name}, this is 5 Star New Look Salon regarding your appointment {$appointment->booking_number}.\n\nService: {$services}\nDate: {$dateLabel}\nTime: {$timeLabel}\n\nPlease confirm your attendance or any changes.";
+                            $statusTone = match ($appointment->status) {
+                                'pending' => 'border-[#f4d27a]/40 text-[#f4d27a]',
+                                'confirmed', 'in_progress' => 'border-[#38bdf8]/40 text-[#7dd3fc]',
+                                'completed' => 'border-[#22c55e]/40 text-[#86efac]',
+                                'cancelled' => 'border-[#ef4444]/40 text-[#fca5a5]',
+                                default => 'border-[#c8a24a]/30 text-[#f8efd8]',
+                            };
+                        @endphp
+                        <article class="rounded-lg border border-[#c8a24a]/20 bg-[#11100d] p-4 shadow-lg shadow-black/10 sm:p-5">
+                            <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="rounded-md border px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] {{ $statusTone }}">{{ Str::headline($appointment->status) }}</span>
+                                        <span class="text-sm font-semibold text-[#fff9ea]">{{ $appointment->booking_number }}</span>
+                                    </div>
+
+                                    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                        <div>
+                                            <p class="text-xs uppercase text-[#a89567]">Customer</p>
+                                            <p class="mt-1 font-semibold text-[#fff9ea]">{{ $appointment->customer->name }}</p>
+                                            <p class="text-sm text-[#d8c8a3]">+91 {{ $appointment->customer->mobile }}</p>
                                         </div>
-                                    </td>
-                                    <td class="px-4 py-4">
-                                        <span class="rounded-full bg-[#1f1a0f] px-3 py-1 text-xs text-[#f4d27a]">{{ $appointment->appointment_type === 'home_service' ? 'Home Visit' : 'Salon Visit' }}</span>
-                                    </td>
-                                    <td class="px-4 py-4">
-                                        <div class="font-semibold text-[#fff9ea]">{{ $appointment->date?->format('d M Y') }}</div>
-                                        <div class="text-xs text-[#d8c8a3]">{{ \Illuminate\Support\Carbon::parse($appointment->start_time)->format('h:i A') }}</div>
-                                    </td>
-                                    <td class="px-4 py-4 text-sm text-[#d8c8a3]">
-                                        <form method="POST" action="{{ route('admin.appointments.assign', $appointment) }}" class="flex min-w-[170px] gap-2">
+                                        <div>
+                                            <p class="text-xs uppercase text-[#a89567]">When</p>
+                                            <p class="mt-1 font-semibold text-[#fff9ea]">{{ $dateLabel }}</p>
+                                            <p class="text-sm text-[#d8c8a3]">{{ $timeLabel }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs uppercase text-[#a89567]">Visit Type</p>
+                                            <p class="mt-1 font-semibold text-[#fff9ea]">{{ $appointment->appointment_type === 'home_service' ? 'Home Visit' : 'Salon Visit' }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs uppercase text-[#a89567]">Assigned Staff</p>
+                                            <p class="mt-1 font-semibold text-[#fff9ea]">{{ $appointment->assignedStaff?->name ?? 'Not assigned' }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <p class="text-xs uppercase text-[#a89567]">Services</p>
+                                        <p class="mt-1 text-sm leading-6 text-[#d8c8a3]">{{ $services ?: 'Salon service' }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-3">
+                                    @if (! in_array($appointment->status, ['completed', 'cancelled'], true))
+                                        <form method="POST" action="{{ route('admin.appointments.assign', $appointment) }}" class="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
                                             @csrf
                                             @method('PATCH')
-                                            <select name="assigned_staff_id" class="w-full rounded-md border border-[#c8a24a]/30 bg-black px-2 py-2 text-xs text-[#fff9ea]">
+                                            <select name="assigned_staff_id" class="min-w-0 rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-sm text-[#fff9ea]">
                                                 <option value="">Assign staff</option>
                                                 @foreach ($activeStaff as $member)
                                                     <option value="{{ $member->id }}" @selected($appointment->assigned_staff_id === $member->id)>{{ $member->name }}</option>
                                                 @endforeach
                                             </select>
-                                            <button class="rounded-md bg-[#d5a93b] px-3 py-2 text-xs font-semibold text-black">Save</button>
+                                            <button class="rounded-md border border-[#c8a24a]/40 px-3 py-2 text-xs font-semibold text-[#f4d27a]">{{ $appointment->assigned_staff_id ? 'Change' : 'Assign' }}</button>
                                         </form>
-                                    </td>
-                                    <td class="px-4 py-4">
-                                        <form method="POST" action="{{ route('admin.appointments.status.update', $appointment) }}" class="flex min-w-[160px] gap-2">
-                                            @csrf
-                                            @method('PATCH')
-                                            <select name="status" class="w-full rounded-md border border-[#c8a24a]/30 bg-black px-2 py-2 text-xs text-[#fff9ea]">
-                                                @foreach ($statuses as $statusOption)
-                                                    <option value="{{ $statusOption }}" @selected($appointment->status === $statusOption)>{{ ucfirst(str_replace('_', ' ', $statusOption)) }}</option>
-                                                @endforeach
-                                            </select>
-                                            <button class="rounded-md border border-[#c8a24a]/40 bg-black px-3 py-2 text-xs font-semibold text-[#f4d27a]">Update</button>
-                                        </form>
-                                    </td>
-                                    <td class="px-4 py-4 text-sm text-[#d8c8a3]">{{ $billingLabel }}</td>
-                                    <td class="px-4 py-4 space-y-2">
-                                        <a href="{{ route('admin.appointments.show', $appointment) }}" class="inline-flex rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-xs font-semibold text-[#f8efd8]">View</a>
-                                        @if ($bill)
-                                            <a href="{{ route('admin.billing.show', $bill) }}" class="inline-flex rounded-md border border-[#f4d27a] bg-[#1b1711] px-3 py-2 text-xs font-semibold text-[#f4d27a]">View Bill</a>
-                                        @else
-                                            <a href="{{ route('admin.billing.create', ['appointment_id' => $appointment->id]) }}" class="inline-flex rounded-md bg-[#d5a93b] px-3 py-2 text-xs font-semibold text-black">Start Billing</a>
+                                    @endif
+
+                                    <div class="grid grid-cols-2 gap-2">
+                                        @if ($appointment->status === 'pending')
+                                            <form method="POST" action="{{ route('admin.appointments.status.update', $appointment) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="confirmed">
+                                                <button class="w-full rounded-md bg-[#d5a93b] px-3 py-2 text-xs font-bold text-black">Accept</button>
+                                            </form>
                                         @endif
-                                        <a href="https://wa.me/91{{ preg_replace('/\D+/', '', $appointment->customer->mobile) }}?text={{ rawurlencode($whatsappMessage) }}" target="_blank" rel="noopener" class="inline-flex rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-xs font-semibold text-[#f8efd8]">WhatsApp</a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                        @if ($appointment->status === 'confirmed')
+                                            <form method="POST" action="{{ route('admin.appointments.status.update', $appointment) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="in_progress">
+                                                <button class="w-full rounded-md bg-[#d5a93b] px-3 py-2 text-xs font-bold text-black">Start</button>
+                                            </form>
+                                        @endif
+                                        @if (in_array($appointment->status, ['confirmed', 'in_progress'], true))
+                                            <form method="POST" action="{{ route('admin.appointments.status.update', $appointment) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="completed">
+                                                <button class="w-full rounded-md bg-[#d5a93b] px-3 py-2 text-xs font-bold text-black">Complete</button>
+                                            </form>
+                                        @endif
+                                        @if (! in_array($appointment->status, ['completed', 'cancelled'], true))
+                                            <form method="POST" action="{{ route('admin.appointments.status.update', $appointment) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="cancelled">
+                                                <button class="w-full rounded-md border border-[#ef4444]/40 px-3 py-2 text-xs font-semibold text-[#fca5a5]">Cancel</button>
+                                            </form>
+                                        @endif
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <a href="{{ route('admin.appointments.show', $appointment) }}" class="rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-center text-xs font-semibold text-[#f8efd8]">View Details</a>
+                                        @if ($bill)
+                                            <a href="{{ route('admin.billing.show', $bill) }}" class="rounded-md border border-[#f4d27a]/40 bg-black px-3 py-2 text-center text-xs font-semibold text-[#f4d27a]">View Bill</a>
+                                        @else
+                                            <a href="{{ route('admin.billing.create', ['appointment_id' => $appointment->id]) }}" class="rounded-md border border-[#f4d27a]/40 bg-black px-3 py-2 text-center text-xs font-semibold text-[#f4d27a]">Billing</a>
+                                        @endif
+                                        <a href="tel:+91{{ $mobile }}" class="rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-center text-xs font-semibold text-[#f8efd8]">Call</a>
+                                        <a href="https://wa.me/91{{ $mobile }}?text={{ rawurlencode($whatsappMessage) }}" target="_blank" rel="noopener" class="rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-center text-xs font-semibold text-[#f8efd8]">WhatsApp</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
                 </div>
 
                 <div class="mt-4">{{ $appointments->links() }}</div>

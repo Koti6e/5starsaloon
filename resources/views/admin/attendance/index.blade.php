@@ -26,6 +26,12 @@
                         <input type="hidden" name="staff_id" value="{{ $member->id }}">
                         <h2 class="font-semibold text-[#fff9ea]">{{ $member->name }}</h2>
                         <p class="mt-1 text-xs text-[#a89567]">{{ $member->shift_start ?: 'Shift not set' }} - {{ $member->shift_end ?: 'Shift not set' }}</p>
+                        @if ($row?->selfie_path)
+                            <a href="{{ route('admin.attendance.selfie', $row) }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 rounded-md border border-[#c8a24a]/30 px-3 py-2 text-xs font-semibold text-[#f4d27a]">
+                                <span class="h-2 w-2 rounded-full bg-[#d5a93b]"></span>
+                                View captured photo
+                            </a>
+                        @endif
                         @include('admin.attendance.partials.controls', ['row' => $row])
                     </form>
                 @endforeach
@@ -33,13 +39,22 @@
 
             <x-admin.card class="hidden overflow-hidden md:block">
                 <table class="min-w-full divide-y divide-[#c8a24a]/15 text-sm">
-                    <thead class="bg-black text-left text-[#f4d27a]"><tr><th class="px-4 py-3">Staff</th><th>Shift</th><th>Source</th><th>Status</th><th>Check in</th><th>Check out</th><th>Reason</th><th>Notes</th><th></th></tr></thead>
+                    <thead class="bg-black text-left text-[#f4d27a]"><tr><th class="px-4 py-3">Staff</th><th>Shift</th><th>Photo</th><th>Source</th><th>Status</th><th>Check in</th><th>Check out</th><th>Reason</th><th>Notes</th><th></th></tr></thead>
                     <tbody class="divide-y divide-[#c8a24a]/10 text-[#f8efd8]">
                         @foreach ($staff as $member)
                             @php($row = $attendance->get($member->id))
                             <tr>
                                     <td class="px-4 py-3">{{ $member->name }}</td>
                                     <td>{{ $member->shift_start ?: 'Not set' }} - {{ $member->shift_end ?: 'Not set' }}</td>
+                                    <td>
+                                        @if ($row?->selfie_path)
+                                            <a href="{{ route('admin.attendance.selfie', $row) }}" target="_blank" rel="noopener" class="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-[#c8a24a]/30 bg-black" title="View captured attendance photo">
+                                                <img src="{{ route('admin.attendance.selfie', $row) }}" alt="Attendance photo for {{ $member->name }}" class="h-full w-full object-cover">
+                                            </a>
+                                        @else
+                                            <span class="text-xs text-[#a89567]">-</span>
+                                        @endif
+                                    </td>
                                     <td><span class="rounded-sm border border-[#c8a24a]/30 px-2 py-1 text-xs">{{ in_array($row?->source, ['automatic_login', 'automatic_logout'], true) ? 'Auto Marked' : ($row ? 'Updated by Admin' : 'Not marked') }}</span></td>
                                     <td><select name="status" form="attendance-row-{{ $member->id }}" class="rounded-md border-[#c8a24a]/30 bg-black text-[#fff9ea]">@foreach (['not_marked', 'present', 'absent', 'late', 'leave', 'weekly_off'] as $status)<option value="{{ $status }}" @selected(($row?->status ?? 'not_marked') === $status)>{{ str_replace('_', ' ', ucfirst($status)) }}</option>@endforeach</select></td>
                                     <td><input type="time" name="check_in_time" form="attendance-row-{{ $member->id }}" value="{{ $row?->check_in_time }}" class="rounded-md border-[#c8a24a]/30 bg-black text-[#fff9ea]"></td>

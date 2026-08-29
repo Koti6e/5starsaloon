@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class User extends Authenticatable
@@ -73,6 +74,16 @@ class User extends Authenticatable
         }
 
         return asset('storage/'.$this->profile_photo);
+    }
+
+    public function fcmDeviceTokens(): HasMany
+    {
+        return $this->hasMany(FcmDeviceToken::class);
+    }
+
+    public function appNotifications(): HasMany
+    {
+        return $this->hasMany(AppNotification::class);
     }
 
     public function initials(): string

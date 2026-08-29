@@ -5,6 +5,9 @@
         @endforeach
     </select>
     <div class="text-xs text-[#a89567]">{{ in_array($row?->source, ['automatic_login', 'automatic_logout'], true) ? 'Auto Marked' : ($row ? 'Updated by Admin' : 'Not marked') }}</div>
+    @if ($row?->selfie_path)
+        <a href="{{ route('admin.attendance.selfie', $row) }}" target="_blank" rel="noopener" class="rounded-md border border-[#c8a24a]/30 px-3 py-2 text-center text-xs font-semibold text-[#f4d27a]">View captured photo</a>
+    @endif
     <div class="grid grid-cols-2 gap-3">
         <input type="time" name="check_in_time" value="{{ $row?->check_in_time }}" class="rounded-md border-[#c8a24a]/30 bg-black text-[#fff9ea]">
         <input type="time" name="check_out_time" value="{{ $row?->check_out_time }}" class="rounded-md border-[#c8a24a]/30 bg-black text-[#fff9ea]">
