@@ -196,17 +196,20 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @auth
             @if (auth()->user()->isAdmin() && config('services.firebase.vapid_key') && config('services.firebase.project_id'))
-                <script type="module">
-                    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
-                    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js';
-
-                    const firebaseConfig = @json([
+                @php
+                    $firebaseWebConfig = [
                         'apiKey' => config('services.firebase.web_api_key'),
                         'authDomain' => config('services.firebase.auth_domain'),
                         'projectId' => config('services.firebase.project_id'),
                         'messagingSenderId' => config('services.firebase.messaging_sender_id'),
                         'appId' => config('services.firebase.app_id'),
-                    ]);
+                    ];
+                @endphp
+                <script type="module">
+                    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
+                    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js';
+
+                    const firebaseConfig = @json($firebaseWebConfig);
                     const vapidKey = @json(config('services.firebase.vapid_key'));
 
                     async function registerCaptainPush() {

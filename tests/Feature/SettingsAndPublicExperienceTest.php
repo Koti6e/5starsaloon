@@ -13,15 +13,15 @@ class SettingsAndPublicExperienceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_public_theme_defaults_to_light_and_uses_icon_toggle(): void
+    public function test_public_theme_defaults_to_luxury_gold(): void
     {
         SalonSetting::putValue('default_theme', 'light');
 
         $this->get('/')
             ->assertOk()
             ->assertSee('dataset.defaultTheme', false)
-            ->assertSee('Switch to dark mode')
-            ->assertDontSee('Dark Theme');
+            ->assertSee('Luxury Gold')
+            ->assertDontSee('Switch to dark mode');
     }
 
     public function test_admin_can_update_settings_and_staff_cannot(): void

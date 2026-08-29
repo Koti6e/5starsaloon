@@ -724,11 +724,13 @@ class BillingTest extends TestCase
 
         $response->assertRedirect();
         $this->assertStringStartsWith('https://wa.me/919876543210?text=', $location);
-        $this->assertStringContainsString('Invoice: '.$bill->invoice_number, rawurldecode($location));
-        $this->assertStringContainsString('Amount Paid: ₹120', rawurldecode($location));
+        $this->assertStringContainsString('Invoice No: '.$bill->invoice_number, rawurldecode($location));
+        $this->assertStringContainsString('Grand Total: ₹120', rawurldecode($location));
         $this->assertStringContainsString(route('invoice.public', $bill->invoice_public_token), rawurldecode($location));
-        $this->assertStringContainsString('secure link', rawurldecode($location));
-        $this->assertStringContainsString('Thank you.', rawurldecode($location));
+        $this->assertStringContainsString('View / Download Your Bill', rawurldecode($location));
+        $this->assertStringContainsString('Where every visit becomes an experience.', rawurldecode($location));
+        $this->assertStringNotContainsString('Hello', rawurldecode($location));
+        $this->assertStringNotContainsString('Hi ', rawurldecode($location));
         $this->assertStringNotContainsString('Staff will manually attach the PDF.', rawurldecode($location));
     }
 

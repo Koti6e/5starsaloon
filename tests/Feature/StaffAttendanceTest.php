@@ -44,7 +44,7 @@ class StaffAttendanceTest extends TestCase
             'password' => 'password',
         ]);
 
-        $this->post('/logout')->assertRedirect('/');
+        $this->post('/logout')->assertRedirect(route('login', absolute: false));
 
         $attendance = StaffAttendance::query()->where('staff_id', $staff->id)->firstOrFail();
         $this->assertNotNull($attendance->check_out_time);
