@@ -59,6 +59,9 @@ Route::get('/services/{service}', [PublicPageController::class, 'service'])->nam
 Route::get('/gallery', [PublicPageController::class, 'gallery'])->name('gallery');
 Route::get('/about', [PublicPageController::class, 'about'])->name('about');
 Route::get('/contact', [PublicPageController::class, 'contact'])->name('contact');
+Route::get('/privacy-policy', function () {
+    return view('public.privacy-policy');
+})->name('privacy-policy');
 Route::get('/sitemap.xml', function () {
     $urls = collect([
         route('home'),
