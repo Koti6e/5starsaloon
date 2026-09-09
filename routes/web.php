@@ -60,7 +60,9 @@ Route::get('/gallery', [PublicPageController::class, 'gallery'])->name('gallery'
 Route::get('/about', [PublicPageController::class, 'about'])->name('about');
 Route::get('/contact', [PublicPageController::class, 'contact'])->name('contact');
 Route::get('/privacy-policy', function () {
-    return view('public.privacy-policy');
+    return view('public.privacy-policy', [
+        'settings' => \App\Models\SalonSetting::cached(),
+    ]);
 })->name('privacy-policy');
 Route::get('/sitemap.xml', function () {
     $urls = collect([
