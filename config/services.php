@@ -45,5 +45,9 @@ return [
         'app_id' => env('VITE_FIREBASE_APP_ID'),
         'vapid_key' => env('VITE_FIREBASE_VAPID_KEY'),
     ],
-
+'whatsapp' => [
+    'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+    'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+    'api_version' => env('WHATSAPP_API_VERSION', 'v26.0'),
+],
 ];
