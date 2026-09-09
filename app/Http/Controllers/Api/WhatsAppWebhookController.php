@@ -31,7 +31,7 @@ class WhatsAppWebhookController extends Controller
         // Incoming WhatsApp events
         $payload = $request->all();
 
-        Log::info('WhatsApp webhook received', [
+        Log::warning('WhatsApp webhook received', [
             'payload' => $payload,
         ]);
 
