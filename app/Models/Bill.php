@@ -24,6 +24,10 @@ class Bill extends Model
         'idempotency_key',
         'invoice_public_token',
         'invoice_pdf_path',
+        'whatsapp_invoice_status',
+        'whatsapp_invoice_sent_at',
+        'whatsapp_invoice_message_id',
+        'whatsapp_invoice_error',
         'notes',
         'billed_at',
     ];
@@ -36,6 +40,7 @@ class Bill extends Model
             'home_visit_charge' => 'decimal:2',
             'grand_total' => 'decimal:2',
             'billed_at' => 'datetime',
+            'whatsapp_invoice_sent_at' => 'datetime',
         ];
     }
 
