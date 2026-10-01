@@ -18,6 +18,10 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
 use App\Http\Controllers\Staff\SelfieAttendanceController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 
 Route::get('/firebase-messaging-sw.js', function () {
     $config = [
@@ -84,8 +88,10 @@ Route::get('/sitemap.xml', function () {
 
     $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . $xml;
 
-    return response($xml, 200)->header('Content-Type', 'application/xml');
-})->name('sitemap');
+    return response($xml, 200)
+        ->header('Content-Type', 'application/xml; charset=UTF-8')
+        ->header('Cache-Control', 'public, max-age=3600, s-maxage=86400, must-revalidate');
+})->withoutMiddleware([StartSession::class, AddQueuedCookiesToResponse::class, ShareErrorsFromSession::class, PreventRequestForgery::class])->name('sitemap');
 Route::post('/contact', [PublicPageController::class, 'storeContact'])
     ->middleware('throttle:5,1')
     ->name('contact.store');
@@ -136,7 +142,7 @@ Route::prefix('admin')
         Route::get('/attendance', [AdminAttendanceController::class, 'index'])->name('attendance.index');
         Route::post('/attendance', [AdminAttendanceController::class, 'update'])->name('attendance.update');
         Route::get('/customers/{customer}/whatsapp', [AdminCustomerController::class, 'whatsapp'])->name('customers.whatsapp');
-        Route::resource('customers', AdminCustomerController::class)->only(['index', 'create', 'store', 'show']);
+        Route::resource('customers', AdminCustomerController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
         Route::resource('services', AdminServiceController::class)->except(['show', 'destroy']);
         Route::patch('/services/{service}/favorite', [AdminServiceController::class, 'toggleFavorite'])->name('services.favorite.toggle');
         Route::get('/settings', [AdminSettingController::class, 'edit'])->name('settings.edit');

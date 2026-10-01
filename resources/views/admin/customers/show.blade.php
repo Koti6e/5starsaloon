@@ -5,7 +5,10 @@
                 <h1 class="font-serif text-2xl text-[#f4d27a]">{{ $customer->name }}</h1>
                 <p class="mt-1 text-sm text-[#d8c8a3]">+91 {{ $customer->mobile }} · {{ $customer->customer_code }}</p>
             </div>
-            <a href="{{ route('admin.customers.whatsapp', $customer) }}" target="_blank" rel="noopener" class="rounded-md bg-[#d5a93b] px-4 py-3 text-center text-sm font-semibold text-black">Open WhatsApp</a>
+            <div class="flex gap-2">
+                <a href="{{ route('admin.customers.edit', $customer) }}" class="rounded-md border border-[#c8a24a]/40 px-4 py-3 text-center text-sm font-semibold text-[#f8efd8]">Edit</a>
+                <a href="{{ route('admin.customers.whatsapp', $customer) }}" target="_blank" rel="noopener" class="rounded-md bg-[#d5a93b] px-4 py-3 text-center text-sm font-semibold text-black">Open WhatsApp</a>
+            </div>
         </div>
     </x-slot>
 

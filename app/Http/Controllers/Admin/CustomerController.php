@@ -73,6 +73,32 @@ class CustomerController extends Controller
         ]);
     }
 
+    public function edit(Customer $customer): View
+    {
+        return view('admin.customers.edit', compact('customer'));
+    }
+
+    public function update(Request $request, Customer $customer): RedirectResponse
+    {
+        $request->validate(['mobile' => ['required', 'string', 'max:30']]);
+        $mobile = Customer::normalizeMobile((string) $request->input('mobile'));
+        if (! preg_match('/^[6-9]\d{9}$/', $mobile)) {
+            throw ValidationException::withMessages(['mobile' => 'Enter a valid Indian mobile number.']);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z]+(?: [A-Za-z]+)*$/'],
+            'mobile' => [Rule::unique('customers', 'mobile')->ignore($customer->id)],
+        ]);
+
+        $customer->update([
+            'name' => Str::title(Str::lower(preg_replace('/\s+/', ' ', trim($validated['name'])))),
+            'mobile' => $mobile,
+        ]);
+
+        return redirect()->route('admin.customers.show', $customer)->with('status', 'Customer details updated.');
+    }
+
     public function whatsapp(Customer $customer): RedirectResponse
     {
         if ($customer->whatsapp_status === 'not_contacted') {

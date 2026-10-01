@@ -35,10 +35,25 @@ class AuthenticatedSessionController extends Controller
         }
 
         if ($request->user()->requiresLoginSelfie()) {
-            return redirect()->intended(route('staff.selfie.create', absolute: false));
+            $now = now('Asia/Kolkata');
+            $weeklyOff = mb_strtolower((string) $request->user()->weekly_off) === mb_strtolower($now->format('l'));
+            $verifiedToday = null;
+            if (! $weeklyOff) {
+                $verifiedToday = StaffAttendance::query()
+                    ->where('staff_id', $request->user()->id)
+                    ->whereDate('attendance_date', $now->toDateString())
+                    ->whereNotNull('selfie_captured_at')
+                    ->first();
+            }
+
+            if ($verifiedToday) {
+                $request->session()->put('staff_selfie_attendance_id', $verifiedToday->id);
+            } elseif (! $weeklyOff) {
+                return redirect()->intended(route('staff.selfie.create', absolute: false));
+            }
         }
 
-        if ($request->user()->isStaff()) {
+        if ($request->user()->isStaff() && ! $request->user()->requiresLoginSelfie()) {
             StaffAttendance::query()->firstOrCreate(
                 [
                     'staff_id' => $request->user()->id,

@@ -51,7 +51,7 @@ class BillingController extends Controller
         }
 
         $todayBillsQuery = Bill::query()
-            ->with(['customer', 'payments'])
+            ->with(['customer', 'payments', 'createdBy'])
             ->whereDate('billed_at', now('Asia/Kolkata')->toDateString())
             ->latest('billed_at');
 
@@ -59,11 +59,21 @@ class BillingController extends Controller
             $todayBillsQuery->where('billed_by', $request->user()->id);
         }
 
+        $todayBillSummary = (clone $todayBillsQuery)
+            ->reorder()
+            ->selectRaw('created_by, COUNT(*) as bill_count, SUM(grand_total) as total_sales')
+            ->groupBy('created_by')
+            ->with('createdBy')
+            ->get();
+        $todayOverall = (clone $todayBillsQuery)->reorder()->selectRaw('COUNT(*) as bill_count, COALESCE(SUM(grand_total), 0) as total_sales')->first();
+
         return view('billing.create', [
             'services' => $services,
             'categories' => $categories,
             'appointment' => $appointment,
-            'todayBills' => $todayBillsQuery->limit(10)->get(),
+            'todayBills' => (clone $todayBillsQuery)->limit(10)->get(),
+            'todayBillSummary' => $todayBillSummary,
+            'todayOverall' => $todayOverall,
             'staff' => User::query()->where('role', 'staff')->where('status', 'active')->orderBy('name')->get(),
             'biller' => $request->user(),
             'idempotencyKey' => old('idempotency_key', (string) Str::uuid()),
@@ -106,19 +116,58 @@ class BillingController extends Controller
             ? $customers->firstWhere('mobile', $mobile)
             : $customers->first();
 
+        $customerIds = $customers->pluck('id');
+        $visitStats = $customerIds->isEmpty() ? collect() : DB::table('bills')
+            ->whereIn('customer_id', $customerIds)
+            ->where('status', 'completed')
+            ->groupBy('customer_id')
+            ->selectRaw('customer_id, COUNT(*) as visit_count, MAX(billed_at) as last_visit_at')
+            ->get()
+            ->keyBy('customer_id');
+        $latestBillTimes = Bill::query()
+            ->whereIn('customer_id', $customerIds)
+            ->where('status', 'completed')
+            ->selectRaw('customer_id, MAX(billed_at) as last_billed_at')
+            ->groupBy('customer_id');
+        $lastBills = $customerIds->isEmpty() ? collect() : Bill::query()
+            ->joinSub($latestBillTimes, 'latest_customer_bills', function ($join): void {
+                $join->on('bills.customer_id', '=', 'latest_customer_bills.customer_id')
+                    ->on('bills.billed_at', '=', 'latest_customer_bills.last_billed_at');
+            })
+            ->where('bills.status', 'completed')
+            ->with('items')
+            ->select('bills.*')
+            ->get()
+            ->unique('customer_id')
+            ->keyBy('customer_id');
+
+        $customerDetails = $customers->mapWithKeys(function (Customer $entry) use ($visitStats, $lastBills, $request): array {
+            $visits = $visitStats->get($entry->id);
+            $lastBill = $lastBills->get($entry->id);
+            return [$entry->id => [
+                'total_visits' => (int) ($visits->visit_count ?? 0),
+                'last_visit_at' => $visits?->last_visit_at
+                    ? \Illuminate\Support\Carbon::parse($visits->last_visit_at)->timezone('Asia/Kolkata')->format('d M Y')
+                    : null,
+                'last_bill_amount' => $lastBill?->grand_total,
+                'last_services' => $lastBill?->items->pluck('service_name_snapshot')->filter()->unique()->values() ?? collect(),
+                'history_url' => $request->user()->isAdmin() ? route('admin.customers.show', $entry, false) : null,
+            ]];
+        });
+
         return response()->json([
             'found' => (bool) $customer,
             'customers' => $customers->map(fn (Customer $customer) => [
                 'id' => $customer->id,
                 'name' => $customer->name,
                 'mobile' => $customer->mobile,
-                'last_visit_at' => $customer->last_visit_at?->format('d M Y'),
+                ...($customerDetails->get($customer->id) ?? []),
             ])->values(),
             'customer' => $customer ? [
                 'id' => $customer->id,
                 'name' => $customer->name,
                 'mobile' => $customer->mobile,
-                'last_visit_at' => $customer->last_visit_at?->format('d M Y'),
+                ...($customerDetails->get($customer->id) ?? []),
             ] : null,
         ]);
     }

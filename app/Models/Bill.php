@@ -59,6 +59,11 @@ class Bill extends Model
         return $this->belongsTo(User::class, 'billed_by');
     }
 
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(BillItem::class);

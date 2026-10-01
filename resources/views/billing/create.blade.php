@@ -105,7 +105,6 @@
             initialActiveCategory: @js(request()->query('category')),
             initialPaymentMethod: @js(old('payment_method', 'cash')),
             initialPaymentNote: @js(old('payment_note', '')),
-            initialSplitPayments: @js(old('split_payments', [['method' => 'cash', 'amount' => 0], ['method' => 'upi', 'amount' => 0]])),
             staff: @js(collect([auth()->user()])->merge($staff)->unique('id')->map(fn ($staffMember) => ['id' => $staffMember->id, 'name' => $staffMember->name])->values()),
             lookupUrl: '{{ route($routeRoot.'.billing.customer-lookup', [], false) }}',
             favoriteToggleBase: '{{ auth()->user()->isAdmin() ? url('admin/services') : '' }}',
@@ -184,6 +183,16 @@
                             <span class="text-[var(--app-muted)]" x-text="maskMobile(mobile)"></span>
                         </p>
                         <button type="button" @click="clearCustomer()" class="shrink-0 text-xs font-bold text-[var(--app-primary)]">Change</button>
+                    </div>
+
+                    <div x-show="customerFound && customerVisitInfo" x-cloak class="mt-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-xs text-[var(--app-text)]">
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <p><span class="block text-[var(--app-muted)]">Total Visits</span><strong x-text="customerVisitInfo?.total_visits ?? 0"></strong></p>
+                            <p><span class="block text-[var(--app-muted)]">Last Visit</span><strong x-text="customerVisitInfo?.last_visit_at ?? '—'"></strong></p>
+                            <p><span class="block text-[var(--app-muted)]">Last Bill</span><strong x-text="customerVisitInfo?.last_bill_amount ? money(customerVisitInfo.last_bill_amount) : '—'"></strong></p>
+                            <p><span class="block text-[var(--app-muted)]">Last Services</span><strong x-text="customerVisitInfo?.last_services?.join(', ') || '—'"></strong></p>
+                        </div>
+                        <a x-show="customerVisitInfo?.history_url" :href="customerVisitInfo?.history_url" class="mt-2 inline-flex font-semibold text-[var(--app-primary)] underline">View Customer History</a>
                     </div>
 
                     <div x-show="newCustomerOpen" x-cloak class="mt-2 grid gap-2 sm:grid-cols-2">
@@ -315,13 +324,24 @@
                 </section>
 
                 <details class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2.5 text-sm text-[var(--app-text)]">
-                    <summary class="cursor-pointer font-semibold text-[var(--app-primary)]">Today’s Bills ({{ $todayBills->count() }})</summary>
+                    <summary class="cursor-pointer font-semibold text-[var(--app-primary)]">Today’s Bills ({{ $todayOverall->bill_count }})</summary>
                     <div class="mt-2 space-y-1.5">
+                        <div class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-xs">
+                            <p class="font-bold text-[var(--app-text)]">Overall: {{ $todayOverall->bill_count }} bills · {{ \App\Support\Money::inr($todayOverall->total_sales) }}</p>
+                            @foreach ($todayBillSummary as $creatorSummary)
+                                <p class="mt-1 text-[var(--app-muted)]">
+                                    {{ $creatorSummary->createdBy?->name ?? 'Creator unknown (historical)' }}:
+                                    {{ $creatorSummary->bill_count }} bills · {{ \App\Support\Money::inr($creatorSummary->total_sales) }}
+                                    @if ($creatorSummary->createdBy?->isAdmin()) · Admin @elseif ($creatorSummary->createdBy?->isStaff()) · Staff @endif
+                                </p>
+                            @endforeach
+                        </div>
                         @forelse ($todayBills as $todayBill)
                             <a href="{{ route($routeRoot.'.billing.show', $todayBill, false) }}" class="flex items-center justify-between gap-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2">
                                 <span class="min-w-0">
                                     <span class="block truncate text-xs font-semibold">{{ $todayBill->invoice_number }}</span>
                                     <span class="block truncate text-xs text-[var(--app-muted)]">{{ $todayBill->customer->name }}</span>
+                                    <span class="block truncate text-[11px] text-[var(--app-muted)]">{{ $todayBill->billed_at->timezone('Asia/Kolkata')->format('h:i A') }} · Created by {{ $todayBill->createdBy?->name ?? 'Unknown (historical)' }}{{ $todayBill->createdBy?->isAdmin() ? ' · Admin' : ($todayBill->createdBy?->isStaff() ? ' · Staff' : '') }}</span>
                                 </span>
                                 <span class="shrink-0 text-xs font-bold text-[var(--app-primary)]">{{ \App\Support\Money::inr($todayBill->grand_total) }}</span>
                             </a>
@@ -341,7 +361,7 @@
                 </div>
 
                 <div x-show="paymentOpen" x-cloak class="fixed inset-0 z-50" aria-modal="true" role="dialog">
-                    <div class="absolute inset-0 bg-black/70" @click="paymentOpen = false"></div>
+                    <div class="absolute inset-0 bg-black/70" @click="cancelPayment()"></div>
                     <section class="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-[32px] border-t border-[var(--app-border)] bg-[var(--app-surface)] p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[0_-24px_80px_rgba(0,0,0,0.55)] sm:left-1/2 sm:max-w-xl sm:-translate-x-1/2 sm:rounded-[32px] sm:border">
                         <div class="mx-auto mb-4 h-1.5 w-12 rounded-full bg-[var(--app-border)]"></div>
                         <div class="flex items-start justify-between gap-3">
@@ -349,7 +369,7 @@
                                 <p class="text-sm text-[var(--app-muted)]">Total</p>
                                 <p class="mt-1 text-4xl font-bold text-[var(--app-primary)]" x-text="money(grandTotal())"></p>
                             </div>
-                            <button type="button" @click="paymentOpen = false" class="h-11 w-11 rounded-full border border-[var(--app-border)] text-xl text-[var(--app-text)]">×</button>
+                            <button type="button" @click="cancelPayment()" class="h-11 w-11 rounded-full border border-[var(--app-border)] text-xl text-[var(--app-text)]">×</button>
                         </div>
 
                         <div class="mt-6 grid grid-cols-3 gap-2">
@@ -385,7 +405,6 @@
                             </template>
                             <div class="flex flex-wrap gap-3">
                                 <button type="button" @click="addSplitPayment" class="rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3 text-sm font-semibold text-[var(--app-primary)]">Add split row</button>
-                                <button type="button" @click="fillSplitBalance" class="rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3 text-sm font-semibold text-[var(--app-primary)]">Fill balance</button>
                             </div>
                             <x-input-error :messages="$errors->get('split_payments')" class="mt-2" />
                         </div>
@@ -421,6 +440,7 @@
                 customerFound: Boolean(config.initialCustomerId),
                 customerStatus: config.initialCustomerId ? 'Existing Customer' : 'New Customer',
                 lastVisit: '',
+                customerVisitInfo: null,
                 lookupLoading: false,
                 lookupController: null,
                 customerSuggestions: [],
@@ -439,13 +459,12 @@
                 paymentMethod: config.initialPaymentMethod || 'cash',
                 paymentNote: config.initialPaymentNote || '',
                 paymentOpen: false,
-                splitPayments: Array.isArray(config.initialSplitPayments) && config.initialSplitPayments.length
-                    ? config.initialSplitPayments
-                    : [{method: 'cash', amount: 0}, {method: 'upi', amount: 0}],
+                splitPayments: [{method: 'cash', amount: 0}, {method: 'upi', amount: 0}],
                 submitting: false,
                 submitError: '',
                 init() {
                     setInterval(() => this.now = new Date(), 1000);
+                    if (this.customerId) this.lookupCustomer();
                 },
                 get filteredServices() {
                     const q = this.serviceQuery.trim().toLowerCase();
@@ -571,6 +590,7 @@
                         this.customerFound = false;
                         this.customerId = '';
                         this.lastVisit = '';
+                        this.customerVisitInfo = null;
                         this.customerSuggestions = [];
                         this.customerSuggestionsOpen = false;
                         this.customerStatus = 'New Customer';
@@ -595,6 +615,7 @@
                             this.customerStatus = this.customerSuggestions.length ? 'Select Customer' : 'New Customer';
                             this.customerId = '';
                             this.lastVisit = '';
+                            this.customerVisitInfo = null;
                             this.newCustomerOpen = false;
                         })
                         .catch(error => {
@@ -602,6 +623,7 @@
                                 this.customerFound = false;
                                 this.customerId = '';
                                 this.lastVisit = '';
+                                this.customerVisitInfo = null;
                                 this.customerSuggestions = [];
                                 this.customerSuggestionsOpen = false;
                                 this.customerStatus = 'New Customer';
@@ -612,9 +634,13 @@
                         });
                 },
                 selectCustomer(customer) {
+                    if (String(this.customerId || '') !== String(customer.id || '')) {
+                        this.splitPayments = [{method: 'cash', amount: 0}, {method: 'upi', amount: 0}];
+                    }
                     this.customerFound = true;
                     this.customerStatus = 'Existing Customer';
                     this.customerId = customer.id || '';
+                    this.customerVisitInfo = customer;
                     this.customerName = customer.name || '';
                     this.mobile = String(customer.mobile || '').replace(/\D/g, '').slice(-10);
                     this.customerQuery = `${this.customerName} · ${this.mobile}`;
@@ -632,6 +658,8 @@
                     this.customerFound = false;
                     this.customerId = '';
                     this.lastVisit = '';
+                    this.customerVisitInfo = null;
+                    this.splitPayments = [{method: 'cash', amount: 0}, {method: 'upi', amount: 0}];
                     this.customerStatus = 'New Customer';
                     this.customerSuggestionsOpen = false;
                     this.newCustomerOpen = true;
@@ -643,6 +671,8 @@
                     this.mobile = '';
                     this.customerQuery = '';
                     this.lastVisit = '';
+                    this.customerVisitInfo = null;
+                    this.splitPayments = [{method: 'cash', amount: 0}, {method: 'upi', amount: 0}];
                     this.customerStatus = 'New Customer';
                     this.customerSuggestions = [];
                     this.customerSuggestionsOpen = false;
@@ -660,8 +690,11 @@
                 },
                 openPayment() {
                     if (this.items.length === 0) return;
-                    this.fillSplitBalance();
                     this.paymentOpen = true;
+                },
+                cancelPayment() {
+                    this.paymentOpen = false;
+                    this.splitPayments = [{method: 'cash', amount: 0}, {method: 'upi', amount: 0}];
                 },
                 async submitBilling(event) {
                     const form = event.target;
@@ -789,10 +822,6 @@
                 },
                 performerName(id) {
                     return this.staff.find(staff => Number(staff.id) === Number(id))?.name || @js(auth()->user()->name);
-                },
-                fillSplitBalance() {
-                    const used = this.splitPayments.slice(0, -1).reduce((total, payment) => total + (Number(payment.amount) || 0), 0);
-                    this.splitPayments[this.splitPayments.length - 1].amount = Math.max(0, this.grandTotal() - used).toFixed(2);
                 },
                 addSplitPayment() {
                     this.splitPayments.push({method: 'cash', amount: 0});
