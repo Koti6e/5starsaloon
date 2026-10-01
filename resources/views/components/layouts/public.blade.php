@@ -1,4 +1,4 @@
-@props(['settings' => []])
+@props(['settings' => [], 'robots' => 'index,follow,max-image-preview:large'])
 
 @php
     $searchServices = \App\Models\Service::query()
@@ -32,15 +32,43 @@
 
     // Set default values with fallbacks. Legacy light/dark settings map into the public theme system.
     $defaultTheme = 'gold';
-    $salonName = $settings['salon_name'] ?? '5 Star New Look Salon';
+    $salonName = $settings['salon_name'] ?? '5 Star New Look A/C';
     $tagline = $settings['tagline'] ?? 'Look Good. Feel Great. Be Confident.';
-    $metaDescription = $description ?? ($settings['meta_description'] ?? 'Premium salon, spa, hair and grooming services in Chengalpattu by 5 Star New Look Salon.');
-    $phoneDigits = preg_replace('/\D+/', '', (string) ($settings['primary_phone'] ?? $settings['whatsapp_number'] ?? '9003866903'));
-    $phoneHref = strlen($phoneDigits) >= 10 ? 'tel:+91'.substr($phoneDigits, -10) : route('contact');
-    $whatsappDigits = preg_replace('/\D+/', '', (string) ($settings['whatsapp_number'] ?? '9003866903'));
-    $whatsappEnabled = ! in_array(strtolower((string) ($settings['whatsapp_floater_enabled'] ?? '1')), ['0', 'false', 'off'], true);
+    $metaDescription = $description ?? ($settings['meta_description'] ?? 'Explore salon, hair care, skin care and grooming services at 5 Star New Look A/C. Browse services and book an appointment online.');
+    $publicBaseUrl = rtrim(config('app.url'), '/');
+    if (app()->environment('production')) $publicBaseUrl = 'https://'.parse_url($publicBaseUrl, PHP_URL_HOST);
+    $weeklyHours = \App\Support\WorkingHours::schedule($settings);
+    $schemaHours = collect($weeklyHours)->filter(fn ($hours) => $hours['open'])->flatMap(function ($hours, $day): array {
+        $specification = fn (string $dayName, string $opens, string $closes) => [
+            '@type' => 'OpeningHoursSpecification', 'dayOfWeek' => 'https://schema.org/'.$dayName,
+            'opens' => $opens, 'closes' => $closes,
+        ];
+        if ($hours['opens'] < $hours['closes']) return [$specification($day, $hours['opens'], $hours['closes'])];
+
+        $dayIndex = array_search($day, \App\Support\WorkingHours::DAYS, true);
+        $nextDay = \App\Support\WorkingHours::DAYS[($dayIndex + 1) % count(\App\Support\WorkingHours::DAYS)];
+
+        return [$specification($day, $hours['opens'], '23:59'), $specification($nextDay, '00:00', $hours['closes'])];
+    })->values()->all();
+    $businessSchema = array_filter([
+        '@context' => 'https://schema.org', '@type' => 'BeautySalon', 'name' => $salonName,
+        'url' => $publicBaseUrl, 'telephone' => $settings['primary_phone'] ?? null,
+        'image' => secure_asset($settings['og_image'] ?? 'images/salon/premium-salon-hero.webp'),
+        'hasMap' => $settings['google_maps_url'] ?? null,
+        'identifier' => $settings['google_place_id'] ?? null,
+        'geo' => is_numeric($settings['latitude'] ?? null) && is_numeric($settings['longitude'] ?? null) ? ['@type' => 'GeoCoordinates', 'latitude' => (float) $settings['latitude'], 'longitude' => (float) $settings['longitude']] : null,
+        'address' => filled($settings['address'] ?? null) ? array_filter([
+            '@type' => 'PostalAddress', 'streetAddress' => $settings['address'], 'addressLocality' => $settings['city'] ?? ($settings['area'] ?? null),
+            'addressRegion' => $settings['state'] ?? null, 'postalCode' => $settings['pincode'] ?? null, 'addressCountry' => 'IN',
+        ]) : null,
+        'openingHoursSpecification' => $schemaHours ?: null,
+        'sameAs' => array_values(array_filter([$settings['instagram_url'] ?? null, $settings['facebook_url'] ?? null, $settings['youtube_url'] ?? null])),
+    ], fn ($value) => $value !== null && $value !== '');
+    $phoneHref = filled($settings['primary_phone'] ?? null) ? 'tel:'.preg_replace('/[^+\d]/', '', $settings['primary_phone']) : route('contact');
+    $whatsappDigits = preg_replace('/\D+/', '', (string) ($settings['whatsapp_number'] ?? ''));
+    $whatsappEnabled = ! in_array(strtolower((string) ($settings['whatsapp_floater_enabled'] ?? '0')), ['0', 'false', 'off'], true);
     $whatsappHref = $whatsappEnabled
-        ? 'https://wa.me/'.(strlen($whatsappDigits) === 10 ? '91'.$whatsappDigits : $whatsappDigits).'?text='.rawurlencode($settings['whatsapp_default_message'] ?? 'Hi 5 Star New Look Salon, I would like to know more about your services.')
+        ? (filled($whatsappDigits) ? 'https://wa.me/'.(strlen($whatsappDigits) === 10 ? '91'.$whatsappDigits : $whatsappDigits).'?text='.rawurlencode($settings['whatsapp_default_message'] ?? 'Hello, I would like to know more about your services.') : route('contact'))
         : route('contact');
     
     $navLinks = [
@@ -61,12 +89,22 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ $title ?? $salonName }}</title>
         <meta name="description" content="{{ $metaDescription }}">
-        <link rel="canonical" href="{{ url()->current() }}">
+        <meta name="robots" content="{{ $robots }}">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $title ?? $salonName }}">
+        <meta name="twitter:description" content="{{ $metaDescription }}">
+        @php
+            $canonicalPath = trim(request()->getPathInfo(), '/');
+            $canonicalUrl = $publicBaseUrl.($canonicalPath === '' ? '' : '/'.$canonicalPath);
+            if (request()->routeIs('gallery') && request()->integer('page') > 1) $canonicalUrl .= '?page='.request()->integer('page');
+        @endphp
+        <link rel="canonical" href="{{ $canonicalUrl }}">
         <meta property="og:type" content="website">
         <meta property="og:title" content="{{ $title ?? $salonName }}">
         <meta property="og:description" content="{{ $metaDescription }}">
-        <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:image" content="{{ asset($settings['og_image'] ?? 'images/salon/premium-salon-hero.webp') }}">
+        <meta property="og:url" content="{{ $canonicalUrl }}">
+        <meta property="og:image" content="{{ secure_asset($settings['og_image'] ?? 'images/salon/premium-salon-hero.webp') }}">
+        <script type="application/ld+json">{!! json_encode($businessSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
         <link rel="icon" href="{{ asset('favicon.ico') }}">
         <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
         <meta name="theme-color" content="#d5a93b">
@@ -787,11 +825,13 @@
                         </div>
                     </div>
                     <address class="not-italic text-sm leading-6 theme-text-secondary">
-                        4/123, Grand Southern Trunk Road<br>
-                        Ottery, main road, Vandalur, Tamil Nadu 600048
+                        @if (filled($settings['address'] ?? null)) {{ $settings['address'] }}<br> @endif
+                        {{ collect([$settings['area'] ?? null, $settings['city'] ?? null, $settings['state'] ?? null, $settings['pincode'] ?? null])->filter()->implode(', ') }}
+                        @if (filled($settings['primary_phone'] ?? null))<br><a href="tel:{{ preg_replace('/[^+\d]/', '', $settings['primary_phone']) }}">{{ $settings['primary_phone'] }}</a>@endif
                     </address>
                     <div class="flex flex-wrap gap-3 text-sm md:justify-end">
-                        <a href="https://share.google/IiDmKg4shunbfTDYh" target="_blank" rel="noopener" class="rounded-md border px-3 py-2 font-semibold link-theme" style="border-color: var(--border-clr);">Get Directions</a>
+                        @if (filled($settings['google_maps_url'] ?? null))<a href="{{ $settings['google_maps_url'] }}" target="_blank" rel="noopener noreferrer" class="rounded-md border px-3 py-2 font-semibold link-theme" style="border-color: var(--border-clr);">Get Directions</a>@endif
+                        <a href="{{ route('contact') }}" class="rounded-md border px-3 py-2 link-theme" style="border-color: var(--border-clr);">Contact</a>
                         <a href="{{ route('login') }}" class="rounded-md border px-3 py-2 link-theme" style="border-color: var(--border-clr);">Staff Login</a>
                     </div>
                 </div>

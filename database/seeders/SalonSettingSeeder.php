@@ -10,19 +10,19 @@ class SalonSettingSeeder extends Seeder
     public function run(): void
     {
         $settings = [
-            'salon_name' => '5 Star New Look Salon',
+            'salon_name' => '5 Star New Look A/C',
             'tagline' => 'Look Good. Feel Great. Be Confident.',
             'logo' => 'images/brand/logo-full.webp',
             'logo_mark' => 'images/brand/logo-mark.webp',
             'favicon' => 'favicon.ico',
-            'address' => 'Visit the salon for location details.',
+            'address' => '',
             'primary_phone' => '',
             'whatsapp_number' => '',
             'whatsapp_floater_enabled' => '0',
             'whatsapp_default_message' => 'Hello, I would like to know more about your salon services.',
             'email' => '',
-            'working_hours' => 'Open daily by appointment.',
-            'weekly_holiday' => 'Confirmed by the salon team.',
+            'working_hours' => '',
+            'weekly_holiday' => '',
             'google_maps_url' => '',
             'currency' => 'INR',
             'invoice_prefix' => '5STAR',

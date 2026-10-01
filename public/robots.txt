@@ -6,5 +6,6 @@ Disallow: /billing
 Disallow: /profile
 Disallow: /login
 Disallow: /password
+Disallow: /invoices
 
-Sitemap: /sitemap.xml
+Sitemap: https://5star.sushako.in/sitemap.xml

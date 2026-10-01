@@ -45,6 +45,13 @@ return [
         'app_id' => env('VITE_FIREBASE_APP_ID'),
         'vapid_key' => env('VITE_FIREBASE_VAPID_KEY'),
     ],
+
+    'search_console' => [
+        'site_url' => env('GOOGLE_SEARCH_CONSOLE_SITE_URL', 'https://5star.sushako.in/'),
+        'client_id' => env('GOOGLE_SEARCH_CONSOLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET'),
+        'refresh_token' => env('GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN'),
+    ],
 'whatsapp' => [
     'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
     'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),

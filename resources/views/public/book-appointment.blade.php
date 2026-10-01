@@ -1,4 +1,4 @@
-<x-layouts.public :settings="$settings" title="Book Appointment | 5 Star New Look Salon">
+<x-layouts.public :settings="$settings" title="Book a Salon Appointment | 5 Star New Look A/C" description="Choose a salon service and request an appointment at 5 Star New Look A/C.">
     <section class="bg-[#0d0b08] px-4 py-12 sm:px-6 lg:px-8">
         <div class="mx-auto max-w-4xl">
             <h1 class="font-serif text-4xl text-[#f4d27a]">Book Appointment</h1>

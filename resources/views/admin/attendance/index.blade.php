@@ -45,6 +45,34 @@
                 </x-admin.card>
             </form>
 
+            <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
+                <div class="flex flex-wrap items-end justify-between gap-4">
+                    <div><h2 class="text-xl font-semibold text-[var(--app-text)]">Monthly Summary</h2><p class="mt-1 text-sm text-[var(--app-text-muted)]">{{ $month->format('F Y') }} · totals include days elapsed in the current month.</p></div>
+                    <form method="GET" class="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="date" value="{{ $date }}">
+                        <label class="text-sm text-[var(--app-text)]">Month<input type="month" name="month" value="{{ $month->format('Y-m') }}" class="mt-1 block rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"></label>
+                        <a href="{{ route('admin.attendance.index', ['month' => $month->copy()->subMonth()->format('Y-m'), 'date' => $date]) }}" class="rounded-md border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-text)]">Previous</a>
+                        <a href="{{ route('admin.attendance.index', ['month' => $month->copy()->addMonth()->format('Y-m'), 'date' => $date]) }}" class="rounded-md border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-text)]">Next</a>
+                        <button class="rounded-md bg-[var(--app-primary-strong)] px-4 py-2 text-sm font-semibold text-black">View</button>
+                    </form>
+                </div>
+                <div class="mt-5 overflow-x-auto"><table class="w-full min-w-[760px] text-left text-sm"><thead class="text-xs uppercase text-[var(--app-text-muted)]"><tr><th class="p-2">Staff</th><th class="p-2">Working Days</th><th class="p-2">Present</th><th class="p-2">Absent</th><th class="p-2">Leave</th><th class="p-2">Half Day</th><th class="p-2">Attendance</th></tr></thead><tbody class="divide-y divide-[var(--app-border)]">
+                    @foreach ($staff as $member)
+                        @php
+                            $summary = $monthlySummary[$member->id];
+                        @endphp
+                        <tr><th class="p-2 font-medium text-[var(--app-text)]"><a class="underline" href="{{ route('admin.attendance.index', ['month' => $month->format('Y-m'), 'date' => $date, 'staff' => $member->id]) }}">{{ $member->name }}</a></th><td class="p-2">{{ $summary['working_days'] }}</td><td class="p-2">{{ $summary['present'] }}</td><td class="p-2">{{ $summary['absent'] }}</td><td class="p-2">{{ $summary['leave'] }}</td><td class="p-2">{{ $summary['half_day'] }}</td><td class="p-2 font-semibold">{{ $summary['attendance'] }}%</td></tr>
+                    @endforeach
+                </tbody></table></div>
+            </section>
+
+            @if ($selectedStaff && isset($monthlySummary[$selectedStaff]))
+                @php
+                    $detailMember = $staff->firstWhere('id', $selectedStaff);
+                @endphp
+                <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5"><div class="flex justify-between gap-3"><h2 class="text-lg font-semibold text-[var(--app-text)]">{{ $detailMember->name }} · {{ $month->format('F Y') }}</h2><a class="text-sm underline" href="{{ route('admin.attendance.index', ['month' => $month->format('Y-m'), 'date' => $date]) }}">Close details</a></div><div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">@foreach ($monthlySummary[$selectedStaff]['daily'] as $day)<div class="rounded-md border border-[var(--app-border)] p-3 text-sm"><p class="font-semibold text-[var(--app-text)]">{{ \Illuminate\Support\Carbon::parse($day['date'])->format('D, M j') }}</p><p class="mt-1 capitalize text-[var(--app-text-muted)]">{{ str_replace('_', ' ', $day['status']) }}</p>@if ($day['row']?->check_in_time)<p class="mt-1 text-xs">{{ substr($day['row']->check_in_time, 0, 5) }}@if($day['row']->check_out_time) – {{ substr($day['row']->check_out_time, 0, 5) }}@endif</p>@endif</div>@endforeach</div></section>
+            @endif
+
             {{-- Daily summary --}}
             @php
                 $presentCount = 0;
@@ -102,6 +130,7 @@
                             'absent' => 'Absent',
                             'late' => 'Late',
                             'leave' => 'Leave',
+                            'half_day' => 'Half Day',
                             'weekly_off' => 'Weekly Off',
                             default => 'Not Marked',
                         };
@@ -111,6 +140,7 @@
                             'absent' => 'border-red-400/20 bg-red-400/10 text-red-300',
                             'late' => 'border-amber-400/20 bg-amber-400/10 text-amber-300',
                             'leave' => 'border-sky-400/20 bg-sky-400/10 text-sky-300',
+                            'half_day' => 'border-violet-400/20 bg-violet-400/10 text-violet-300',
                             'weekly_off' => 'border-slate-400/20 bg-slate-400/10 text-slate-300',
                             default => 'border-[#c8a24a]/20 bg-[#c8a24a]/5 text-[#d8c8a3]',
                         };
@@ -225,7 +255,7 @@
                                             name="status"
                                             class="w-full rounded-xl border-[#c8a24a]/30 bg-black px-3 py-3 text-sm text-[#fff9ea] outline-none focus:border-[#d5a93b] focus:ring-1 focus:ring-[#d5a93b]"
                                         >
-                                            @foreach (['not_marked', 'present', 'absent', 'late', 'leave', 'weekly_off'] as $statusOption)
+                                            @foreach (['not_marked', 'present', 'absent', 'late', 'leave', 'half_day', 'weekly_off'] as $statusOption)
                                                 <option
                                                     value="{{ $statusOption }}"
                                                     @selected($status === $statusOption)

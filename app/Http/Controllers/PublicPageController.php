@@ -333,12 +333,12 @@ class PublicPageController extends Controller
             "Notes: {$notesStr}\n\n".
             "Please confirm this booking.";
 
-        $whatsappNum = preg_replace('/\D+/', '', $settings['whatsapp_number'] ?? $settings['primary_phone'] ?? '919876543210');
+        $whatsappNum = preg_replace('/\D+/', '', $settings['whatsapp_number'] ?? '');
         if (strlen($whatsappNum) === 10) {
             $whatsappNum = '91'.$whatsappNum;
         }
 
-        $whatsappUrl = 'https://wa.me/'.$whatsappNum.'?text='.rawurlencode($rawMessage);
+        $whatsappUrl = strlen($whatsappNum) >= 10 ? 'https://wa.me/'.$whatsappNum.'?text='.rawurlencode($rawMessage) : null;
 
         return view('public.appointment-confirmed', [
             'appointment' => $appointment,

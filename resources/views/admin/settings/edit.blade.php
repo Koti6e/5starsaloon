@@ -9,6 +9,10 @@
                 <p class="mb-5 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-3 text-sm text-[var(--app-text)]">{{ session('status') }}</p>
             @endif
 
+            <p class="mb-5 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-4 text-sm leading-6 text-[var(--app-text-muted)]">
+                Store verified business details from the exact “5 Star New Look A/C” Google Maps listing here. The listing’s full address, Maps URL or Place ID, coordinates, phone and opening hours have not been independently verified yet. Public contact details and structured data use only values saved in these settings.
+            </p>
+
             <form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" class="space-y-6">
                 @csrf
                 @method('PUT')
@@ -18,7 +22,7 @@
                         ['salon_name', 'Salon Name', 'text'], ['tagline', 'Tagline', 'text'],
                         ['address', 'Address', 'textarea'], ['area', 'Area', 'text'], ['city', 'City', 'text'], ['state', 'State', 'text'], ['pincode', 'Pincode', 'text'],
                         ['primary_phone', 'Phone Number', 'text'], ['alternate_phone', 'Alternate Phone', 'text'], ['email', 'Email', 'email'],
-                        ['google_maps_url', 'Google Maps URL', 'url'], ['working_hours', 'Working Hours', 'text'], ['weekly_holiday', 'Weekly Holiday', 'text'],
+                        ['google_maps_url', 'Google Maps URL', 'url'], ['google_place_id', 'Google Maps Place ID (verified)', 'text'], ['latitude', 'Latitude (verified)', 'text'], ['longitude', 'Longitude (verified)', 'text'],
                     ],
                     'Social Links' => [
                         ['instagram_url', 'Instagram URL', 'url'], ['facebook_url', 'Facebook URL', 'url'], ['youtube_url', 'YouTube URL', 'url'],
@@ -52,16 +56,39 @@
                     </section>
                 @endforeach
 
+                @php
+                    $weeklyHours = \App\Support\WorkingHours::schedule($settings);
+                @endphp
+                <section class="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
+                    <h2 class="font-serif text-xl text-[var(--app-text)]">Working Hours</h2>
+                    <p class="mt-1 text-sm text-[var(--app-text-muted)]">Set the public opening schedule. Closed days are excluded automatically.</p>
+                    <div class="mt-5 space-y-3">
+                        @foreach (\App\Support\WorkingHours::DAYS as $day)
+                            @php
+                                $hours = $weeklyHours[$day];
+                            @endphp
+                            <div class="grid items-end gap-3 rounded-md border border-[var(--app-border)] p-3 sm:grid-cols-[1fr_auto_1fr_1fr]">
+                                <span class="font-semibold text-[var(--app-text)]">{{ $day }}</span>
+                                <label class="flex items-center gap-2 text-sm text-[var(--app-text)]"><input type="checkbox" name="weekly_working_hours[{{ $day }}][open]" value="1" @checked($hours['open'])> Open</label>
+                                <label class="text-sm text-[var(--app-text)]">Opens<input type="time" name="weekly_working_hours[{{ $day }}][opens]" value="{{ old("weekly_working_hours.$day.opens", $hours['opens']) }}" class="mt-1 w-full rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"></label>
+                                <label class="text-sm text-[var(--app-text)]">Closes<input type="time" name="weekly_working_hours[{{ $day }}][closes]" value="{{ old("weekly_working_hours.$day.closes", $hours['closes']) }}" class="mt-1 w-full rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"></label>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+
                 <section class="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
                     <h2 class="font-serif text-xl text-[var(--app-text)]">Appearance & Media</h2>
                     <div class="mt-5 grid gap-4 sm:grid-cols-2">
                         <label class="block">
                             <span class="text-sm font-semibold text-[var(--app-text)]">Default Theme</span>
-                            @php($selectedTheme = match ($settings['default_theme'] ?? 'emerald') {
-                                'light' => 'pearl',
-                                'dark' => 'obsidian',
-                                default => $settings['default_theme'] ?? 'emerald',
-                            })
+                            @php
+                                $selectedTheme = match ($settings['default_theme'] ?? 'emerald') {
+                                    'light' => 'pearl',
+                                    'dark' => 'obsidian',
+                                    default => $settings['default_theme'] ?? 'emerald',
+                                };
+                            @endphp
                             <select name="default_theme" class="mt-1 w-full rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]">
                                 <option value="emerald" @selected($selectedTheme === 'emerald')>Neon Emerald</option>
                                 <option value="sapphire" @selected($selectedTheme === 'sapphire')>Neon Sapphire</option>

@@ -7,6 +7,7 @@ use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Service;
 use App\Models\ServiceCategory;
+use App\Models\SalonSetting;
 use App\Models\User;
 use App\Services\AppointmentNumberGenerator;
 use App\Services\CustomerCodeGenerator;
@@ -194,6 +195,7 @@ class Phase1StabilityTest extends TestCase
 
     public function test_confirmation_page_displays_data_and_whatsapp_intent(): void
     {
+        SalonSetting::putValue('whatsapp_number', '9876543210');
         $service = Service::query()->where('status', 'active')->firstOrFail();
         $customer = Customer::factory()->create(['name' => 'Sunil Kumar', 'mobile' => '9988776655']);
 

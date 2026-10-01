@@ -7,6 +7,7 @@
 node_modules
 vendor
 storage/logs/*.log
+storage/app/private/**
 storage/framework/cache/*
 storage/framework/sessions/*
 storage/framework/testing/*

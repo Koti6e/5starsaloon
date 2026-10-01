@@ -1,4 +1,4 @@
-<x-layouts.public :settings="$settings" title="Services | 5 Star New Look Salon">
+<x-layouts.public :settings="$settings" title="Salon Services & Packages | 5 Star New Look A/C" description="Browse haircuts, grooming, facials, hair care and salon packages at 5 Star New Look A/C. Compare configured prices and durations, then book online.">
     <section class="bg-[#0d0b08] px-4 py-12 sm:px-6 lg:px-8">
         <div class="mx-auto max-w-7xl">
             <h1 class="font-serif text-4xl text-[#f4d27a]">Services</h1>

@@ -24,6 +24,8 @@
             <img
                 src="{{ asset($coverPath) }}"
                 alt="{{ $service->coverImage()?->alt_text ?? $service->name }}"
+                width="640"
+                height="480"
                 class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                 loading="lazy"
             >

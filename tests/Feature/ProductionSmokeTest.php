@@ -15,7 +15,7 @@ class ProductionSmokeTest extends TestCase
     {
         $service = Service::query()->where('slug', 'haircut')->firstOrFail();
 
-        $this->get(route('home'))->assertOk()->assertSee('5 Star New Look Salon');
+        $this->get(route('home'))->assertOk()->assertSee('5 Star New Look A/C');
         $this->get(route('services.index'))->assertOk()->assertSee('Haircut');
         $this->get(route('services.index', ['search' => 'Hair']))->assertOk()->assertSee('Haircut');
         $this->get(route('services.show', $service))->assertOk()->assertSee($service->name);

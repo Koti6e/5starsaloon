@@ -65,16 +65,24 @@ Route::get('/privacy-policy', function () {
     ]);
 })->name('privacy-policy');
 Route::get('/sitemap.xml', function () {
+    $baseUrl = rtrim(config('app.url'), '/');
+    if (app()->environment('production')) $baseUrl = 'https://'.parse_url($baseUrl, PHP_URL_HOST);
+
     $urls = collect([
-        route('home'),
-        route('services.index'),
-        route('gallery'),
-        route('about'),
-        route('contact'),
-        route('appointments.book'),
+        $baseUrl,
+        $baseUrl . '/services',
+        $baseUrl . '/gallery',
+        $baseUrl . '/about',
+        $baseUrl . '/contact',
+        $baseUrl . '/book-appointment',
+        $baseUrl . '/privacy-policy',
     ]);
+    $serviceUrls = \App\Models\Service::query()->publiclyVisible()->orderBy('id')->get(['slug'])->map(fn ($service) => $baseUrl.'/services/'.$service->slug);
+    $urls = $urls->merge($serviceUrls);
 
     $xml = view('public.sitemap', ['urls' => $urls])->render();
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . $xml;
 
     return response($xml, 200)->header('Content-Type', 'application/xml');
 })->name('sitemap');

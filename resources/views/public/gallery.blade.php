@@ -1,4 +1,4 @@
-<x-layouts.public :settings="$settings" title="Gallery | 5 Star New Look Salon">
+<x-layouts.public :settings="$settings" title="Salon Gallery | 5 Star New Look A/C" description="Browse photos from 5 Star New Look A/C, including salon services and customer looks.">
     <section class="bg-[#0d0b08] px-4 py-12 sm:px-6 lg:px-8">
         <div class="mx-auto max-w-7xl">
             <h1 class="font-serif text-4xl text-[#f4d27a]">Inside the 5 Star Experience</h1>

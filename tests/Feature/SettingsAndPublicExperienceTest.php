@@ -32,15 +32,26 @@ class SettingsAndPublicExperienceTest extends TestCase
         $this->actingAs($staff)->put(route('admin.settings.update'), [])->assertForbidden();
 
         $this->actingAs($admin)->put(route('admin.settings.update'), [
-            'salon_name' => '5 Star New Look Salon',
+            'salon_name' => '5 Star New Look A/C',
             'default_theme' => 'light',
             'invoice_prefix' => '5STAR',
             'whatsapp_number' => '9876543210',
             'whatsapp_floater_enabled' => '1',
+            'weekly_working_hours' => [
+                'Monday' => ['open' => '1', 'opens' => '09:00', 'closes' => '21:00'],
+                'Tuesday' => ['opens' => '', 'closes' => ''],
+                'Wednesday' => ['opens' => '', 'closes' => ''],
+                'Thursday' => ['opens' => '', 'closes' => ''],
+                'Friday' => ['opens' => '', 'closes' => ''],
+                'Saturday' => ['opens' => '', 'closes' => ''],
+                'Sunday' => ['opens' => '', 'closes' => ''],
+            ],
         ])->assertRedirect();
 
         $this->assertSame('9876543210', SalonSetting::getValue('whatsapp_number'));
         $this->assertTrue(SalonSetting::bool('whatsapp_floater_enabled'));
+        $this->assertSame('09:00', json_decode(SalonSetting::getValue('weekly_working_hours'), true)['Monday']['opens']);
+        $this->get(route('contact'))->assertOk()->assertSee('9:00 AM – 9:00 PM');
     }
 
     public function test_whatsapp_floater_renders_when_enabled_and_hides_when_disabled(): void

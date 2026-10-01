@@ -1,17 +1,8 @@
 @props(['settings' => [], 'service' => null])
 @php
-    $whatsappSettings = \App\Models\SalonSetting::query()
-        ->whereIn('key', ['whatsapp_number', 'whatsapp_floater_enabled', 'whatsapp_default_message'])
-        ->pluck('value', 'key')
-        ->all();
-    $settings = array_replace($settings, $whatsappSettings);
-
-    $enabledValue = strtolower((string) ($settings['whatsapp_floater_enabled'] ?? '1'));
+    $enabledValue = strtolower((string) ($settings['whatsapp_floater_enabled'] ?? '0'));
     $enabled = ! in_array($enabledValue, ['0', 'false', 'off'], true);
-    $digits = preg_replace('/\D+/', '', (string) ($settings['whatsapp_number'] ?? '9003866903'));
-    if (strlen($digits) < 10) {
-        $digits = '9003866903';
-    }
+    $digits = preg_replace('/\D+/', '', (string) ($settings['whatsapp_number'] ?? ''));
     if (strlen($digits) === 10) {
         $digits = '91'.$digits;
     }
@@ -26,16 +17,18 @@
 
 @if ($enabled && strlen($digits) >= 11)
     <div class="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-50 grid gap-3">
+        @if (filled($settings['primary_phone'] ?? null))
         <a
-        href="tel:+919003866903"
-        aria-label="Call 5 Star New Look Salon"
-        title="Call 5 Star New Look Salon"
+        href="tel:{{ preg_replace('/[^+\d]/', '', $settings['primary_phone']) }}"
+        aria-label="Call {{ $settings['salon_name'] ?? 'the salon' }}"
+        title="Call {{ $settings['salon_name'] ?? 'the salon' }}"
         class="call-pulse relative flex h-14 w-14 items-center justify-center rounded-full border border-[#f4d27a]/50 bg-[var(--accent)] text-black shadow-2xl transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[var(--glow)]"
     >
         <svg viewBox="0 0 24 24" aria-hidden="true" class="h-7 w-7 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.9.66 2.8a2 2 0 0 1-.45 2.11L8.05 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.31 1.84.53 2.8.66A2 2 0 0 1 22 16.92Z"/>
         </svg>
         </a>
+        @endif
 
         <a
         href="https://wa.me/{{ $digits }}?text={{ rawurlencode($message) }}"
@@ -48,8 +41,8 @@
         </svg>
         </a>
 
-        <a
-            href="https://share.google/IiDmKg4shunbfTDYh"
+        @if (filled($settings['google_maps_url'] ?? null))<a
+            href="{{ $settings['google_maps_url'] }}"
             target="_blank"
             rel="noopener"
             aria-label="Visit 5 Star New Look Salon"
@@ -61,5 +54,6 @@
                 <circle cx="12" cy="10" r="3"/>
             </svg>
         </a>
+        @endif
     </div>
 @endif

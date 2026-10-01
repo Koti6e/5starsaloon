@@ -1,18 +1,23 @@
-<x-layouts.public :settings="$settings" title="5 Star New Look Salon | Best Unisex Salon & Spa in Chengalpattu">
+<x-layouts.public :settings="$settings" title="5 Star New Look A/C | Hair, Skin & Grooming Services" description="Explore salon services, grooming, hair care and facial treatments at 5 Star New Look A/C. Browse services and book an appointment online.">
     <!-- Hero Section -->
     <section class="relative min-h-[calc(100vh-72px)] overflow-hidden" data-hero>
-        <img 
-            src="{{ asset('images/salon/premium-salon-hero.webp') }}" 
-            alt="Luxury interior of 5 Star New Look Salon featuring modern styling chairs and ambient lighting in Chengalpattu" 
+        <img
+            src="{{ asset('images/salon/premium-salon-hero.webp') }}"
+            alt="Salon interior with modern styling chairs and ambient lighting"
+            width="1920"
+            height="1080"
+            fetchpriority="high"
             class="absolute inset-0 h-full w-full object-cover"
         >
         <div class="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/30" aria-hidden="true"></div>
         
         <div class="relative mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center px-4 py-16 sm:px-6 lg:px-8">
             <div class="max-w-3xl">
-                <img 
-                    src="{{ asset('images/brand/logo-mark.webp') }}" 
-                    alt="5 Star New Look Salon official logo mark" 
+                <img
+                    src="{{ asset('images/brand/logo-mark.webp') }}"
+                    alt="5 Star New Look A/C logo mark"
+                    width="256"
+                    height="256"
                     class="mb-6 h-24 w-24 rounded-full object-contain"
                 >
                 <p class="text-sm font-semibold uppercase tracking-wider text-[#f4d27a]">Premier Salon, Hair & Spa Experience</p>
@@ -20,7 +25,7 @@
                     Define Your Look. Elevate Your Confidence.
                 </h1>
                 <p class="mt-6 max-w-2xl text-lg leading-relaxed text-[#eadfca]">
-                    Welcome to Chengalpattu's premier destination for professional hair styling, advanced facial care, rejuvenating spa treatments, and elite grooming. Crafted with precision and personal care.
+                    Explore professional hair styling, facial care, massage treatments, and grooming, delivered with care and attention to your personal style.
                 </p>
                 
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -302,7 +307,7 @@
                     <span class="inline-block text-xs font-semibold uppercase tracking-wider text-[#c8a24a]">Visit Us</span>
                     <h2 class="mt-2 font-serif text-4xl text-[#f4d27a]">Confidence Begins with the Right Care</h2>
                     <p class="mt-5 text-lg leading-relaxed text-[#d8c8a3]">
-                        At 5 Star New Look Salon in Chengalpattu, every service is approached with extreme care, meticulous hygiene standards, and a deep respect for your personal style. Step into a tranquil, welcoming environment designed for complete relaxation.
+                        At 5 Star New Look A/C, every service is approached with care, attention to hygiene, and respect for your personal style. Visit for a welcoming salon experience.
                     </p>
                     <a href="{{ route('about') }}" class="mt-8 inline-flex items-center gap-2 rounded-md border border-[#c8a24a]/40 px-8 py-4 font-semibold text-[#f8efd8] transition-colors hover:bg-white/5">
                         Discover Our Story
@@ -315,23 +320,21 @@
                 <div class="rounded-2xl border border-[#c8a24a]/25 bg-gradient-to-br from-[#11100d] to-[#0a0907] p-10">
                     <h3 class="font-serif text-2xl text-[#fff9ea]">Contact and Location</h3>
                     <dl class="mt-6 space-y-4 text-sm">
-                        <div class="flex flex-col gap-1">
+                        @if (filled($settings['address'] ?? null))<div class="flex flex-col gap-1">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-[#c8a24a]">Address</dt>
-                            <dd class="text-[#d8c8a3]">{{ $settings['address'] ?? 'Visit the salon for location details.' }}</dd>
-                        </div>
-                        <div class="flex flex-col gap-1">
+                            <dd class="text-[#d8c8a3]">{{ collect([$settings['address'], $settings['area'] ?? null, $settings['city'] ?? null, $settings['state'] ?? null, $settings['pincode'] ?? null])->filter()->implode(', ') }}</dd>
+                        </div>@endif
+                        @if (filled($settings['primary_phone'] ?? null))<div class="flex flex-col gap-1">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-[#c8a24a]">Phone</dt>
-                            <dd class="text-[#d8c8a3]">{{ $settings['primary_phone'] ?? 'Available from salon reception.' }}</dd>
-                        </div>
+                            <dd class="text-[#d8c8a3]"><a href="tel:{{ preg_replace('/[^+\d]/', '', $settings['primary_phone']) }}">{{ $settings['primary_phone'] }}</a></dd>
+                        </div>@endif
+                        @if (filled($settings['whatsapp_number'] ?? null))<div class="flex flex-col gap-1"><dt class="text-xs font-semibold uppercase tracking-wider text-[#c8a24a]">WhatsApp</dt><dd class="text-[#d8c8a3]">{{ $settings['whatsapp_number'] }}</dd></div>@endif
                         <div class="flex flex-col gap-1">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-[#c8a24a]">Working Hours</dt>
-                            <dd class="text-[#d8c8a3]">{{ $settings['working_hours'] ?? 'Confirmed by the salon team.' }}</dd>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <dt class="text-xs font-semibold uppercase tracking-wider text-[#c8a24a]">Weekly Holiday</dt>
-                            <dd class="text-[#d8c8a3]">{{ $settings['weekly_holiday'] ?? 'Confirmed by the salon team.' }}</dd>
+                            <dd class="text-[#d8c8a3]">See configured weekly opening schedule below.</dd>
                         </div>
                     </dl>
+                    <div class="mt-5"><x-public-opening-hours :settings="$settings" /></div>
 
                     <div class="mt-8 grid gap-3 sm:grid-cols-3">
                         <a 
@@ -346,12 +349,12 @@
                         >
                             Message Us
                         </a>
-                        <a 
-                            href="{{ $settings['google_maps_url'] ?? route('contact') }}" 
+                        @if (filled($settings['google_maps_url'] ?? null))<a
+                            href="{{ $settings['google_maps_url'] }}"
                             class="rounded-md border border-[#c8a24a]/40 px-4 py-3.5 text-center text-sm font-semibold text-[#f8efd8] transition-colors hover:bg-white/5"
                         >
                             Get Directions
-                        </a>
+                        </a>@endif
                     </div>
                 </div>
             </div>

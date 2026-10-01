@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SalonSetting;
+use App\Support\WorkingHours;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -33,6 +34,9 @@ class SettingController extends Controller
             'alternate_phone' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:160'],
             'google_maps_url' => ['nullable', 'url', 'max:500'],
+            'google_place_id' => ['nullable', 'string', 'max:200'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'working_hours' => ['nullable', 'string', 'max:160'],
             'weekly_holiday' => ['nullable', 'string', 'max:120'],
             'instagram_url' => ['nullable', 'url', 'max:500'],
@@ -56,7 +60,26 @@ class SettingController extends Controller
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,ico', 'max:2048'],
             'favicon' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,ico', 'max:512'],
             'promotion_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
+            'weekly_working_hours' => ['sometimes', 'array'],
         ]);
+
+        if (array_key_exists('weekly_working_hours', $validated)) {
+            foreach (WorkingHours::DAYS as $day) {
+                $validated['weekly_working_hours'][$day] = validator(
+                    ['row' => $validated['weekly_working_hours'][$day] ?? []],
+                    ['row' => ['required', 'array'], 'row.open' => ['nullable', 'boolean'], 'row.opens' => ['nullable', 'date_format:H:i'], 'row.closes' => ['nullable', 'date_format:H:i']],
+                )->validate()['row'];
+                $row = $validated['weekly_working_hours'][$day];
+                if (! empty($row['open']) && (empty($row['opens']) || empty($row['closes']))) {
+                    return back()->withErrors(["weekly_working_hours.{$day}.opens" => "Add opening and closing times for {$day}, or mark it closed."])->withInput();
+                }
+                if (! empty($row['open']) && $row['opens'] === $row['closes']) {
+                    return back()->withErrors(["weekly_working_hours.{$day}.closes" => "Opening and closing times must be different for {$day}."])->withInput();
+                }
+                $validated['weekly_working_hours'][$day]['open'] = ! empty($row['open']);
+            }
+            $validated['weekly_working_hours'] = json_encode($validated['weekly_working_hours'], JSON_THROW_ON_ERROR);
+        }
 
         foreach (['whatsapp_floater_enabled', 'promotion_enabled'] as $flag) {
             $validated[$flag] = $request->boolean($flag) ? '1' : '0';
