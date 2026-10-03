@@ -22,6 +22,16 @@ class Phase1StabilityTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $hours = [];
+        foreach (\App\Support\WorkingHours::DAYS as $day) {
+            $hours[$day] = ['open' => true, 'opens' => '09:00', 'closes' => '21:00'];
+        }
+        SalonSetting::putValue('weekly_working_hours', json_encode($hours));
+    }
+
     public function test_admin_dashboard_renders_safely_when_appointments_table_is_unavailable(): void
     {
         Log::shouldReceive('warning')

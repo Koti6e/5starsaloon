@@ -83,7 +83,7 @@
         <dl class="rounded-md border {{ $printMode ? 'border-gray-200' : 'border-[#c8a24a]/15 bg-black/40' }} p-4 text-sm">
             <div class="flex justify-between"><dt>Subtotal</dt><dd>{{ \App\Support\Money::inr($bill->subtotal) }}</dd></div>
             @if ((float) $bill->discount_amount > 0)
-                <div class="mt-2 flex justify-between"><dt>Discount</dt><dd>-{{ \App\Support\Money::inr($bill->discount_amount) }}</dd></div>
+                <div class="mt-2 flex justify-between"><dt>{{ $bill->appointment?->booking_source === 'ONLINE_BOOKING' ? 'Online Booking Discount (10%)' : 'Discount' }}</dt><dd>-{{ \App\Support\Money::inr($bill->discount_amount) }}</dd></div>
             @endif
             @if ((float) $bill->home_visit_charge > 0)
                 <div class="mt-2 flex justify-between"><dt>Home Service Charge</dt><dd>{{ \App\Support\Money::inr($bill->home_visit_charge) }}</dd></div>

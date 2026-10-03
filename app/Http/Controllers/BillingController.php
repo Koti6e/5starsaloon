@@ -279,7 +279,9 @@ class BillingController extends Controller
                     ];
                 }
 
-                $discountCents = $this->toCents($validated['discount_amount'] ?? 0);
+                $discountCents = $appointment?->booking_source === 'ONLINE_BOOKING'
+                    ? min($subtotalCents, $this->toCents($appointment->discount))
+                    : $this->toCents($validated['discount_amount'] ?? 0);
                 $homeVisitCents = $this->toCents($validated['home_visit_charge'] ?? 0);
 
                 if ($discountCents > $subtotalCents) {
@@ -447,7 +449,7 @@ class BillingController extends Controller
     private function invoiceData(Bill $bill): array
     {
         return [
-            'bill' => $bill->load(['customer', 'billedBy', 'items.performer', 'payments']),
+            'bill' => $bill->load(['customer', 'appointment', 'billedBy', 'items.performer', 'payments']),
             'settings' => SalonSetting::cached(),
             'logoDataUri' => $this->logoDataUri(),
         ];

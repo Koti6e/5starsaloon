@@ -121,7 +121,7 @@
     <table class="summary">
         <tr><td>Subtotal</td><td class="right">{{ \App\Support\Money::inr($bill->subtotal) }}</td></tr>
         @if ((float) $bill->discount_amount > 0)
-            <tr><td>Discount</td><td class="right">-{{ \App\Support\Money::inr($bill->discount_amount) }}</td></tr>
+            <tr><td>{{ $bill->appointment?->booking_source === 'ONLINE_BOOKING' ? 'Online Booking Discount (10%)' : 'Discount' }}</td><td class="right">-{{ \App\Support\Money::inr($bill->discount_amount) }}</td></tr>
         @endif
         @if ((float) $bill->home_visit_charge > 0)
             <tr><td>Home Service Charge</td><td class="right">{{ \App\Support\Money::inr($bill->home_visit_charge) }}</td></tr>

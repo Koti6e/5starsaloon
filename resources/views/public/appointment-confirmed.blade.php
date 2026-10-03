@@ -41,6 +41,19 @@
                     </div>
 
                     <div>
+                        <dt class="text-xs uppercase tracking-wider text-[#a89873]">Original Price</dt>
+                        <dd class="mt-1 font-semibold text-[#fff9ea]">{{ \App\Support\Money::inr((float) $appointment->subtotal + (float) $appointment->visit_charge) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs uppercase tracking-wider text-[#a89873]">Online Booking Discount (10%)</dt>
+                        <dd class="mt-1 font-semibold text-[#f4d27a]">-{{ \App\Support\Money::inr($appointment->discount) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs uppercase tracking-wider text-[#a89873]">Final Price</dt>
+                        <dd class="mt-1 font-semibold text-[#fff9ea]">{{ \App\Support\Money::inr($appointment->total) }}</dd>
+                    </div>
+
+                    <div>
                         <dt class="text-xs uppercase tracking-wider text-[#a89873]">Appointment Type</dt>
                         <dd class="mt-1 font-semibold text-[#fff9ea]">
                             @if ($appointment->appointment_type === 'home_service')

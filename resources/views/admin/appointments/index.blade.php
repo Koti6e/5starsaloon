@@ -8,6 +8,7 @@
             </div>
             <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <a href="{{ route('appointments.book') }}" class="rounded-md bg-[#d5a93b] px-4 py-3 text-center text-sm font-semibold text-[#111]">Open Public Booking</a>
+                <a href="{{ route('admin.closed-dates.index') }}" class="rounded-md border border-[#c8a24a]/40 px-4 py-3 text-center text-sm font-semibold text-[#f8efd8]">Manage Closed Dates</a>
                 <a href="{{ route('admin.billing.create') }}" class="rounded-md border border-[#c8a24a]/40 px-4 py-3 text-center text-sm font-semibold text-[#f8efd8]">Quick Billing</a>
             </div>
         </div>

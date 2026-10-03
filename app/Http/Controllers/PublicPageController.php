@@ -8,11 +8,13 @@ use App\Models\ContactEnquiry;
 use App\Models\Customer;
 use App\Models\Gallery;
 use App\Models\SalonSetting;
+use App\Models\SalonClosedDate;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Services\AppointmentNumberGenerator;
 use App\Services\AppointmentNotificationService;
 use App\Services\CustomerCodeGenerator;
+use App\Support\WorkingHours;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -170,9 +172,40 @@ class PublicPageController extends Controller
 
     public function bookAppointment(): View
     {
+        $services = Service::query()->with(['category', 'images'])->publiclyVisible()->orderBy('name')->get();
+        $defaultDate = $services->first()
+            ? ($this->availableDates($services->first())->first() ?? now(config('app.timezone'))->toDateString())
+            : now(config('app.timezone'))->toDateString();
         return view('public.book-appointment', [
             'settings' => SalonSetting::cached(),
-            'services' => Service::query()->with(['category', 'images'])->publiclyVisible()->orderBy('name')->get(),
+            'services' => $services,
+            'defaultDate' => $defaultDate,
+        ]);
+    }
+
+    public function appointmentAvailability(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'service_slug' => ['required', 'exists:services,slug'],
+            'appointment_type' => ['nullable', 'in:salon_visit,home_service'],
+        ]);
+        $service = Service::query()->publiclyVisible()->where('slug', $data['service_slug'])->firstOrFail();
+        $appointmentType = $data['appointment_type'] ?? 'salon_visit';
+        $serviceAvailable = $appointmentType === 'home_service'
+            ? $service->is_home_service_available
+            : $service->is_salon_service_available;
+        $dates = ! $serviceAvailable
+            ? collect()
+            : $this->availableDates($service);
+        $selectedDate = $data['date'] ?? $dates->first();
+        $slots = $selectedDate && $dates->contains($selectedDate)
+            ? $this->availableSlots(Carbon::createFromFormat('Y-m-d', $selectedDate, config('app.timezone')), $service)
+            : collect();
+        return response()->json([
+            'dates' => $dates->map(fn (string $date) => ['value' => $date, 'label' => Carbon::createFromFormat('Y-m-d', $date)->format('D, d M Y')])->values(),
+            'selected_date' => $selectedDate,
+            'slots' => $slots->map(fn (Carbon $slot) => ['value' => $slot->format('H:i'), 'label' => $slot->format('h:i A')])->values(),
         ]);
     }
 
@@ -181,7 +214,7 @@ class PublicPageController extends Controller
         $validated = $request->validate([
             'appointment_type' => ['required', 'string', 'in:salon_visit,home_service'],
             'service_slug' => ['required', 'string', 'exists:services,slug'],
-            'appointment_date' => ['required', 'date', 'after_or_equal:today'],
+            'appointment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'appointment_time' => ['required', 'date_format:H:i'],
             'customer_name' => ['required', 'string', 'max:80', 'regex:/^[A-Za-z]+(?: [A-Za-z]+)*$/'],
             'mobile' => ['required', 'string', 'max:20'],
@@ -215,17 +248,18 @@ class PublicPageController extends Controller
         if ($validated['appointment_type'] === 'home_service' && ! $service->is_home_service_available) {
             throw ValidationException::withMessages(['appointment_type' => 'Selected service is not available for home visits.']);
         }
+        if ($validated['appointment_type'] === 'salon_visit' && ! $service->is_salon_service_available) {
+            throw ValidationException::withMessages(['service_slug' => 'Selected service is not available for salon visits.']);
+        }
 
         $customerName = Str::title(Str::lower(preg_replace('/\s+/', ' ', trim($validated['customer_name']))));
         $appointmentStart = Carbon::createFromFormat(
             'Y-m-d H:i',
             $validated['appointment_date'].' '.$validated['appointment_time'],
-            'Asia/Kolkata',
+            config('app.timezone'),
         );
         $durationMinutes = $service->duration_minutes ?: 30;
         $appointmentEnd = $appointmentStart->copy()->addMinutes($durationMinutes);
-
-        $this->validateAppointmentSlot($appointmentStart, $appointmentEnd);
 
         $duplicate = Appointment::query()
             ->where('appointment_type', $validated['appointment_type'])
@@ -240,6 +274,8 @@ class PublicPageController extends Controller
         if ($duplicate?->confirmation_token) {
             return redirect()->route('appointments.confirmed', ['token' => $duplicate->confirmation_token]);
         }
+
+        $this->validateAppointmentSlot($appointmentStart, $appointmentEnd);
 
         $appointment = DB::transaction(function () use ($validated, $mobile, $customerName, $service, $durationMinutes): Appointment {
             $customer = Customer::query()->firstOrCreate(
@@ -258,13 +294,15 @@ class PublicPageController extends Controller
 
             $unitPrice = $service->discounted_price ?: $service->price ?: $service->minimum_price ?: 0;
             $visitCharge = $validated['appointment_type'] === 'home_service' ? ($service->home_service_visit_charge ?? 0) : 0;
-            $total = $unitPrice + $visitCharge;
+            $discount = round($unitPrice * 0.10, 2);
+            $total = $unitPrice - $discount + $visitCharge;
 
             $startTime = $validated['appointment_time'];
             $estimatedEndTime = Carbon::parse($startTime)->addMinutes($durationMinutes)->format('H:i:s');
 
             $appointment = Appointment::query()->create([
                 'booking_number' => (new AppointmentNumberGenerator)->generate(),
+                'booking_source' => 'ONLINE_BOOKING',
                 'confirmation_token' => Str::random(40),
                 'customer_id' => $customer->id,
                 'appointment_type' => $validated['appointment_type'],
@@ -273,7 +311,7 @@ class PublicPageController extends Controller
                 'estimated_end_time' => $estimatedEndTime,
                 'subtotal' => $unitPrice,
                 'visit_charge' => $visitCharge,
-                'discount' => 0,
+                'discount' => $discount,
                 'total' => $total,
                 'status' => 'pending',
                 'customer_notes' => $validated['notes'] ?? null,
@@ -361,63 +399,76 @@ class PublicPageController extends Controller
 
     private function validateAppointmentSlot(Carbon $start, Carbon $end): void
     {
-        if ($start->lte(now('Asia/Kolkata'))) {
+        if ($start->lt(now(config('app.timezone'))->addHour())) {
             throw ValidationException::withMessages([
-                'appointment_time' => 'Please choose a future appointment time.',
+                'appointment_time' => 'Please choose a time at least one hour from now.',
             ]);
         }
 
+        if (SalonClosedDate::query()->whereDate('date', $start->toDateString())->where('is_active', true)->exists()) {
+            throw ValidationException::withMessages(['appointment_date' => 'The salon is closed on this date.']);
+        }
+        $hours = WorkingHours::schedule()[ $start->format('l') ] ?? null;
+        if (! $hours || ! $hours['open']) {
+            throw ValidationException::withMessages(['appointment_date' => 'The salon is closed on this date.']);
+        }
+        $opensAt = $start->copy()->setTimeFromTimeString($hours['opens']);
+        $closesAt = $start->copy()->setTimeFromTimeString($hours['closes']);
         $slotDuration = max(15, (int) (SalonSetting::getValue('appointment_slot_duration', '30') ?: 30));
-        if (($start->hour * 60 + $start->minute) % $slotDuration !== 0) {
-            throw ValidationException::withMessages([
-                'appointment_time' => 'Please choose a valid appointment slot.',
-            ]);
+        $offsetFromOpening = intdiv($start->getTimestamp() - $opensAt->getTimestamp(), 60);
+        if ($offsetFromOpening < 0 || $offsetFromOpening % $slotDuration !== 0) {
+            throw ValidationException::withMessages(['appointment_time' => 'Please choose a valid appointment slot.']);
         }
-
-        [$opensAt, $closesAt] = $this->workingHoursFor($start);
 
         if ($start->lt($opensAt) || $end->gt($closesAt)) {
             throw ValidationException::withMessages([
                 'appointment_time' => 'Please choose a time within salon working hours.',
             ]);
         }
+
+        $overlap = Appointment::query()->whereDate('date', $start->toDateString())->where('status', '!=', 'cancelled')
+            ->where('start_time', '<', $end->format('H:i:s'))->where('estimated_end_time', '>', $start->format('H:i:s'))->exists();
+        if ($overlap) throw ValidationException::withMessages(['appointment_time' => 'That appointment time is no longer available. Please choose another slot.']);
     }
 
-    /**
-     * @return array{0: Carbon, 1: Carbon}
-     */
-    private function workingHoursFor(Carbon $date): array
+    private function availableSlots(Carbon $date, Service $service): \Illuminate\Support\Collection
     {
-        $workingHours = SalonSetting::getValue('working_hours', '') ?: '';
-        $open = '09:00';
-        $close = '20:00';
-
-        if (preg_match('/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:-|to|–|—)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i', $workingHours, $matches)) {
-            $open = $this->normalizeWorkingHour($matches[1], $matches[2] ?? '00', $matches[3] ?? null);
-            $close = $this->normalizeWorkingHour($matches[4], $matches[5] ?? '00', $matches[6] ?? null);
-        }
-
-        return [
-            $date->copy()->setTimeFromTimeString($open),
-            $date->copy()->setTimeFromTimeString($close),
-        ];
+        $bookings = Appointment::query()->whereDate('date', $date->toDateString())->where('status', '!=', 'cancelled')->get(['start_time', 'estimated_end_time']);
+        return $this->slotsForDate($date, $service, $bookings, SalonClosedDate::query()->whereDate('date', $date->toDateString())->where('is_active', true)->exists());
     }
 
-    private function normalizeWorkingHour(string $hour, string $minute, ?string $meridian): string
+    private function availableDates(Service $service): \Illuminate\Support\Collection
     {
-        $hourInt = (int) $hour;
-        $minuteInt = (int) $minute;
-
-        if ($meridian) {
-            $meridian = strtolower($meridian);
-            if ($meridian === 'pm' && $hourInt < 12) {
-                $hourInt += 12;
-            }
-            if ($meridian === 'am' && $hourInt === 12) {
-                $hourInt = 0;
-            }
-        }
-
-        return str_pad((string) $hourInt, 2, '0', STR_PAD_LEFT).':'.str_pad((string) $minuteInt, 2, '0', STR_PAD_LEFT);
+        $startDate = now(config('app.timezone'))->startOfDay();
+        $endDate = $startDate->copy()->addDays(59);
+        $bookings = Appointment::query()->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where('status', '!=', 'cancelled')->get(['date', 'start_time', 'estimated_end_time'])->groupBy(fn (Appointment $appointment) => $appointment->date->toDateString());
+        $closures = SalonClosedDate::query()->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])->where('is_active', true)
+            ->pluck('date')->map(fn ($date) => Carbon::parse($date, config('app.timezone'))->toDateString())->flip();
+        return collect(range(0, 59))->map(fn (int $offset) => $startDate->copy()->addDays($offset))
+            ->filter(fn (Carbon $date) => $this->slotsForDate($date, $service, $bookings->get($date->toDateString(), collect()), $closures->has($date->toDateString()))->isNotEmpty())
+            ->map(fn (Carbon $date) => $date->toDateString())->values();
     }
+
+    private function slotsForDate(Carbon $date, Service $service, \Illuminate\Support\Collection $bookings, bool $closed): \Illuminate\Support\Collection
+    {
+        if ($closed) return collect();
+        $hours = WorkingHours::schedule()[ $date->format('l') ] ?? null;
+        if (! $hours || ! $hours['open']) return collect();
+        $open = $date->copy()->setTimeFromTimeString($hours['opens']);
+        $close = $date->copy()->setTimeFromTimeString($hours['closes']);
+        if ($close->lte($open)) $close->addDay();
+        $interval = max(15, (int) (SalonSetting::getValue('appointment_slot_duration', '30') ?: 30));
+        $duration = max(1, (int) ($service->duration_minutes ?: 30));
+        $now = now(config('app.timezone'));
+        $slots = collect();
+        for ($slot = $open->copy(); $slot->copy()->addMinutes($duration)->lte($close); $slot->addMinutes($interval)) {
+            if ($slot->lt($now->copy()->addHour())) continue;
+            $end = $slot->copy()->addMinutes($duration);
+            $busy = $bookings->contains(fn (Appointment $appointment) => $appointment->start_time < $end->format('H:i:s') && $appointment->estimated_end_time > $slot->format('H:i:s'));
+            if (! $busy) $slots->push($slot->copy());
+        }
+        return $slots;
+    }
+
 }

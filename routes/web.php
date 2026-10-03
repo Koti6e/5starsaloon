@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AboutSalonOsController;
 use App\Http\Controllers\Admin\AppointmentController;
+use App\Http\Controllers\Admin\SalonClosedDateController;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -96,6 +97,7 @@ Route::post('/contact', [PublicPageController::class, 'storeContact'])
     ->middleware('throttle:5,1')
     ->name('contact.store');
 Route::get('/book-appointment', [PublicPageController::class, 'bookAppointment'])->name('appointments.book');
+Route::get('/book-appointment/availability', [PublicPageController::class, 'appointmentAvailability'])->name('appointments.availability');
 Route::post('/book-appointment', [PublicPageController::class, 'storeAppointment'])
     ->middleware('throttle:10,1')
     ->name('appointments.store');
@@ -136,6 +138,10 @@ Route::prefix('admin')
         Route::get('/billing/{bill}/pdf', [BillingController::class, 'pdf'])->name('billing.pdf');
         Route::get('/billing/{bill}/whatsapp', [BillingController::class, 'whatsapp'])->name('billing.whatsapp');
         Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
+        Route::get('/closed-dates', [SalonClosedDateController::class, 'index'])->name('closed-dates.index');
+        Route::post('/closed-dates', [SalonClosedDateController::class, 'store'])->name('closed-dates.store');
+        Route::patch('/closed-dates/{closedDate}', [SalonClosedDateController::class, 'update'])->name('closed-dates.update');
+        Route::delete('/closed-dates/{closedDate}', [SalonClosedDateController::class, 'destroy'])->name('closed-dates.destroy');
         Route::get('/appointments/{appointment}', [AppointmentController::class, 'show'])->name('appointments.show');
         Route::patch('/appointments/{appointment}/assign', [AppointmentController::class, 'assign'])->name('appointments.assign');
         Route::patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status.update');

@@ -13,6 +13,7 @@ class Appointment extends Model
 
     protected $fillable = [
         'booking_number',
+        'booking_source',
         'confirmation_token',
         'customer_id',
         'appointment_type',
