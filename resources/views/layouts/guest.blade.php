@@ -25,6 +25,13 @@
 
         <title>{{ config('app.name', '5 Star New Look Salon') }}</title>
         <link rel="icon" href="{{ asset('favicon.ico') }}">
+        @if ($isLogin)
+            <link rel="manifest" href="{{ asset('staff.webmanifest') }}">
+            <meta name="theme-color" content="#d5a93b">
+            <link rel="apple-touch-icon" href="{{ asset('images/brand/5-star-new-look-salon-logo.png') }}">
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-title" content="SalonOS Staff">
+        @endif
         <script>
             (() => {
                 const defaultTheme = @json($defaultTheme);
@@ -273,6 +280,7 @@
                     </p>
                 </footer>
             </div>
+            <x-pwa-controls audience="staff" :enable-push="false" />
         </body>
     @else
         <body class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(213,169,59,0.12),_transparent_40%),#080705] font-sans text-[#fff9ea] antialiased">

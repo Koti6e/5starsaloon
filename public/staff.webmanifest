@@ -1,20 +1,14 @@
 {
-  "id": "/?app=customer",
-  "name": "5 Star New Look Salon",
-  "short_name": "5 Star Salon",
-  "description": "Book salon services and explore 5 Star New Look Salon.",
-  "start_url": "/",
+  "id": "/login?app=staff",
+  "name": "5 Star SalonOS Staff",
+  "short_name": "SalonOS Staff",
+  "description": "Secure staff and administration workspace for 5 Star New Look Salon.",
+  "start_url": "/login?app=staff",
   "scope": "/",
   "display": "standalone",
   "background_color": "#080705",
   "theme_color": "#d5a93b",
   "icons": [
-    {
-      "src": "/images/brand/logo-small.webp",
-      "sizes": "96x96",
-      "type": "image/webp",
-      "purpose": "any"
-    },
     {
       "src": "/images/brand/logo-mark.webp",
       "sizes": "256x256",

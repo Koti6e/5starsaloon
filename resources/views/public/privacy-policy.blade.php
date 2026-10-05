@@ -9,7 +9,7 @@
                     Privacy Policy
                 </h1>
                 <p class="mt-4 text-sm text-[#bfae88]">
-                    Last updated: September 9, 2026
+                    Last updated: October 5, 2026
                 </p>
             </div>
 
@@ -59,7 +59,29 @@
                 </section>
 
                 <section>
-                    <h2 class="font-serif text-2xl text-[#f4d27a]">5. Information Sharing</h2>
+                    <h2 class="font-serif text-2xl text-[#f4d27a]">5. Push Notifications</h2>
+                    <p class="mt-4">
+                        Push notifications are optional. They are enabled only after you choose
+                        “Enable notifications” and grant permission in your browser. To deliver
+                        updates, we store the browser's push token, consent time, browser type, and
+                        last successful delivery time. We use Firebase Cloud Messaging to deliver
+                        notifications. You can disable notifications from the same device using the
+                        notification controls on our website or revoke permission in your browser
+                        settings. When you disable notifications on our website, the delivery token
+                        is removed; stored delivery tokens are encrypted, and a one-way token hash
+                        and revocation time may be retained to prevent accidental reactivation.
+                        Tokens invalidated only through browser settings may remain until the
+                        delivery service reports them as expired.
+                    </p>
+                    <p class="mt-4">
+                        Customer notifications contain salon updates and links to pages on this
+                        website. We do not include payment details or other sensitive information in
+                        push notification content.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="font-serif text-2xl text-[#f4d27a]">6. Information Sharing</h2>
                     <p class="mt-4">
                         We do not sell your personal information. Information may be shared with
                         service providers or technology platforms when reasonably necessary to
@@ -69,7 +91,7 @@
                 </section>
 
                 <section>
-                    <h2 class="font-serif text-2xl text-[#f4d27a]">6. Data Security</h2>
+                    <h2 class="font-serif text-2xl text-[#f4d27a]">7. Data Security</h2>
                     <p class="mt-4">
                         We take reasonable technical and organizational measures to protect personal
                         information against unauthorized access, misuse, alteration, disclosure, or
@@ -79,7 +101,7 @@
                 </section>
 
                 <section>
-                    <h2 class="font-serif text-2xl text-[#f4d27a]">7. Data Retention</h2>
+                    <h2 class="font-serif text-2xl text-[#f4d27a]">8. Data Retention</h2>
                     <p class="mt-4">
                         We retain information for as long as reasonably necessary to provide our
                         services, maintain business and transaction records, meet legal obligations,
@@ -88,7 +110,7 @@
                 </section>
 
                 <section>
-                    <h2 class="font-serif text-2xl text-[#f4d27a]">8. Your Rights</h2>
+                    <h2 class="font-serif text-2xl text-[#f4d27a]">9. Your Rights</h2>
                     <p class="mt-4">
                         You may contact us to request access to, correction of, or deletion of
                         personal information that we hold about you, subject to applicable legal and
@@ -97,7 +119,7 @@
                 </section>
 
                 <section>
-                    <h2 class="font-serif text-2xl text-[#f4d27a]">9. Changes to This Policy</h2>
+                    <h2 class="font-serif text-2xl text-[#f4d27a]">10. Changes to This Policy</h2>
                     <p class="mt-4">
                         We may update this Privacy Policy from time to time. Any updated version
                         will be published on this page with a revised effective date.
@@ -105,7 +127,7 @@
                 </section>
 
                 <section>
-                    <h2 class="font-serif text-2xl text-[#f4d27a]">10. Contact Us</h2>
+                    <h2 class="font-serif text-2xl text-[#f4d27a]">11. Contact Us</h2>
                     <p class="mt-4">
                         If you have questions about this Privacy Policy or wish to make a privacy
                         request, please contact 5 Star New Look Salon through the contact details

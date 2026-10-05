@@ -15,6 +15,8 @@
         ['label' => 'Attendance', 'short' => 'Day', 'route' => 'admin.attendance.index', 'match' => ['admin.attendance.*'], 'icon' => 'attendance'],
         ['label' => 'Staff', 'short' => 'Staff', 'route' => 'admin.staff.index', 'match' => ['admin.staff.*'], 'icon' => 'staff'],
         ['label' => 'Reports', 'short' => 'Reports', 'route' => 'admin.reports.index', 'match' => ['admin.reports.*'], 'icon' => 'reports'],
+        ['label' => 'Sales Report', 'short' => 'Sales', 'route' => 'admin.reports.sales', 'match' => ['admin.reports.sales'], 'icon' => 'reports'],
+        ['label' => 'Customer Notifications', 'short' => 'Notify', 'route' => 'admin.customer-notifications.index', 'match' => ['admin.customer-notifications.*'], 'icon' => 'reports'],
         ['label' => 'Settings', 'short' => 'Settings', 'route' => 'admin.settings.edit', 'match' => ['admin.settings.*'], 'icon' => 'settings'],
         ['label' => 'About SalonOS', 'short' => 'About', 'route' => 'admin.about-salonos', 'match' => ['admin.about-salonos'], 'icon' => 'about'],
     ];

@@ -2,16 +2,19 @@
 
 use App\Http\Controllers\Admin\AboutSalonOsController;
 use App\Http\Controllers\Admin\AppointmentController;
+use App\Http\Controllers\Admin\CustomerNotificationController;
 use App\Http\Controllers\Admin\SalonClosedDateController;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\SalesReportController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\StaffController as AdminStaffController;
 use App\Http\Controllers\Admin\StaffPasswordController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\CustomerPushSubscriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\PushDeviceController;
@@ -33,29 +36,42 @@ Route::get('/firebase-messaging-sw.js', function () {
         'appId' => config('services.firebase.app_id'),
     ];
 
+    if (collect($config)->contains(fn ($value) => blank($value))) {
+        return response('// Customer push notifications are not configured.', 200)
+            ->header('Content-Type', 'application/javascript; charset=UTF-8')
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Service-Worker-Allowed', '/');
+    }
+
     $script = "importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js');\n"
         ."importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js');\n"
-        .'firebase.initializeApp('.json_encode($config).");\n"
+        .'firebase.initializeApp('.json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT).");\n"
         ."const messaging = firebase.messaging();\n"
         ."messaging.onBackgroundMessage((payload) => {\n"
-        ."  const notification = payload.notification || {};\n"
         ."  const data = payload.data || {};\n"
-        ."  self.registration.showNotification(notification.title || 'SalonOS', {\n"
-        ."    body: notification.body || '',\n"
+        ."  self.registration.showNotification(data.title || '5 Star New Look Salon', {\n"
+        ."    body: data.body || '',\n"
         ."    icon: '/images/brand/logo-small.webp',\n"
         ."    data: { url: data.url || '/' }\n"
         ."  });\n"
         ."});\n"
         ."self.addEventListener('notificationclick', (event) => {\n"
         ."  event.notification.close();\n"
-        ."  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/admin/appointments';\n"
+        ."  const requestedUrl = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';\n"
+        ."  const destination = new URL(requestedUrl, self.location.origin);\n"
+        ."  const publicPaths = ['/', '/services', '/gallery', '/about', '/contact', '/book-appointment', '/privacy-policy'];\n"
+        ."  const safePath = publicPaths.includes(destination.pathname) || /^\\/admin\\/appointments(?:\\/\\d+)?$/.test(destination.pathname);\n"
+        ."  const url = destination.origin === self.location.origin && requestedUrl.startsWith('/') && !requestedUrl.startsWith('//') && safePath ? destination.href : self.location.origin + '/';\n"
         ."  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {\n"
-        ."    for (const client of clientList) { if (client.url === url && 'focus' in client) return client.focus(); }\n"
+        ."    for (const client of clientList) { if (new URL(client.url).origin === self.location.origin && 'focus' in client) { client.navigate(url); return client.focus(); } }\n"
         ."    return clients.openWindow(url);\n"
         ."  }));\n"
         ."});\n";
 
-    return response($script, 200)->header('Content-Type', 'application/javascript');
+    return response($script, 200)
+        ->header('Content-Type', 'application/javascript; charset=UTF-8')
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        ->header('Service-Worker-Allowed', '/');
 })->name('firebase.messaging-sw');
 
 Route::get('/', [PublicPageController::class, 'home'])->name('home');
@@ -102,6 +118,12 @@ Route::post('/book-appointment', [PublicPageController::class, 'storeAppointment
     ->middleware('throttle:10,1')
     ->name('appointments.store');
 Route::get('/appointment-confirmed/{token}', [PublicPageController::class, 'appointmentConfirmed'])->name('appointments.confirmed');
+Route::post('/customer-push-subscriptions', [CustomerPushSubscriptionController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('customer-push-subscriptions.store');
+Route::delete('/customer-push-subscriptions', [CustomerPushSubscriptionController::class, 'destroy'])
+    ->middleware('throttle:10,1')
+    ->name('customer-push-subscriptions.destroy');
 Route::get('/invoices/{token}', [BillingController::class, 'publicInvoice'])
     ->whereUuid('token')
     ->name('invoice.public');
@@ -125,8 +147,13 @@ Route::prefix('admin')
     ->middleware(['auth', 'active', 'password.changed', 'auth.no-store', 'role:admin'])
     ->group(function (): void {
         Route::get('/dashboard', AdminDashboardController::class)->name('dashboard');
+        Route::get('/customer-notifications', [CustomerNotificationController::class, 'index'])->name('customer-notifications.index');
+        Route::post('/customer-notifications', [CustomerNotificationController::class, 'store'])
+            ->middleware('throttle:2,1')
+            ->name('customer-notifications.store');
         Route::get('/search', SearchController::class)->name('search');
         Route::get('/reports', AdminReportController::class)->name('reports.index');
+        Route::get('/reports/sales', SalesReportController::class)->name('reports.sales');
         Route::get('/about-salonos', AboutSalonOsController::class)->name('about-salonos');
         Route::get('/billing/create', [BillingController::class, 'create'])->name('billing.create');
         Route::post('/billing', [BillingController::class, 'store'])->name('billing.store');

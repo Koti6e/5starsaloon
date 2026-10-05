@@ -106,6 +106,9 @@
         <meta property="og:image" content="{{ secure_asset($settings['og_image'] ?? 'images/salon/premium-salon-hero.webp') }}">
         <script type="application/ld+json">{!! json_encode($businessSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
         <link rel="icon" href="{{ asset('favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/brand/5-star-new-look-salon-logo.png') }}">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="5 Star Salon">
         <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
         <meta name="theme-color" content="#d5a93b">
         
@@ -529,6 +532,7 @@
     </head>
 
     <body class="antialiased theme-transition">
+        <x-pwa-controls audience="customer" :enable-push="true" />
         <div
             x-data="{
                 open: false,
