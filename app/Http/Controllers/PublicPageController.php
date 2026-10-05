@@ -173,20 +173,30 @@ class PublicPageController extends Controller
     public function bookAppointment(): View
     {
         $services = Service::query()->with(['category', 'images'])->publiclyVisible()->orderBy('name')->get();
-        $defaultDate = $services->first()
-            ? ($this->availableDates($services->first())->first() ?? now(config('app.timezone'))->toDateString())
+        $selectedSlug = old('service_slug', request('service', $services->first()?->slug));
+        $selectedService = $services->firstWhere('slug', $selectedSlug) ?? $services->first();
+        $defaultDate = $selectedService
+            ? ($this->availableDates($selectedService)->first() ?? now(config('app.timezone'))->toDateString())
             : now(config('app.timezone'))->toDateString();
         return view('public.book-appointment', [
             'settings' => SalonSetting::cached(),
             'services' => $services,
             'defaultDate' => $defaultDate,
+            'selectedServiceSlug' => $selectedService?->slug ?? '',
+            'servicePrices' => $services->mapWithKeys(fn (Service $service) => [$service->slug => [
+                'price' => $service->onlineBookingPrice(),
+                'homeServicePrice' => $service->home_service_price !== null ? (float) $service->home_service_price : null,
+                'visitCharge' => (float) ($service->home_service_visit_charge ?? 0),
+            ]]),
         ]);
     }
 
     public function appointmentAvailability(Request $request): \Illuminate\Http\JsonResponse
     {
+        $today = now(config('app.timezone'))->toDateString();
+        $lastBookableDate = now(config('app.timezone'))->addMonthsNoOverflow(3)->toDateString();
         $data = $request->validate([
-            'date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:'.$today, 'before_or_equal:'.$lastBookableDate],
             'service_slug' => ['required', 'exists:services,slug'],
             'appointment_type' => ['nullable', 'in:salon_visit,home_service'],
         ]);
@@ -198,7 +208,10 @@ class PublicPageController extends Controller
         $dates = ! $serviceAvailable
             ? collect()
             : $this->availableDates($service);
-        $selectedDate = $data['date'] ?? $dates->first();
+        $requestedDate = $data['date'] ?? null;
+        $selectedDate = $requestedDate && $dates->contains($requestedDate)
+            ? $requestedDate
+            : $dates->first();
         $slots = $selectedDate && $dates->contains($selectedDate)
             ? $this->availableSlots(Carbon::createFromFormat('Y-m-d', $selectedDate, config('app.timezone')), $service)
             : collect();
@@ -211,10 +224,12 @@ class PublicPageController extends Controller
 
     public function storeAppointment(Request $request): RedirectResponse
     {
+        $today = now(config('app.timezone'))->toDateString();
+        $lastBookableDate = now(config('app.timezone'))->addMonthsNoOverflow(3)->toDateString();
         $validated = $request->validate([
             'appointment_type' => ['required', 'string', 'in:salon_visit,home_service'],
             'service_slug' => ['required', 'string', 'exists:services,slug'],
-            'appointment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'appointment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$today, 'before_or_equal:'.$lastBookableDate],
             'appointment_time' => ['required', 'date_format:H:i'],
             'customer_name' => ['required', 'string', 'max:80', 'regex:/^[A-Za-z]+(?: [A-Za-z]+)*$/'],
             'mobile' => ['required', 'string', 'max:20'],
@@ -292,8 +307,9 @@ class PublicPageController extends Controller
                 $customer->update(['email' => $validated['email']]);
             }
 
-            $unitPrice = $service->discounted_price ?: $service->price ?: $service->minimum_price ?: 0;
-            $visitCharge = $validated['appointment_type'] === 'home_service' ? ($service->home_service_visit_charge ?? 0) : 0;
+            $isHomeService = $validated['appointment_type'] === 'home_service';
+            $unitPrice = $service->onlineBookingPrice($isHomeService);
+            $visitCharge = $isHomeService ? ($service->home_service_visit_charge ?? 0) : 0;
             $discount = round($unitPrice * 0.10, 2);
             $total = $unitPrice - $discount + $visitCharge;
 
@@ -399,7 +415,8 @@ class PublicPageController extends Controller
 
     private function validateAppointmentSlot(Carbon $start, Carbon $end): void
     {
-        if ($start->lt(now(config('app.timezone'))->addHour())) {
+        $now = now(config('app.timezone'));
+        if ($start->isSameDay($now) && $start->lt($now->copy()->addHour())) {
             throw ValidationException::withMessages([
                 'appointment_time' => 'Please choose a time at least one hour from now.',
             ]);
@@ -440,12 +457,17 @@ class PublicPageController extends Controller
     private function availableDates(Service $service): \Illuminate\Support\Collection
     {
         $startDate = now(config('app.timezone'))->startOfDay();
-        $endDate = $startDate->copy()->addDays(59);
+        $endDate = $startDate->copy()->addMonthsNoOverflow(3);
         $bookings = Appointment::query()->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where('status', '!=', 'cancelled')->get(['date', 'start_time', 'estimated_end_time'])->groupBy(fn (Appointment $appointment) => $appointment->date->toDateString());
         $closures = SalonClosedDate::query()->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])->where('is_active', true)
             ->pluck('date')->map(fn ($date) => Carbon::parse($date, config('app.timezone'))->toDateString())->flip();
-        return collect(range(0, 59))->map(fn (int $offset) => $startDate->copy()->addDays($offset))
+        $dates = collect();
+        for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+            $dates->push($date->copy());
+        }
+
+        return $dates
             ->filter(fn (Carbon $date) => $this->slotsForDate($date, $service, $bookings->get($date->toDateString(), collect()), $closures->has($date->toDateString()))->isNotEmpty())
             ->map(fn (Carbon $date) => $date->toDateString())->values();
     }
@@ -463,7 +485,7 @@ class PublicPageController extends Controller
         $now = now(config('app.timezone'));
         $slots = collect();
         for ($slot = $open->copy(); $slot->copy()->addMinutes($duration)->lte($close); $slot->addMinutes($interval)) {
-            if ($slot->lt($now->copy()->addHour())) continue;
+            if ($slot->isSameDay($now) && $slot->lt($now->copy()->addHour())) continue;
             $end = $slot->copy()->addMinutes($duration);
             $busy = $bookings->contains(fn (Appointment $appointment) => $appointment->start_time < $end->format('H:i:s') && $appointment->estimated_end_time > $slot->format('H:i:s'));
             if (! $busy) $slots->push($slot->copy());

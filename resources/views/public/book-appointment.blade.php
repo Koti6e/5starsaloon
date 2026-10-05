@@ -12,11 +12,11 @@
                     <label class="block text-sm font-medium text-[#f8efd8]">Appointment Type</label>
                     <div class="mt-2 grid gap-3 sm:grid-cols-2 sm:gap-4">
                         <label class="flex cursor-pointer items-center justify-center rounded-md border border-[#c8a24a]/30 p-3 transition" :class="appointmentType === 'salon_visit' ? 'bg-[#d5a93b]/20 border-[#d5a93b] text-[#f4d27a]' : 'bg-black text-[#d8c8a3]'">
-                            <input type="radio" name="appointment_type" value="salon_visit" x-model="appointmentType" @change="loadSlots()" class="sr-only">
+                            <input type="radio" name="appointment_type" value="salon_visit" x-model="appointmentType" @change="$nextTick(() => loadSlots())" class="sr-only">
                             <span class="font-semibold">Salon Visit</span>
                         </label>
                         <label class="flex cursor-pointer items-center justify-center rounded-md border border-[#c8a24a]/30 p-3 transition" :class="appointmentType === 'home_service' ? 'bg-[#d5a93b]/20 border-[#d5a93b] text-[#f4d27a]' : 'bg-black text-[#d8c8a3]'">
-                            <input type="radio" name="appointment_type" value="home_service" x-model="appointmentType" @change="loadSlots()" class="sr-only">
+                            <input type="radio" name="appointment_type" value="home_service" x-model="appointmentType" @change="$nextTick(() => loadSlots())" class="sr-only">
                             <span class="font-semibold">Elite Home Service</span>
                         </label>
                     </div>
@@ -28,10 +28,10 @@
                 <!-- Service Selection -->
                 <div class="sm:col-span-2">
                     <label for="service_slug" class="block text-sm font-medium text-[#f8efd8]">Select Service</label>
-                    <select id="service_slug" name="service_slug" class="mt-1 w-full rounded-md border-[#c8a24a]/30 bg-black px-4 py-2.5 text-[#fff9ea] focus:border-[#d5a93b] focus:ring-[#d5a93b]" required>
+                    <select id="service_slug" name="service_slug" x-model="selectedServiceSlug" @change="$nextTick(() => loadSlots())" class="mt-1 w-full rounded-md border-[#c8a24a]/30 bg-black px-4 py-2.5 text-[#fff9ea] focus:border-[#d5a93b] focus:ring-[#d5a93b]" required>
                         <option value="">-- Choose a Service --</option>
                         @forelse ($services as $service)
-                        <option value="{{ $service->slug }}" data-price="{{ $service->discounted_price ?: $service->price ?: $service->minimum_price ?: 0 }}" data-home-visit-charge="{{ $service->home_service_visit_charge ?? 0 }}" @selected(old('service_slug', request('service', $services->first()?->slug)) === $service->slug)>
+                        <option value="{{ $service->slug }}" @selected($selectedServiceSlug === $service->slug)>
                                 {{ $service->name }} — {{ $service->displayPrice() }}
                             </option>
                         @empty
@@ -46,10 +46,11 @@
                 <!-- Date -->
                 <div>
                     <label for="appointment_date" class="block text-sm font-medium text-[#f8efd8]">Preferred Date</label>
-                    <select id="appointment_date" name="appointment_date" x-model="selectedDate" @change="loadSlots()" class="mt-1 w-full rounded-md border-[#c8a24a]/30 bg-black px-4 py-2.5 text-[#fff9ea] focus:border-[#d5a93b] focus:ring-[#d5a93b]" required>
+                    <select id="appointment_date" name="appointment_date" x-model="selectedDate" @change="$nextTick(() => loadSlots())" class="mt-1 w-full rounded-md border-[#c8a24a]/30 bg-black px-4 py-2.5 text-[#fff9ea] focus:border-[#d5a93b] focus:ring-[#d5a93b]" required>
                         <option value="" x-text="loading ? 'Finding available dates…' : (dates.length ? 'Choose an available date' : 'No available dates')"></option>
                         <template x-for="day in dates" :key="day.value"><option :value="day.value" x-text="day.label"></option></template>
                     </select>
+                    <p x-show="availabilityError" x-text="availabilityError" class="mt-1 text-xs text-red-400"></p>
                     @error('appointment_date')
                         <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
                     @enderror
@@ -106,7 +107,7 @@
                 <!-- Home Service Address (Conditional) -->
                 <div class="sm:col-span-2" x-show="appointmentType === 'home_service'" x-cloak>
                     <label for="address" class="block text-sm font-medium text-[#f8efd8]">Complete Service Address <span class="text-red-400">*</span></label>
-                    <textarea id="address" name="address" rows="3" placeholder="House/Flat No., Building Name, Street, Area, City & Pincode" class="mt-1 w-full rounded-md border-[#c8a24a]/30 bg-black px-4 py-2.5 text-[#fff9ea] focus:border-[#d5a93b] focus:ring-[#d5a93b]">{{ old('address') }}</textarea>
+                    <textarea id="address" name="address" rows="3" :required="appointmentType === 'home_service'" placeholder="House/Flat No., Building Name, Street, Area, City & Pincode" class="mt-1 w-full rounded-md border-[#c8a24a]/30 bg-black px-4 py-2.5 text-[#fff9ea] focus:border-[#d5a93b] focus:ring-[#d5a93b]">{{ old('address') }}</textarea>
                     @error('address')
                         <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
                     @enderror
@@ -157,28 +158,35 @@
     <script>
         function bookingForm() {
             return {
-                appointmentType: '{{ old('appointment_type', request('type') === 'home' ? 'home_service' : 'salon_visit') }}', submitting: false, slots: [], dates: [], loading: false, selectedTime: @js(old('appointment_time', '')), selectedDate: @js(old('appointment_date', $defaultDate)),
-                get originalPrice() { return Number(document.querySelector('#service_slug option:checked')?.dataset.price || 0); },
-                get visitCharge() { return this.appointmentType === 'home_service' ? Number(document.querySelector('#service_slug option:checked')?.dataset.homeVisitCharge || 0) : 0; },
+                appointmentType: '{{ old('appointment_type', request('type') === 'home' ? 'home_service' : 'salon_visit') }}', submitting: false, slots: [], dates: [], loading: false, availabilityError: '', requestSequence: 0, selectedTime: @js(old('appointment_time', '')), selectedDate: @js(old('appointment_date', $defaultDate)), selectedServiceSlug: @js($selectedServiceSlug), servicePrices: @js($servicePrices),
+                get originalPrice() {
+                    const prices = this.servicePrices[this.selectedServiceSlug];
+                    return this.appointmentType === 'home_service' && prices?.homeServicePrice !== null && prices?.homeServicePrice !== undefined
+                        ? Number(prices.homeServicePrice)
+                        : Number(prices?.price || 0);
+                },
+                get visitCharge() { return this.appointmentType === 'home_service' ? Number(this.servicePrices[this.selectedServiceSlug]?.visitCharge || 0) : 0; },
                 get discount() { return Math.round(this.originalPrice * 10) / 100; },
                 money(value) { return new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR', maximumFractionDigits:2}).format(value || 0); },
-                async init() { document.querySelector('#service_slug').addEventListener('change', () => this.loadSlots()); await this.loadSlots(); },
+                async init() { await this.loadSlots(); },
                 async loadSlots() {
-                    const service = document.querySelector('#service_slug').value, date = this.selectedDate;
-                    this.slots = []; this.selectedTime = ''; if (!service) return;
+                    const requestSequence = ++this.requestSequence;
+                    const service = this.selectedServiceSlug, date = this.selectedDate;
+                    this.slots = []; this.selectedTime = ''; this.availabilityError = '';
+                    if (!service) { this.dates = []; this.selectedDate = ''; this.loading = false; return; }
                     this.loading = true;
                     try {
-                        const url = new URL(@js(route('appointments.availability')), window.location.origin); url.search = new URLSearchParams({service_slug:service, appointment_type:this.appointmentType, ...(date ? {date} : {})});
-                        const response = await fetch(url); const data = await response.json();
+                        const url = new URL(@js(route('appointments.availability', [], false)), window.location.origin); url.search = new URLSearchParams({service_slug:service, appointment_type:this.appointmentType, ...(date ? {date} : {})});
+                        const response = await fetch(url, {headers: {Accept: 'application/json'}}); const data = await response.json();
+                        if (!response.ok) throw new Error('Availability could not be loaded. Please try again.');
+                        if (requestSequence !== this.requestSequence) return;
                         this.dates = data.dates || [];
-                        if (!this.dates.some(day => day.value === date)) this.selectedDate = data.selected_date || this.dates[0]?.value || '';
-                        this.slots = this.selectedDate === data.selected_date ? (data.slots || []) : [];
-                        if (this.selectedDate && !this.slots.length && this.dates.some(day => day.value === this.selectedDate)) {
-                            const selectedUrl = new URL(@js(route('appointments.availability')), window.location.origin); selectedUrl.search = new URLSearchParams({service_slug:service,appointment_type:this.appointmentType,date:this.selectedDate});
-                            const selectedResponse = await fetch(selectedUrl); const selectedData = await selectedResponse.json(); this.slots = selectedData.slots || [];
-                        }
+                        this.selectedDate = data.selected_date || '';
+                        this.slots = data.slots || [];
+                    } catch (error) {
+                        if (requestSequence === this.requestSequence) this.availabilityError = error.message || 'Availability could not be loaded.';
                     }
-                    finally { this.loading = false; }
+                    finally { if (requestSequence === this.requestSequence) this.loading = false; }
                 }
             }
         }

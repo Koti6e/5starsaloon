@@ -149,6 +149,15 @@ class Service extends Model
         return $this->discounted_price ?: $this->price;
     }
 
+    public function onlineBookingPrice(bool $homeService = false): float
+    {
+        if ($homeService && $this->home_service_price !== null) {
+            return (float) $this->home_service_price;
+        }
+
+        return (float) ($this->discounted_price ?: $this->price ?: $this->minimum_price ?: 0);
+    }
+
     public function displayPrice(): string
     {
         return match ($this->price_type) {
