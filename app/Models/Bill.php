@@ -22,12 +22,15 @@ class Bill extends Model
         'payment_status',
         'status',
         'idempotency_key',
-        'invoice_public_token',
+        'invoice_access_token_hash',
+        'invoice_access_expires_at',
+        'invoice_access_revoked_at',
         'invoice_pdf_path',
         'whatsapp_invoice_status',
         'whatsapp_invoice_sent_at',
         'whatsapp_invoice_message_id',
         'whatsapp_invoice_error',
+        'whatsapp_invoice_status_at',
         'notes',
         'billed_at',
     ];
@@ -41,6 +44,9 @@ class Bill extends Model
             'grand_total' => 'decimal:2',
             'billed_at' => 'datetime',
             'whatsapp_invoice_sent_at' => 'datetime',
+            'whatsapp_invoice_status_at' => 'datetime',
+            'invoice_access_expires_at' => 'datetime',
+            'invoice_access_revoked_at' => 'datetime',
         ];
     }
 

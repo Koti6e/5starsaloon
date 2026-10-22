@@ -90,12 +90,12 @@
                                 };
                             @endphp
                             <select name="default_theme" class="mt-1 w-full rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]">
-                                <option value="emerald" @selected($selectedTheme === 'emerald')>Neon Emerald</option>
-                                <option value="sapphire" @selected($selectedTheme === 'sapphire')>Neon Sapphire</option>
-                                <option value="crimson" @selected($selectedTheme === 'crimson')>Neon Crimson</option>
-                                <option value="gold" @selected($selectedTheme === 'gold')>Neon Gold</option>
-                                <option value="pearl" @selected($selectedTheme === 'pearl')>Neon Pearl</option>
-                                <option value="obsidian" @selected($selectedTheme === 'obsidian')>Neon Obsidian</option>
+                                <option value="emerald" @selected($selectedTheme === 'emerald')>Emerald & Ivory</option>
+                                <option value="sapphire" @selected($selectedTheme === 'sapphire')>Sapphire</option>
+                                <option value="crimson" @selected($selectedTheme === 'crimson')>Crimson</option>
+                                <option value="gold" @selected($selectedTheme === 'gold')>Champagne Gold</option>
+                                <option value="pearl" @selected($selectedTheme === 'pearl')>Warm Ivory</option>
+                                <option value="obsidian" @selected($selectedTheme === 'obsidian')>Obsidian</option>
                             </select>
                         </label>
                         <label class="flex items-center gap-3 text-sm font-semibold text-[var(--app-text)]">

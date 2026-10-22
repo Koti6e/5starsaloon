@@ -1,126 +1,31 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex flex-col gap-1">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-subtle)]">Business performance</p>
-            <h1 class="font-serif text-2xl text-[var(--app-primary)] sm:text-3xl">Monthly Sales Report</h1>
-            <p class="text-sm text-[var(--app-muted)]">{{ $monthLabel }} · All amounts in Indian rupees</p>
-        </div>
-    </x-slot>
-
-    <div class="space-y-6">
-        <x-admin.card>
-            <form method="GET" action="{{ route('admin.reports.sales') }}" class="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <label for="sales-report-month" class="mb-1 block text-sm font-semibold text-[var(--app-muted)]">Report month</label>
-                    <input
-                        id="sales-report-month"
-                        name="month"
-                        type="month"
-                        value="{{ $month }}"
-                        max="{{ now($timezone)->format('Y-m') }}"
-                        onchange="this.form.requestSubmit()"
-                        class="min-h-11 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-[var(--app-text)]"
-                    >
+    <x-slot name="header"><div class="flex flex-col gap-1"><p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--app-subtle)]">Business performance</p><h1 class="font-serif text-2xl text-[var(--app-primary)]">{{ $period === 'monthly' ? 'Monthly ' : '' }}Sales Report</h1><p class="text-sm text-[var(--app-muted)]">{{ $periodLabel }} · INR · {{ $timezone }}</p></div></x-slot>
+    <div class="space-y-4">
+        <x-admin.card class="!p-4">
+            <nav class="mb-4 flex gap-2" aria-label="Sales report period">
+                @foreach(['daily'=>'Daily','weekly'=>'Weekly','monthly'=>'Monthly'] as $key=>$label)
+                    <a href="{{ route('admin.reports.sales', ['period'=>$key, $key==='daily'?'date':($key==='weekly'?'week':'month')=>$key==='daily'?now($timezone)->toDateString():($key==='weekly'?now($timezone)->startOfWeek()->toDateString():now($timezone)->format('Y-m'))]) }}" class="rounded-lg border px-3 py-2 text-sm font-semibold {{ $period===$key?'border-[var(--accent-border)] bg-[var(--app-primary-soft)] text-[var(--app-primary)]':'border-[var(--app-border)] text-[var(--app-muted)]' }}">{{ $label }}</a>
+                @endforeach
+            </nav>
+            <form method="GET" action="{{ route('admin.reports.sales') }}" class="flex flex-wrap items-end gap-3">
+                <input type="hidden" name="period" value="{{ $period }}">
+                <div><label class="mb-1 block text-xs font-semibold text-[var(--app-muted)]" for="period-value">{{ ucfirst($period) }}</label>
+                    @if($period==='daily') <input id="period-value" type="date" name="date" value="{{ $selectedDate }}" max="{{ now($timezone)->toDateString() }}" class="min-h-11 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 text-[var(--app-text)]">
+                    @elseif($period==='weekly') <input id="period-value" type="date" name="week" value="{{ $week }}" max="{{ now($timezone)->toDateString() }}" class="min-h-11 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 text-[var(--app-text)]">
+                    @else <input id="period-value" type="month" name="month" value="{{ $month }}" max="{{ now($timezone)->format('Y-m') }}" class="min-h-11 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 text-[var(--app-text)]"> @endif
                 </div>
-                <nav class="flex items-center gap-2" aria-label="Change report month">
-                    <a href="{{ route('admin.reports.sales', ['month' => $previousMonth]) }}" class="rounded-xl border border-[var(--app-border)] px-4 py-2.5 text-sm font-semibold text-[var(--app-text)] hover:border-[var(--app-primary)]" aria-label="Previous month">← Previous</a>
-                    @if ($nextMonth <= now($timezone)->format('Y-m'))
-                        <a href="{{ route('admin.reports.sales', ['month' => $nextMonth]) }}" class="rounded-xl border border-[var(--app-border)] px-4 py-2.5 text-sm font-semibold text-[var(--app-text)] hover:border-[var(--app-primary)]" aria-label="Next month">Next →</a>
-                    @endif
-                </nav>
+                <button class="min-h-11 rounded-xl bg-[var(--app-primary)] px-4 text-sm font-semibold text-[var(--on-accent)]">View report</button>
+                <div class="ml-auto flex gap-2"><a class="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm" href="{{ route('admin.reports.sales', ['period'=>$period, $period==='daily'?'date':($period==='weekly'?'week':'month')=>$previousValue]) }}">← Previous</a>@unless($isCurrent)<a class="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm" href="{{ route('admin.reports.sales', ['period'=>$period, $period==='daily'?'date':($period==='weekly'?'week':'month')=>$nextValue]) }}">Next →</a>@endunless</div>
             </form>
-            @error('month')
-                <p class="mt-3 text-sm text-red-400" role="alert">Choose a valid report month.</p>
-            @enderror
+            <div class="mt-3 flex gap-2"><a class="text-xs font-semibold text-[var(--app-primary)]" href="{{ request()->fullUrlWithQuery(['export'=>'excel']) }}">Export Excel (CSV)</a><span class="text-[var(--app-subtle)]">·</span><a class="text-xs font-semibold text-[var(--app-primary)]" href="{{ request()->fullUrlWithQuery(['export'=>'pdf']) }}">Export PDF</a></div>
         </x-admin.card>
-
-        <section class="grid gap-4 sm:grid-cols-3" aria-label="Monthly sales summary">
-            <x-admin.card>
-                <p class="text-sm font-medium text-[var(--app-muted)]">Total Sales</p>
-                <p class="mt-2 text-3xl font-semibold text-[var(--app-primary)]">{{ $moneyFormatter($totalSales) }}</p>
-            </x-admin.card>
-            <x-admin.card>
-                <p class="text-sm font-medium text-[var(--app-muted)]">Total Bills</p>
-                <p class="mt-2 text-3xl font-semibold text-[var(--app-text)]">{{ number_format($totalBills) }}</p>
-            </x-admin.card>
-            <x-admin.card>
-                <p class="text-sm font-medium text-[var(--app-muted)]">Active Staff</p>
-                <p class="mt-2 text-3xl font-semibold text-[var(--app-text)]">{{ number_format($activeStaffCount) }}</p>
-            </x-admin.card>
+        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Sales summary">
+            @foreach([['Total sales',$moneyFormatter($totalSales)],['Completed bills',number_format($totalBills)],['Average bill',$moneyFormatter($averageBill)],['Actual collections',$moneyFormatter($actualCollections)],['Previous period',$moneyFormatter($previousSales)]] as [$label,$value])<x-admin.card class="!p-4"><p class="text-xs text-[var(--app-muted)]">{{ $label }}</p><p class="mt-1 text-xl font-semibold tabular-nums text-[var(--app-text)]">{{ $value }}</p></x-admin.card>@endforeach
         </section>
-
-        <x-admin.card>
-            <div class="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-                <div>
-                    <h2 class="font-serif text-xl text-[var(--app-primary)]">Staff Performance</h2>
-                    <p class="mt-1 max-w-3xl text-xs text-[var(--app-subtle)]">{{ $salesAttribution }}</p>
-                </div>
-                <p class="text-xs text-[var(--app-subtle)]">Period uses {{ $timezone }}</p>
-            </div>
-
-            <div class="mt-5 hidden overflow-hidden rounded-xl border border-[var(--app-border)] md:block">
-                <table class="w-full divide-y divide-[var(--app-border)] text-left text-sm">
-                    <thead class="bg-[var(--app-bg)] text-[var(--app-muted)]">
-                        <tr>
-                            <th scope="col" class="px-4 py-3 font-semibold">Staff / Biller</th>
-                            <th scope="col" class="px-4 py-3 text-right font-semibold">Bills</th>
-                            <th scope="col" class="px-4 py-3 text-right font-semibold">Sales</th>
-                            <th scope="col" class="px-4 py-3 text-right font-semibold">Monthly sales</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-[var(--app-border)]">
-                        @forelse ($staffRows as $row)
-                            <tr>
-                                <th scope="row" class="px-4 py-3 font-medium text-[var(--app-text)]">
-                                    {{ $row->staff_name }}
-                                    @if ($row->role !== 'staff')
-                                        <span class="ml-1 text-xs font-normal text-[var(--app-subtle)]">({{ ucfirst($row->role) }} biller)</span>
-                                    @endif
-                                </th>
-                                <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row->bill_count) }}</td>
-                                <td class="px-4 py-3 text-right font-semibold tabular-nums">{{ $moneyFormatter($row->total_sales) }}</td>
-                                <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row->sales_percentage, 1) }}%</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4" class="px-4 py-8 text-center text-[var(--app-muted)]">No active staff or completed bills for this month.</td></tr>
-                        @endforelse
-                    </tbody>
-                    <tfoot class="border-t-2 border-[var(--app-border)] bg-[var(--app-bg)] font-bold text-[var(--app-text)]">
-                        <tr>
-                            <th scope="row" class="px-4 py-3">TOTAL</th>
-                            <td class="px-4 py-3 text-right tabular-nums">{{ number_format($totalBills) }}</td>
-                            <td class="px-4 py-3 text-right tabular-nums">{{ $moneyFormatter($totalSales) }}</td>
-                            <td class="px-4 py-3 text-right tabular-nums">{{ $totalSales > 0 ? '100.0%' : '0.0%' }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <div class="mt-5 space-y-3 md:hidden">
-                @forelse ($staffRows as $row)
-                    <article class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] p-4">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <h3 class="font-semibold text-[var(--app-text)]">{{ $row->staff_name }}</h3>
-                                @if ($row->role !== 'staff')
-                                    <p class="text-xs text-[var(--app-subtle)]">{{ ucfirst($row->role) }} biller</p>
-                                @endif
-                            </div>
-                            <p class="text-right text-lg font-semibold text-[var(--app-primary)]">{{ $moneyFormatter($row->total_sales) }}</p>
-                        </div>
-                        <div class="mt-3 flex justify-between border-t border-[var(--app-border)] pt-3 text-sm text-[var(--app-muted)]">
-                            <span>{{ number_format($row->bill_count) }} {{ $row->bill_count === 1 ? 'bill' : 'bills' }}</span>
-                            <span>{{ number_format($row->sales_percentage, 1) }}% of monthly sales</span>
-                        </div>
-                    </article>
-                @empty
-                    <p class="py-6 text-center text-sm text-[var(--app-muted)]">No active staff or completed bills for this month.</p>
-                @endforelse
-                <article class="rounded-xl border-2 border-[var(--app-border)] p-4 font-bold">
-                    <div class="flex justify-between gap-3"><span>TOTAL SALES</span><span>{{ $moneyFormatter($totalSales) }}</span></div>
-                    <div class="mt-2 flex justify-between text-sm"><span>{{ number_format($totalBills) }} bills</span><span>{{ $totalSales > 0 ? '100.0%' : '0.0%' }}</span></div>
-                </article>
-            </div>
-        </x-admin.card>
+        <x-admin.card class="!p-4"><h2 class="font-serif text-lg text-[var(--app-primary)]">Period comparison</h2><p class="mt-1 text-sm text-[var(--app-muted)]">{{ number_format($previousBills) }} bills in the previous period · @if($salesChange!==null){{ $salesChange>=0?'+':'' }}{{ number_format($salesChange,1) }}% sales change @else no previous-period sales to compare @endif</p></x-admin.card>
+        @if(count($dailyRows))<x-admin.card class="!p-4"><h2 class="mb-3 font-serif text-lg text-[var(--app-primary)]">Daily sales</h2><div class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">@foreach($dailyRows as $row)<div class="rounded-lg border border-[var(--app-border)] p-3"><p class="text-xs text-[var(--app-muted)]">{{ $row['date']->format('D d') }}</p><p class="mt-1 text-sm font-semibold">{{ $moneyFormatter($row['sales']) }}</p><p class="text-xs text-[var(--app-subtle)]">{{ $row['count'] }} bills</p></div>@endforeach</div>@if($period==='daily'&&$hourlyRows->isNotEmpty())<h3 class="mt-4 text-sm font-semibold">Hourly sales</h3><div class="mt-2 flex flex-wrap gap-2">@foreach($hourlyRows as $hour)<span class="rounded-lg bg-[var(--app-bg)] px-3 py-2 text-xs">{{ str_pad($hour->hour,2,'0',STR_PAD_LEFT) }}:00 · {{ $moneyFormatter($hour->total) }} ({{ $hour->bill_count }})</span>@endforeach</div>@endif</x-admin.card>@endif
+        <div class="grid gap-4 lg:grid-cols-3"><x-admin.card class="!p-4 lg:col-span-2"><div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="font-serif text-lg text-[var(--app-primary)]">Staff performance</h2><p class="text-xs text-[var(--app-muted)]">{{ number_format($totalBills) }} {{ $totalBills===1?'bill':'bills' }} completed</p></div><p class="mt-1 text-xs text-[var(--app-subtle)]">{{ $salesAttribution }}</p><div class="mt-3 overflow-x-auto"><table class="w-full text-left text-sm"><thead class="text-xs text-[var(--app-muted)]"><tr><th class="py-2">Staff / biller</th><th class="py-2 text-right">Bills</th><th class="py-2 text-right">Sales</th><th class="py-2 text-right">Share</th></tr></thead><tbody class="divide-y divide-[var(--app-border)]">@foreach($staffRows as $row)<tr><td class="py-2">{{ $row->staff_name }}</td><td class="py-2 text-right">{{ $row->bill_count }}</td><td class="py-2 text-right">{{ $moneyFormatter($row->total_sales) }}</td><td class="py-2 text-right">{{ number_format($row->sales_percentage, 1) }}%</td></tr>@endforeach</tbody><tfoot class="border-t border-[var(--app-border)] font-semibold"><tr><td class="py-2">Total</td><td class="py-2 text-right">{{ number_format($totalBills) }}</td><td class="py-2 text-right">{{ $moneyFormatter($totalSales) }}</td><td class="py-2 text-right">{{ $totalSales>0?'100.0%':'0.0%' }}</td></tr></tfoot></table></div></x-admin.card>
+            <x-admin.card class="!p-4"><h2 class="font-serif text-lg text-[var(--app-primary)]">Collections by payment date</h2><div class="mt-3 space-y-2">@forelse($paymentBreakdown as $payment)<div class="flex justify-between gap-3 text-sm"><span>{{ ucfirst($payment->payment_method) }} <span class="text-xs text-[var(--app-subtle)]">({{ $payment->count }})</span></span><strong>{{ $moneyFormatter($payment->total) }}</strong></div>@empty<p class="text-sm text-[var(--app-muted)]">No payment records in this period.</p>@endforelse</div><p class="mt-3 text-[11px] text-[var(--app-subtle)]">Collections use recorded payment dates; a backdated bill can appear in sales and collections on different dates. Refunds are not separately modeled.</p></x-admin.card></div>
+        <x-admin.card class="!p-4"><h2 class="font-serif text-lg text-[var(--app-primary)]">Transactions</h2><div class="mt-3 overflow-x-auto"><table class="w-full min-w-[680px] text-left text-sm"><thead class="text-xs text-[var(--app-muted)]"><tr><th class="py-2">Time</th><th>Invoice</th><th>Customer</th><th>Biller</th><th class="text-right">Amount</th></tr></thead><tbody class="divide-y divide-[var(--app-border)]">@forelse($bills as $bill)<tr><td class="py-2">{{ $bill->billed_at?->timezone($timezone)->format('d M, H:i') }}</td><td>{{ $bill->invoice_number }}</td><td>{{ $bill->customer?->name }}</td><td>{{ $bill->billedBy?->name }}</td><td class="text-right font-semibold">{{ $moneyFormatter($bill->grand_total) }}</td></tr>@empty<tr><td colspan="5" class="py-6 text-center text-[var(--app-muted)]">No completed bills in this period.</td></tr>@endforelse</tbody></table></div></x-admin.card>
     </div>
 </x-app-layout>

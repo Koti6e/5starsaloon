@@ -25,6 +25,11 @@
                 @endforeach
             </div>
 
+            <a href="{{ route('admin.backdated-billing.create') }}" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--accent-border)] bg-[var(--app-surface)] p-4 shadow-[var(--shadow-card)] transition hover:border-[var(--app-primary)]">
+                <span><span class="block font-semibold text-[var(--app-text)]">Backdated Billing</span><span class="text-sm text-[var(--app-muted)]">Record a service completed within the previous 30 days.</span></span>
+                <span class="rounded-lg bg-[var(--app-primary)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]">Create backdated bill →</span>
+            </a>
+
             <div class="grid gap-6 lg:grid-cols-2">
                 <section class="rounded-lg border border-[#c8a24a]/20 bg-[#11100d] p-5">
                     <h2 class="font-serif text-xl text-[#f4d27a]">Payment Breakdown</h2>

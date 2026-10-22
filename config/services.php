@@ -54,7 +54,11 @@ return [
     ],
 'whatsapp' => [
     'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+    'app_secret' => env('WHATSAPP_APP_SECRET'),
     'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
     'api_version' => env('WHATSAPP_API_VERSION', 'v26.0'),
+    'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+    'invoice_template' => env('WHATSAPP_INVOICE_TEMPLATE', 'salon_invoice'),
+    'invoice_template_language' => env('WHATSAPP_INVOICE_TEMPLATE_LANGUAGE', 'en'),
 ],
 ];

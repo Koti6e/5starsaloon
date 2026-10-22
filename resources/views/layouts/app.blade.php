@@ -23,23 +23,23 @@
                 const theme = validThemes.includes(normalizedSaved) ? normalizedSaved : (validThemes.includes(normalizedDefault) ? normalizedDefault : 'emerald');
                 document.documentElement.dataset.defaultTheme = normalizedDefault;
                 document.documentElement.dataset.theme = theme;
-                document.documentElement.classList.toggle('theme-dark', theme !== 'pearl');
-                document.documentElement.classList.toggle('theme-light', theme === 'pearl');
+                document.documentElement.classList.toggle('theme-dark', theme === 'obsidian');
+                document.documentElement.classList.toggle('theme-light', theme !== 'obsidian');
             })();
         </script>
         <style>
             :root {
-                --bg-app: #070807;
-                --bg-surface: #101211;
-                --bg-surface-elevated: #171a18;
-                --bg-input: #0b0d0c;
-                --text-primary: #f4f7f5;
-                --text-secondary: #c6cec9;
-                --text-muted: #8f9a94;
-                --text-disabled: #5e6762;
-                --border-default: rgba(226, 232, 240, 0.11);
-                --border-strong: rgba(226, 232, 240, 0.2);
-                --shadow-card: 0 18px 50px rgba(0, 0, 0, 0.28);
+                --bg-app: #f4f1eb;
+                --bg-surface: #fffdf8;
+                --bg-surface-elevated: #ffffff;
+                --bg-input: #f8f5ef;
+                --text-primary: #1e2420;
+                --text-secondary: #4b5750;
+                --text-muted: #727d76;
+                --text-disabled: #9aa39d;
+                --border-default: rgba(30, 36, 32, 0.12);
+                --border-strong: rgba(30, 36, 32, 0.22);
+                --shadow-card: 0 14px 32px rgba(32, 27, 18, 0.08);
                 --success: #34d399;
                 --success-soft: rgba(52, 211, 153, 0.13);
                 --danger: #fb7185;
@@ -48,14 +48,14 @@
                 --warning-soft: rgba(251, 191, 36, 0.13);
                 --info: #38bdf8;
                 --info-soft: rgba(56, 189, 248, 0.13);
-                --accent: #47e88a;
-                --accent-hover: #59f39a;
-                --accent-active: #2fd875;
-                --accent-soft: rgba(71, 232, 138, 0.1);
-                --accent-border: rgba(71, 232, 138, 0.28);
-                --accent-glow: rgba(71, 232, 138, 0.14);
-                --focus-ring: rgba(71, 232, 138, 0.24);
-                --on-accent: #031008;
+                --accent: #166b48;
+                --accent-hover: #1c7b55;
+                --accent-active: #11583b;
+                --accent-soft: rgba(22, 107, 72, 0.09);
+                --accent-border: rgba(22, 107, 72, 0.24);
+                --accent-glow: rgba(22, 107, 72, 0.1);
+                --focus-ring: rgba(22, 107, 72, 0.22);
+                --on-accent: #ffffff;
                 --app-bg: var(--bg-app);
                 --app-surface: var(--bg-surface);
                 --app-surface-elevated: var(--bg-surface-elevated);
@@ -94,12 +94,12 @@
             }
 
             html[data-theme="gold"] {
-                --accent: #e9c46a;
-                --accent-hover: #f2d889;
-                --accent-active: #d6aa3a;
-                --accent-soft: rgba(233, 196, 106, 0.11);
-                --accent-border: rgba(233, 196, 106, 0.3);
-                --accent-glow: rgba(233, 196, 106, 0.14);
+                --accent: #806014;
+                --accent-hover: #6f5210;
+                --accent-active: #5d440d;
+                --accent-soft: rgba(128, 96, 20, 0.09);
+                --accent-border: rgba(128, 96, 20, 0.26);
+                --accent-glow: rgba(128, 96, 20, 0.1);
                 --focus-ring: rgba(233, 196, 106, 0.24);
             }
 
@@ -114,14 +114,14 @@
                 --text-disabled: #9aa39d;
                 --border-default: rgba(30, 36, 32, 0.12);
                 --border-strong: rgba(30, 36, 32, 0.22);
-                --shadow-card: 0 18px 42px rgba(32, 27, 18, 0.1);
-                --accent: #167a4d;
-                --accent-hover: #1f9360;
-                --accent-active: #11683f;
-                --accent-soft: rgba(22, 122, 77, 0.1);
-                --accent-border: rgba(22, 122, 77, 0.3);
-                --accent-glow: rgba(22, 122, 77, 0.12);
-                --focus-ring: rgba(22, 122, 77, 0.22);
+                --shadow-card: 0 14px 32px rgba(32, 27, 18, 0.08);
+                --accent: #166b48;
+                --accent-hover: #1c7b55;
+                --accent-active: #11583b;
+                --accent-soft: rgba(22, 107, 72, 0.09);
+                --accent-border: rgba(22, 107, 72, 0.24);
+                --accent-glow: rgba(22, 107, 72, 0.1);
+                --focus-ring: rgba(22, 107, 72, 0.22);
                 --on-accent: #ffffff;
             }
 
@@ -238,7 +238,7 @@
                 <x-admin.flash />
 
                 <main class="mx-auto max-w-7xl pb-6 pt-2 sm:pb-10 sm:pt-4 {{ request()->routeIs('*.billing.create') ? 'px-2 sm:px-3 lg:px-4' : 'px-3 sm:px-6 lg:px-8' }}">
-                    <div class="{{ request()->routeIs('*.billing.create') ? 'rounded-2xl p-0 sm:p-2' : 'rounded-3xl p-3 sm:p-6 lg:rounded-[32px]' }} border border-[var(--app-border)] bg-[var(--app-surface)]/95 shadow-[var(--shadow-card)]">
+                    <div class="{{ request()->routeIs('*.billing.create', '*.backdated-billing.*') ? 'rounded-2xl p-0 sm:p-2' : 'rounded-3xl p-3 sm:p-4 lg:rounded-[32px]' }} border border-[var(--app-border)] bg-[var(--app-surface)]/95 shadow-[var(--shadow-card)]">
                         {{ $slot }}
                     </div>
                 </main>

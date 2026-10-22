@@ -15,6 +15,50 @@ class BillingTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function tearDown(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow();
+        parent::tearDown();
+    }
+
+    public function test_backdated_billing_is_admin_only_and_keeps_record_creation_time_current(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
+        $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
+        $service = $this->service();
+        $this->actingAs($staff)->get(route('admin.backdated-billing.create'))->assertForbidden();
+        $this->actingAs($staff)->post(route('admin.backdated-billing.store'), [])->assertForbidden();
+        $response = $this->actingAs($admin)->post(route('admin.backdated-billing.store'), [
+            'customer_mobile' => '9876543210', 'customer_name' => 'Demo Customer',
+            'items' => [['service_id' => $service->id, 'quantity' => 1]],
+            'payment_method' => 'cash', 'idempotency_key' => 'backdate-window-start', 'billed_at' => '2026-09-22',
+        ]);
+        $response->assertRedirect()->assertSessionHasNoErrors();
+        $bill = Bill::query()->where('idempotency_key', 'backdate-window-start')->firstOrFail();
+        $this->assertSame('2026-09-22', $bill->billed_at->timezone('Asia/Kolkata')->toDateString());
+        $this->assertSame('2026-10-22', $bill->created_at->timezone('Asia/Kolkata')->toDateString());
+        $this->assertSame($admin->id, $bill->created_by);
+        $this->assertSame(1, Bill::query()->where('idempotency_key', 'backdate-window-start')->count());
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
+    public function test_backdated_billing_rejects_dates_outside_window_and_future_dates(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
+        $service = $this->service();
+        foreach (['2026-09-21', '2026-10-23'] as $index => $date) {
+            $this->actingAs($admin)->post(route('admin.backdated-billing.store'), [
+                'customer_mobile' => '9876543210', 'customer_name' => 'Demo Customer',
+                'items' => [['service_id' => $service->id, 'quantity' => 1]],
+                'payment_method' => 'cash', 'idempotency_key' => 'invalid-backdate-'.$index, 'billed_at' => $date,
+            ])->assertSessionHasErrors('billed_at');
+        }
+        $this->assertDatabaseCount('bills', 0);
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
     public function test_staff_can_open_billing_desk(): void
     {
         $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
@@ -285,7 +329,7 @@ class BillingTest extends TestCase
             ->assertSee('Cash')
             ->assertSee('PAID')
             ->assertSee('Print Invoice')
-            ->assertSee('Share WhatsApp')
+            ->assertSee('Open WhatsApp to share manually')
             ->assertSee('New Bill');
     }
 
@@ -726,7 +770,11 @@ class BillingTest extends TestCase
         $this->assertStringStartsWith('https://wa.me/919876543210?text=', $location);
         $this->assertStringContainsString('Invoice No: '.$bill->invoice_number, rawurldecode($location));
         $this->assertStringContainsString('Grand Total: ₹120', rawurldecode($location));
-        $this->assertStringContainsString(route('invoice.public', $bill->invoice_public_token), rawurldecode($location));
+        $message = rawurldecode($location);
+        $configuredUrl = preg_quote(rtrim((string) config('app.url'), '/').'/invoices/', '/');
+        $this->assertMatchesRegularExpression('/'.$configuredUrl.'([a-f0-9]{64})/', $message);
+        preg_match('/'.$configuredUrl.'([a-f0-9]{64})/', $message, $matches);
+        $this->assertSame(hash('sha256', $matches[1]), $bill->fresh()->invoice_access_token_hash);
         $this->assertStringContainsString('View / Download Your Bill', rawurldecode($location));
         $this->assertStringContainsString('Where every visit becomes an experience.', rawurldecode($location));
         $this->assertStringNotContainsString('Hello', rawurldecode($location));

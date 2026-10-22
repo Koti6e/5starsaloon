@@ -9,6 +9,7 @@ use App\Models\SalonSetting;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
+use App\Services\InvoiceAccessLinkService;
 use App\Support\Money;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\QueryException;
@@ -78,6 +79,12 @@ class BillingController extends Controller
             'biller' => $request->user(),
             'idempotencyKey' => old('idempotency_key', (string) Str::uuid()),
         ]);
+    }
+
+    public function createBackdated(Request $request): View
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+        return $this->create($request)->with('backdatedBilling', true);
     }
 
     public function lookupCustomer(Request $request): JsonResponse
@@ -174,6 +181,10 @@ class BillingController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $backdated = $request->routeIs('admin.backdated-billing.store');
+        abort_if($backdated && ! $request->user()?->isAdmin(), 403);
+        $businessToday = now((string) config('app.timezone', 'Asia/Kolkata'))->startOfDay();
+        $earliestDate = $businessToday->copy()->subDays(30)->toDateString();
         $validated = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
             'appointment_id' => ['nullable', 'exists:appointments,id'],
@@ -190,10 +201,12 @@ class BillingController extends Controller
             'home_visit_charge' => ['nullable', 'numeric', 'min:0'],
             'payment_method' => ['required', 'in:cash,upi,card,split,other'],
             'payment_note' => ['nullable', 'string', 'max:255'],
+            'whatsapp_invoice_opt_in' => ['nullable', 'boolean'],
             'split_payments' => ['exclude_unless:payment_method,split', 'required_if:payment_method,split', 'array', 'min:1'],
             'split_payments.*.method' => ['exclude_unless:payment_method,split', 'required', 'in:cash,upi,card,other'],
             'split_payments.*.amount' => ['exclude_unless:payment_method,split', 'required', 'numeric', 'min:0.01'],
             'idempotency_key' => ['required', 'string', 'max:100'],
+            'billed_at' => [$backdated ? 'required' : 'nullable', 'date_format:Y-m-d', 'after_or_equal:'.$earliestDate, 'before_or_equal:'.$businessToday->toDateString()],
         ]);
 
         if ($existing = Bill::query()->where('idempotency_key', $validated['idempotency_key'])->first()) {
@@ -207,7 +220,7 @@ class BillingController extends Controller
         $customerName = $this->normalizeCustomerName($validated['customer_name']);
 
         try {
-            $bill = DB::transaction(function () use ($request, $validated, $mobile, $customerName): Bill {
+            $bill = DB::transaction(function () use ($request, $validated, $mobile, $customerName, $backdated): Bill {
                 $appointment = null;
                 if (filled($validated['appointment_id'] ?? null)) {
                     $appointment = Appointment::query()
@@ -230,7 +243,10 @@ class BillingController extends Controller
                         'status' => 'active',
                     ],
                 );
-                $customer->update(['name' => $customerName]);
+                $customer->update([
+                    'name' => $customerName,
+                    'whatsapp_invoice_opt_in' => (bool) ($validated['whatsapp_invoice_opt_in'] ?? false),
+                ]);
 
                 $subtotalCents = 0;
                 $items = [];
@@ -305,8 +321,9 @@ class BillingController extends Controller
                     'payment_status' => 'paid',
                     'status' => 'completed',
                     'idempotency_key' => $validated['idempotency_key'],
-                    'invoice_public_token' => (string) Str::uuid(),
-                    'billed_at' => now('Asia/Kolkata'),
+                    'billed_at' => $backdated
+                        ? \Illuminate\Support\Carbon::parse($validated['billed_at'], (string) config('app.timezone', 'Asia/Kolkata'))->startOfDay()
+                        : now((string) config('app.timezone', 'Asia/Kolkata')),
                 ]);
 
                 foreach ($items as $item) {
@@ -374,6 +391,15 @@ class BillingController extends Controller
 
         $this->ensureInvoicePdf($bill);
 
+        try {
+            app(\App\Services\WhatsApp\WhatsAppInvoiceService::class)->sendInvoice($bill->fresh());
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::error('WhatsApp invoice sending failed unexpectedly.', [
+                'bill_id' => $bill->id,
+                'exception_class' => get_class($exception),
+            ]);
+        }
+
         return $this->redirectToSuccess($request, $bill);
     }
 
@@ -431,10 +457,20 @@ class BillingController extends Controller
         return redirect()->away('https://wa.me/91'.$bill->customer->mobile.'?text='.rawurlencode($message));
     }
 
+    public function revokeInvoiceLink(Request $request, Bill $bill): RedirectResponse
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+        $bill->forceFill(['invoice_access_revoked_at' => now()])->save();
+        return back()->with('status', 'Customer invoice link revoked.');
+    }
+
     public function publicInvoice(string $token)
     {
+        abort_unless(preg_match('/^[a-f0-9]{64}$/', $token) || Str::isUuid($token), 404);
         $bill = Bill::query()
-            ->where('invoice_public_token', $token)
+            ->where('invoice_access_token_hash', hash('sha256', $token))
+            ->whereNull('invoice_access_revoked_at')
+            ->where('invoice_access_expires_at', '>', now())
             ->firstOrFail();
 
         $this->ensureInvoicePdf($bill);
@@ -442,7 +478,7 @@ class BillingController extends Controller
         return Storage::disk('local')->response(
             $bill->invoice_pdf_path,
             str_replace(['/', '\\'], '-', $bill->invoice_number).'.pdf',
-            ['Content-Type' => 'application/pdf'],
+            ['Content-Type' => 'application/pdf', 'Cache-Control' => 'private, no-store, max-age=0', 'Referrer-Policy' => 'no-referrer', 'X-Robots-Tag' => 'noindex, nofollow'],
         );
     }
 
@@ -612,7 +648,7 @@ class BillingController extends Controller
             'Grand Total: '.Money::inr($bill->grand_total),
             '',
             'View / Download Your Bill',
-            route('invoice.public', $bill->invoice_public_token),
+            app(InvoiceAccessLinkService::class)->issue($bill),
             '',
             'Thank you for choosing 5 Star New Look Salon.',
             'Where every visit becomes an experience.',
@@ -653,14 +689,11 @@ class BillingController extends Controller
             return;
         }
 
-        if (blank($bill->invoice_public_token)) {
-            $bill->forceFill(['invoice_public_token' => (string) Str::uuid()])->save();
-        }
-
         $pdf = Pdf::loadView('billing.invoice-pdf', $this->invoiceData($bill))->setPaper('a4');
-        $path = 'invoices/'.$bill->invoice_public_token.'.pdf';
+        $path = $bill->invoice_pdf_path ?: 'invoices/'.Str::uuid().'.pdf';
 
         Storage::disk('local')->put($path, $pdf->output());
         $bill->forceFill(['invoice_pdf_path' => $path])->save();
     }
+
 }

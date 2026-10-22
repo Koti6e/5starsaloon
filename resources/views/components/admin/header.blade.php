@@ -54,7 +54,7 @@
                         @if ($user->profilePhotoUrl())
                             <img src="{{ $user->profilePhotoUrl() }}" alt="{{ $user->name }}" class="h-8 w-8 rounded-full object-cover">
                         @else
-                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-primary-strong)] text-xs font-bold text-black">{{ $user->initials() }}</span>
+                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-primary-strong)] text-xs font-bold text-[var(--on-accent)]">{{ $user->initials() }}</span>
                         @endif
                         <span class="hidden max-w-36 truncate md:block">{{ $user->name }}</span>
                     </button>

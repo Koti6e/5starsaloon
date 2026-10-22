@@ -35,6 +35,7 @@ class Customer extends Model
         'last_visit_at',
         'status',
         'whatsapp_status',
+        'whatsapp_invoice_opt_in',
         'source',
         'source_reference',
         'imported_at',
@@ -59,6 +60,7 @@ class Customer extends Model
             'last_visit_at' => 'datetime',
             'total_spent' => 'decimal:2',
             'imported_at' => 'datetime',
+            'whatsapp_invoice_opt_in' => 'boolean',
         ];
     }
 }

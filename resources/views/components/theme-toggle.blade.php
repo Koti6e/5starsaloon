@@ -7,8 +7,8 @@
             this.theme = this.themes.includes(value) ? value : 'emerald';
             localStorage.setItem('salon-theme', this.theme);
             document.documentElement.dataset.theme = this.theme;
-            document.documentElement.classList.toggle('theme-dark', this.theme !== 'pearl');
-            document.documentElement.classList.toggle('theme-light', this.theme === 'pearl');
+            document.documentElement.classList.toggle('theme-dark', this.theme === 'obsidian');
+            document.documentElement.classList.toggle('theme-light', this.theme !== 'obsidian');
         },
         next() {
             this.apply(this.themes[(this.themes.indexOf(this.theme) + 1) % this.themes.length]);

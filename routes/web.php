@@ -125,7 +125,7 @@ Route::delete('/customer-push-subscriptions', [CustomerPushSubscriptionControlle
     ->middleware('throttle:10,1')
     ->name('customer-push-subscriptions.destroy');
 Route::get('/invoices/{token}', [BillingController::class, 'publicInvoice'])
-    ->whereUuid('token')
+    ->where('token', '(?:[0-9a-fA-F-]{36}|[a-f0-9]{64})')
     ->name('invoice.public');
 
 Route::get('/dashboard', function () {
@@ -154,6 +154,8 @@ Route::prefix('admin')
         Route::get('/search', SearchController::class)->name('search');
         Route::get('/reports', AdminReportController::class)->name('reports.index');
         Route::get('/reports/sales', SalesReportController::class)->name('reports.sales');
+        Route::get('/backdated-billing', [BillingController::class, 'createBackdated'])->name('backdated-billing.create');
+        Route::post('/backdated-billing', [BillingController::class, 'store'])->name('backdated-billing.store');
         Route::get('/about-salonos', AboutSalonOsController::class)->name('about-salonos');
         Route::get('/billing/create', [BillingController::class, 'create'])->name('billing.create');
         Route::post('/billing', [BillingController::class, 'store'])->name('billing.store');
@@ -163,6 +165,7 @@ Route::prefix('admin')
         Route::get('/billing/{bill}', [BillingController::class, 'show'])->name('billing.show');
         Route::get('/billing/{bill}/print', [BillingController::class, 'print'])->name('billing.print');
         Route::get('/billing/{bill}/pdf', [BillingController::class, 'pdf'])->name('billing.pdf');
+        Route::post('/billing/{bill}/invoice-link/revoke', [BillingController::class, 'revokeInvoiceLink'])->name('billing.invoice-link.revoke');
         Route::get('/billing/{bill}/whatsapp', [BillingController::class, 'whatsapp'])->name('billing.whatsapp');
         Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
         Route::get('/closed-dates', [SalonClosedDateController::class, 'index'])->name('closed-dates.index');

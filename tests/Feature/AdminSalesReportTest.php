@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -135,6 +136,44 @@ class AdminSalesReportTest extends TestCase
             ->assertOk()
             ->assertSee('Sales Report')
             ->assertSee(route('admin.reports.sales'), false);
+    }
+
+    public function test_daily_and_weekly_views_use_completed_bills_and_monday_week_ranges(): void
+    {
+        $admin = $this->user('admin', 'Salon Admin');
+        $staff = $this->user('staff', 'Priya');
+        $this->bill($staff, '100.00', '2026-10-05 10:00:00');
+        $this->bill($staff, '200.00', '2026-10-06 10:00:00');
+        $this->bill($staff, '900.00', '2026-10-05 11:00:00', ['status' => 'cancelled']);
+
+        $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'daily', 'date' => '2026-10-05']))
+            ->assertOk()->assertSee('₹100')->assertSee('Monday, 05 Oct 2026')->assertSee('Hourly sales');
+        $weekly = $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'weekly', 'week' => '2026-10-07']))
+            ->assertOk()->assertSee('05 Oct – 11 Oct 2026')->assertSee('₹300');
+        $this->assertSame('2026-10-05', $weekly->viewData('week'));
+        $this->assertSame(7, count($weekly->viewData('dailyRows')));
+    }
+
+    public function test_sales_exports_follow_the_selected_period_and_formula_protect_csv_fields(): void
+    {
+        $admin = $this->user('admin', 'Salon Admin');
+        $staff = $this->user('staff', '=Formula');
+        $this->bill($staff, '100.00', '2026-10-05 10:00:00');
+        $response = $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'daily', 'date' => '2026-10-05', 'export' => 'excel']))->assertOk();
+        $this->assertStringContainsString("'=Formula", $response->streamedContent());
+        $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'weekly', 'week' => '2026-10-05', 'export' => 'pdf']))->assertOk()->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_actual_collections_use_payment_date_while_sales_use_bill_date(): void
+    {
+        $admin = $this->user('admin', 'Salon Admin');
+        $staff = $this->user('staff', 'Priya');
+        $backdated = $this->bill($staff, '300.00', '2026-10-01 10:00:00');
+        Payment::query()->create(['bill_id' => $backdated->id, 'payment_method' => 'cash', 'amount' => '300.00', 'received_by' => $staff->id, 'paid_at' => Carbon::parse('2026-10-05 10:00:00', 'Asia/Kolkata')]);
+
+        $response = $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'daily', 'date' => '2026-10-05']))->assertOk();
+        $this->assertSame('0.00', number_format((float) $response->viewData('totalSales'), 2, '.', ''));
+        $this->assertSame('300.00', number_format((float) $response->viewData('actualCollections'), 2, '.', ''));
     }
 
     private function user(string $role, string $name): User
