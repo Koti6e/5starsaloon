@@ -74,9 +74,6 @@
                 <a href="{{ route($routeRoot.'.billing.show', $bill, false) }}" class="rounded-md border border-[#c8a24a]/40 bg-[#11100d] px-4 py-3 text-center text-sm font-semibold text-[#f8efd8] shadow-sm transition hover:border-[#f4d27a] hover:text-[#f4d27a]">View Invoice</a>
                 <a href="{{ route($routeRoot.'.billing.pdf', $bill, false) }}" class="rounded-md bg-[#d5a93b] px-4 py-3 text-center text-sm font-bold text-black shadow-lg shadow-black/20 transition hover:bg-[#f4d27a]">Download PDF</a>
                 <a href="{{ route($routeRoot.'.billing.print', $bill, false) }}" target="_blank" class="rounded-md border border-[#c8a24a]/40 bg-[#11100d] px-4 py-3 text-center text-sm font-semibold text-[#f8efd8] shadow-sm transition hover:border-[#f4d27a] hover:text-[#f4d27a]">Print Invoice</a>
-                @if (auth()->user()->isAdmin())
-                    <form method="POST" action="{{ route('admin.billing.invoice-link.revoke', $bill) }}" onsubmit="return confirm('Revoke the customer invoice link?')">@csrf<button class="rounded-md border border-rose-500/40 px-4 py-3 text-sm font-semibold text-rose-700">Revoke customer link</button></form>
-                @endif
                 <div class="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-center text-sm font-semibold text-emerald-200">
                     @if (in_array($bill->whatsapp_invoice_status, ['delivered', 'read'], true))
                         Invoice {{ $bill->whatsapp_invoice_status }} via WhatsApp

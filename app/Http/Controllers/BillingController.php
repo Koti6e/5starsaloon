@@ -9,7 +9,6 @@ use App\Models\SalonSetting;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
-use App\Services\InvoiceAccessLinkService;
 use App\Support\Money;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\QueryException;
@@ -19,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -185,6 +185,7 @@ class BillingController extends Controller
         abort_if($backdated && ! $request->user()?->isAdmin(), 403);
         $businessToday = now((string) config('app.timezone', 'Asia/Kolkata'))->startOfDay();
         $earliestDate = $businessToday->copy()->subDays(30)->toDateString();
+        $supportsWhatsAppConsent = Schema::hasColumn('customers', 'whatsapp_invoice_opt_in');
         $validated = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
             'appointment_id' => ['nullable', 'exists:appointments,id'],
@@ -220,7 +221,7 @@ class BillingController extends Controller
         $customerName = $this->normalizeCustomerName($validated['customer_name']);
 
         try {
-            $bill = DB::transaction(function () use ($request, $validated, $mobile, $customerName, $backdated): Bill {
+            $bill = DB::transaction(function () use ($request, $validated, $mobile, $customerName, $backdated, $supportsWhatsAppConsent): Bill {
                 $appointment = null;
                 if (filled($validated['appointment_id'] ?? null)) {
                     $appointment = Appointment::query()
@@ -243,10 +244,11 @@ class BillingController extends Controller
                         'status' => 'active',
                     ],
                 );
-                $customer->update([
-                    'name' => $customerName,
-                    'whatsapp_invoice_opt_in' => (bool) ($validated['whatsapp_invoice_opt_in'] ?? false),
-                ]);
+                $customerUpdates = ['name' => $customerName];
+                if ($supportsWhatsAppConsent) {
+                    $customerUpdates['whatsapp_invoice_opt_in'] = (bool) ($validated['whatsapp_invoice_opt_in'] ?? false);
+                }
+                $customer->update($customerUpdates);
 
                 $subtotalCents = 0;
                 $items = [];
@@ -321,6 +323,7 @@ class BillingController extends Controller
                     'payment_status' => 'paid',
                     'status' => 'completed',
                     'idempotency_key' => $validated['idempotency_key'],
+                    'invoice_public_token' => (string) Str::uuid(),
                     'billed_at' => $backdated
                         ? \Illuminate\Support\Carbon::parse($validated['billed_at'], (string) config('app.timezone', 'Asia/Kolkata'))->startOfDay()
                         : now((string) config('app.timezone', 'Asia/Kolkata')),
@@ -457,21 +460,21 @@ class BillingController extends Controller
         return redirect()->away('https://wa.me/91'.$bill->customer->mobile.'?text='.rawurlencode($message));
     }
 
-    public function revokeInvoiceLink(Request $request, Bill $bill): RedirectResponse
-    {
-        abort_unless($request->user()?->isAdmin(), 403);
-        $bill->forceFill(['invoice_access_revoked_at' => now()])->save();
-        return back()->with('status', 'Customer invoice link revoked.');
-    }
-
     public function publicInvoice(string $token)
     {
-        abort_unless(preg_match('/^[a-f0-9]{64}$/', $token) || Str::isUuid($token), 404);
-        $bill = Bill::query()
-            ->where('invoice_access_token_hash', hash('sha256', $token))
-            ->whereNull('invoice_access_revoked_at')
-            ->where('invoice_access_expires_at', '>', now())
-            ->firstOrFail();
+        $hasSecureTokenSchema = Schema::hasColumn('bills', 'invoice_access_token_hash')
+            && Schema::hasColumn('bills', 'invoice_access_expires_at')
+            && Schema::hasColumn('bills', 'invoice_access_revoked_at');
+
+        if ($hasSecureTokenSchema && preg_match('/^[a-f0-9]{64}$/', $token)) {
+            $bill = Bill::query()
+                ->where('invoice_access_token_hash', hash('sha256', $token))
+                ->whereNull('invoice_access_revoked_at')
+                ->where('invoice_access_expires_at', '>', now())
+                ->firstOrFail();
+        } else {
+            $bill = Bill::query()->where('invoice_public_token', $token)->firstOrFail();
+        }
 
         $this->ensureInvoicePdf($bill);
 
@@ -480,6 +483,19 @@ class BillingController extends Controller
             str_replace(['/', '\\'], '-', $bill->invoice_number).'.pdf',
             ['Content-Type' => 'application/pdf', 'Cache-Control' => 'private, no-store, max-age=0', 'Referrer-Policy' => 'no-referrer', 'X-Robots-Tag' => 'noindex, nofollow'],
         );
+    }
+
+    public function revokeInvoiceLink(Request $request, Bill $bill): RedirectResponse
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+        abort_unless(
+            Schema::hasColumn('bills', 'invoice_access_revoked_at'),
+            404,
+        );
+
+        $bill->forceFill(['invoice_access_revoked_at' => now()])->save();
+
+        return back()->with('status', 'Customer invoice link revoked.');
     }
 
     private function invoiceData(Bill $bill): array
@@ -648,7 +664,7 @@ class BillingController extends Controller
             'Grand Total: '.Money::inr($bill->grand_total),
             '',
             'View / Download Your Bill',
-            app(InvoiceAccessLinkService::class)->issue($bill),
+            route('invoice.public', $bill->invoice_public_token),
             '',
             'Thank you for choosing 5 Star New Look Salon.',
             'Where every visit becomes an experience.',
@@ -689,8 +705,12 @@ class BillingController extends Controller
             return;
         }
 
+        if (blank($bill->invoice_public_token)) {
+            $bill->forceFill(['invoice_public_token' => (string) Str::uuid()])->save();
+        }
+
         $pdf = Pdf::loadView('billing.invoice-pdf', $this->invoiceData($bill))->setPaper('a4');
-        $path = $bill->invoice_pdf_path ?: 'invoices/'.Str::uuid().'.pdf';
+        $path = $bill->invoice_pdf_path ?: 'invoices/'.$bill->invoice_public_token.'.pdf';
 
         Storage::disk('local')->put($path, $pdf->output());
         $bill->forceFill(['invoice_pdf_path' => $path])->save();

@@ -772,9 +772,12 @@ class BillingTest extends TestCase
         $this->assertStringContainsString('Grand Total: ₹120', rawurldecode($location));
         $message = rawurldecode($location);
         $configuredUrl = preg_quote(rtrim((string) config('app.url'), '/').'/invoices/', '/');
-        $this->assertMatchesRegularExpression('/'.$configuredUrl.'([a-f0-9]{64})/', $message);
-        preg_match('/'.$configuredUrl.'([a-f0-9]{64})/', $message, $matches);
-        $this->assertSame(hash('sha256', $matches[1]), $bill->fresh()->invoice_access_token_hash);
+        $this->assertMatchesRegularExpression('/'.$configuredUrl.'([0-9a-f-]{36})/', $message);
+        preg_match('/'.$configuredUrl.'([0-9a-f-]{36})/', $message, $matches);
+        $this->assertSame($bill->fresh()->invoice_public_token, $matches[1]);
+        $this->get(route('invoice.public', $matches[1]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
         $this->assertStringContainsString('View / Download Your Bill', rawurldecode($location));
         $this->assertStringContainsString('Where every visit becomes an experience.', rawurldecode($location));
         $this->assertStringNotContainsString('Hello', rawurldecode($location));
