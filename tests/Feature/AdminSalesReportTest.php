@@ -159,7 +159,7 @@ class AdminSalesReportTest extends TestCase
         $admin = $this->user('admin', 'Salon Admin');
         $staff = $this->user('staff', '=Formula');
         $this->bill($staff, '100.00', '2026-10-05 10:00:00');
-        $response = $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'daily', 'date' => '2026-10-05', 'export' => 'excel']))->assertOk();
+        $response = $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'daily', 'date' => '2026-10-05', 'export' => 'csv']))->assertOk();
         $this->assertStringContainsString("'=Formula", $response->streamedContent());
         $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'weekly', 'week' => '2026-10-05', 'export' => 'pdf']))->assertOk()->assertHeader('content-type', 'application/pdf');
     }

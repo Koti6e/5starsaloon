@@ -18,9 +18,9 @@ class SalesReportController extends Controller
 {
     public function __invoke(Request $request): View|Response|RedirectResponse
     {
-        if ($request->query('export') === 'excel' || $request->query('export') === 'pdf') {
-            $exportRequest = $request->validate(['period' => ['nullable', 'in:daily,weekly,monthly'], 'date' => ['nullable', 'date_format:Y-m-d'], 'week' => ['nullable', 'date_format:Y-m-d'], 'month' => ['nullable', 'date_format:Y-m'], 'export' => ['required', 'in:excel,pdf']]);
-            return $exportRequest['export'] === 'excel' ? $this->exportCsv($request) : $this->exportPdf($request);
+        if ($request->query('export') === 'csv' || $request->query('export') === 'pdf') {
+            $exportRequest = $request->validate(['period' => ['nullable', 'in:daily,weekly,monthly'], 'date' => ['nullable', 'date_format:Y-m-d'], 'week' => ['nullable', 'date_format:Y-m-d'], 'month' => ['nullable', 'date_format:Y-m'], 'export' => ['required', 'in:csv,pdf']]);
+            return $exportRequest['export'] === 'csv' ? $this->exportCsv($request) : $this->exportPdf($request);
         }
         $validated = $request->validate([
             'period' => ['nullable', 'in:daily,weekly,monthly'],

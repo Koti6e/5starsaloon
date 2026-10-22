@@ -36,6 +36,7 @@ class AdminDashboardDailyBillsTest extends TestCase
         $this->assertSame(1, $response->viewData('todayBills'));
         $this->assertSame('100.00', number_format((float) $response->viewData('todaySales'), 2, '.', ''));
         $this->assertSame([$today->id], $response->viewData('todayBillRows')->pluck('id')->all());
+        $response->assertSee(htmlspecialchars(route('admin.reports.sales', ['period' => 'daily', 'date' => '2026-10-22'])), false);
         $this->assertDatabaseHas('bills', ['id' => $backdated->id, 'created_at' => now('Asia/Kolkata')->format('Y-m-d H:i:s')]);
     }
 
