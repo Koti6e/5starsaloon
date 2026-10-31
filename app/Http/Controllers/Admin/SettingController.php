@@ -37,6 +37,8 @@ class SettingController extends Controller
             'google_place_id' => ['nullable', 'string', 'max:200'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'attendance_geofence_radius_meters' => ['sometimes', 'required', 'integer', 'between:50,5000'],
+            'attendance_gps_accuracy_threshold_meters' => ['sometimes', 'required', 'integer', 'between:10,500'],
             'working_hours' => ['nullable', 'string', 'max:160'],
             'weekly_holiday' => ['nullable', 'string', 'max:120'],
             'instagram_url' => ['nullable', 'url', 'max:500'],

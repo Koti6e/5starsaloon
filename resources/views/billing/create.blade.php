@@ -119,6 +119,9 @@
                         <p class="mb-2 text-xs text-[var(--app-muted)]">Choose a date within the previous 30 days. The record creation time remains unchanged.</p>
                         <input id="billed_at" name="billed_at" type="date" required min="{{ now(config('app.timezone'))->subDays(30)->toDateString() }}" max="{{ now(config('app.timezone'))->toDateString() }}" value="{{ old('billed_at') }}" class="min-h-11 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 text-[var(--app-text)]">
                         @error('billed_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <label for="backdating_reason" class="mt-3 block text-sm font-semibold text-[var(--app-text)]">Reason for backdating</label>
+                        <textarea id="backdating_reason" name="backdating_reason" rows="2" maxlength="1000" required class="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-[var(--app-text)]" placeholder="Explain why this bill is being recorded for an earlier date">{{ old('backdating_reason') }}</textarea>
+                        @error('backdating_reason')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </section>
                 @endif
                 @if ($appointment)

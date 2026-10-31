@@ -33,6 +33,7 @@ class BillingTest extends TestCase
             'customer_mobile' => '9876543210', 'customer_name' => 'Demo Customer',
             'items' => [['service_id' => $service->id, 'quantity' => 1]],
             'payment_method' => 'cash', 'idempotency_key' => 'backdate-window-start', 'billed_at' => '2026-09-22',
+            'backdating_reason' => 'Recorded from the paper invoice log.',
         ]);
         $response->assertRedirect()->assertSessionHasNoErrors();
         $bill = Bill::query()->where('idempotency_key', 'backdate-window-start')->firstOrFail();
@@ -40,6 +41,12 @@ class BillingTest extends TestCase
         $this->assertSame('2026-10-22', $bill->created_at->timezone('Asia/Kolkata')->toDateString());
         $this->assertSame($admin->id, $bill->created_by);
         $this->assertSame(1, Bill::query()->where('idempotency_key', 'backdate-window-start')->count());
+        $this->assertDatabaseHas('backdated_billing_audits', [
+            'bill_id' => $bill->id,
+            'admin_id' => $admin->id,
+            'business_date' => '2026-09-22',
+            'reason' => 'Recorded from the paper invoice log.',
+        ]);
         \Illuminate\Support\Carbon::setTestNow();
     }
 
@@ -55,6 +62,22 @@ class BillingTest extends TestCase
                 'payment_method' => 'cash', 'idempotency_key' => 'invalid-backdate-'.$index, 'billed_at' => $date,
             ])->assertSessionHasErrors('billed_at');
         }
+        $this->assertDatabaseCount('bills', 0);
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
+    public function test_backdated_billing_requires_an_audit_reason(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
+        $service = $this->service();
+
+        $this->actingAs($admin)->post(route('admin.backdated-billing.store'), [
+            'customer_mobile' => '9876543210', 'customer_name' => 'Demo Customer',
+            'items' => [['service_id' => $service->id, 'quantity' => 1]],
+            'payment_method' => 'cash', 'idempotency_key' => 'backdate-no-reason', 'billed_at' => '2026-09-22',
+        ])->assertSessionHasErrors('backdating_reason');
+
         $this->assertDatabaseCount('bills', 0);
         \Illuminate\Support\Carbon::setTestNow();
     }

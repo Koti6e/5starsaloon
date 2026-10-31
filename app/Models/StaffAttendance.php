@@ -17,6 +17,15 @@ class StaffAttendance extends Model
         'login_session_id',
         'selfie_path',
         'selfie_captured_at',
+        'latitude',
+        'longitude',
+        'gps_accuracy_meters',
+        'distance_from_salon_meters',
+        'verification_status',
+        'verification_reason',
+        'face_verification_status',
+        'device_id',
+        'consent_at',
         'notes',
         'marked_by',
         'corrected_by',
@@ -29,6 +38,7 @@ class StaffAttendance extends Model
         return [
             'attendance_date' => 'date',
             'selfie_captured_at' => 'datetime',
+            'consent_at' => 'datetime',
             'corrected_at' => 'datetime',
         ];
     }

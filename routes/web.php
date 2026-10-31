@@ -177,6 +177,8 @@ Route::prefix('admin')
         Route::patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status.update');
         Route::get('/attendance', [AdminAttendanceController::class, 'index'])->name('attendance.index');
         Route::post('/attendance', [AdminAttendanceController::class, 'update'])->name('attendance.update');
+        Route::post('/attendance/verification-attempts/{attempt}/review', [AdminAttendanceController::class, 'reviewAttempt'])->name('attendance.verification.review');
+        Route::patch('/attendance/devices/{device}', [AdminAttendanceController::class, 'updateDevice'])->name('attendance.devices.update');
         Route::get('/customers/{customer}/whatsapp', [AdminCustomerController::class, 'whatsapp'])->name('customers.whatsapp');
         Route::resource('customers', AdminCustomerController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
         Route::resource('services', AdminServiceController::class)->except(['show', 'destroy']);
@@ -196,7 +198,7 @@ Route::prefix('staff')
     ->middleware(['auth', 'active', 'password.changed', 'auth.no-store', 'role:staff', 'staff.cutoff'])
     ->group(function (): void {
         Route::get('/login-selfie', [SelfieAttendanceController::class, 'create'])->name('selfie.create');
-        Route::post('/login-selfie', [SelfieAttendanceController::class, 'store'])->name('selfie.store');
+        Route::post('/login-selfie', [SelfieAttendanceController::class, 'store'])->middleware('throttle:5,1')->name('selfie.store');
     });
 
 Route::prefix('staff')

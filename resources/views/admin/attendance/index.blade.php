@@ -35,15 +35,73 @@
                             >
                         </div>
 
-                        <button
-                            type="submit"
-                            class="inline-flex items-center justify-center rounded-xl bg-[#d5a93b] px-6 py-3 text-sm font-semibold text-[#111] transition hover:bg-[#e4bd55] focus:outline-none focus:ring-2 focus:ring-[#d5a93b]/50"
-                        >
-                            Open Date
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ route('admin.attendance.index', ['date' => \Illuminate\Support\Carbon::parse($date)->subDay()->toDateString(), 'month' => $month->format('Y-m')]) }}" class="rounded-xl border border-[var(--app-border)] px-4 py-3 text-sm text-[var(--app-text)]" aria-label="Previous attendance day">← Day</a>
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[var(--app-primary)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] transition focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]">Open Date</button>
+                            @if ($date < now('Asia/Kolkata')->toDateString())
+                                <a href="{{ route('admin.attendance.index', ['date' => \Illuminate\Support\Carbon::parse($date)->addDay()->toDateString(), 'month' => $month->format('Y-m')]) }}" class="rounded-xl border border-[var(--app-border)] px-4 py-3 text-sm text-[var(--app-text)]" aria-label="Next attendance day">Day →</a>
+                            @endif
+                        </div>
                     </div>
                 </x-admin.card>
             </form>
+
+            <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-semibold text-[var(--app-text)]">Weekly Attendance</h2>
+                        <p class="mt-1 text-sm text-[var(--app-text-muted)]">{{ $weekStart->format('d M') }} – {{ $weekEnd->format('d M Y') }}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="{{ route('admin.attendance.index', ['date' => $weekStart->copy()->subWeek()->toDateString(), 'month' => $month->format('Y-m')]) }}" class="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-text)]">← Previous week</a>
+                        @if ($weekEnd->toDateString() < now('Asia/Kolkata')->toDateString())
+                            <a href="{{ route('admin.attendance.index', ['date' => $weekStart->copy()->addWeek()->toDateString(), 'month' => $month->format('Y-m')]) }}" class="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-text)]">Next week →</a>
+                        @endif
+                    </div>
+                </div>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="w-full min-w-[900px] text-left text-sm">
+                        <thead class="text-xs uppercase text-[var(--app-text-muted)]"><tr><th class="p-2">Staff</th>@foreach ($weekStart->copy()->daysUntil($weekEnd->copy()->addDay()) as $day)<th class="p-2 text-center">{{ $day->format('D d') }}</th>@endforeach<th class="p-2 text-right">Present</th><th class="p-2 text-right">Attendance</th></tr></thead>
+                        <tbody class="divide-y divide-[var(--app-border)]">
+                            @foreach ($staff as $member)
+                                @php
+                                    $summary = $weeklySummary[$member->id];
+                                @endphp
+                                <tr>
+                                    <th class="p-2 font-medium text-[var(--app-text)]"><a class="underline" href="{{ route('admin.attendance.index', ['date' => $date, 'month' => $month->format('Y-m'), 'staff' => $member->id]) }}">{{ $member->name }}</a></th>
+                                    @foreach ($summary['days'] as $day)
+                                        @php
+                                            $tone = in_array($day['status'], ['present', 'late'], true) ? 'bg-emerald-500' : (in_array($day['status'], ['absent', 'leave', 'half_day'], true) ? 'bg-amber-500' : 'bg-[var(--app-border)]');
+                                        @endphp
+                                        <td class="p-2 text-center"><a href="{{ route('admin.attendance.index', ['date' => $day['date'], 'month' => $month->format('Y-m')]) }}" class="inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg hover:bg-[var(--app-bg)]" title="{{ $day['date'] }} · {{ str_replace('_', ' ', $day['status']) }}"><span class="h-2.5 w-2.5 rounded-full {{ $tone }}" aria-hidden="true"></span><span class="sr-only">{{ str_replace('_', ' ', $day['status']) }}</span></a></td>
+                                    @endforeach
+                                    <td class="p-2 text-right">{{ $summary['present'] }}/{{ $summary['working_days'] }}</td><td class="p-2 text-right font-semibold">{{ $summary['attendance'] }}%</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-3 text-xs text-[var(--app-text-muted)]">Activity dots show recorded attendance. Gray indicates no record or a weekly day off.</p>
+            </section>
+
+            <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
+                <div class="flex items-center justify-between gap-3"><div><h2 class="text-xl font-semibold text-[var(--app-text)]">Attendance Verification Review</h2><p class="mt-1 text-sm text-[var(--app-text-muted)]">GPS failures and unverified selfie/device submissions. Review decisions require an explanation.</p></div><span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700">{{ $verificationAttempts->count() }} pending</span></div>
+                <div class="mt-4 space-y-3">
+                    @forelse ($verificationAttempts as $attempt)
+                        <article class="rounded-lg border border-[var(--app-border)] p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-2"><div><p class="font-semibold text-[var(--app-text)]">{{ $attempt->staff?->name ?? 'Former staff' }} · {{ $attempt->attempted_at?->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}</p><p class="mt-1 text-sm text-[var(--app-muted)]">{{ $attempt->reason }}</p><p class="mt-1 text-xs text-[var(--app-subtle)]">GPS: {{ $attempt->latitude ?? 'not provided' }}, {{ $attempt->longitude ?? 'not provided' }} · accuracy {{ $attempt->gps_accuracy_meters ? number_format($attempt->gps_accuracy_meters).' m' : 'unavailable' }} · distance {{ $attempt->distance_from_salon_meters ? number_format($attempt->distance_from_salon_meters).' m' : 'not calculated' }}</p></div>@if ($attempt->attendance_id)<a class="text-sm font-semibold text-[var(--app-primary)] underline" href="{{ route('admin.attendance.selfie', $attempt->attendance_id) }}">Review selfie</a>@endif</div>
+                            <form method="POST" action="{{ route('admin.attendance.verification.review', $attempt) }}" class="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">@csrf<label class="sr-only" for="review-reason-{{ $attempt->id }}">Review reason</label><input id="review-reason-{{ $attempt->id }}" name="review_reason" required maxlength="1000" placeholder="Required review reason" class="min-h-10 rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] px-3 text-sm text-[var(--app-text)]"><button name="decision" value="approved" class="rounded-md bg-[var(--app-primary)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]">Approve exception</button><button name="decision" value="rejected" class="rounded-md border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-700">Reject</button></form>
+                        </article>
+                    @empty
+                        <p class="rounded-lg border border-dashed border-[var(--app-border)] p-5 text-center text-sm text-[var(--app-muted)]">No attendance verification reviews are waiting.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
+                <h2 class="text-xl font-semibold text-[var(--app-text)]">Registered Staff Devices</h2><p class="mt-1 text-sm text-[var(--app-text-muted)]">Browser installation IDs assist review and do not establish physical device identity.</p>
+                <div class="mt-4 space-y-2">@forelse ($attendanceDevices as $device)<div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--app-border)] p-3"><div><p class="font-semibold text-[var(--app-text)]">{{ $device->staff?->name ?? 'Former staff' }} · {{ ucfirst($device->status) }}</p><p class="text-xs text-[var(--app-muted)]">{{ $device->label ?: 'Attendance browser' }} · first seen {{ $device->first_seen_at?->timezone('Asia/Kolkata')->format('d M Y') }} · last seen {{ $device->last_seen_at?->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}</p></div><div class="flex gap-2">@if ($device->status !== 'approved')<form method="POST" action="{{ route('admin.attendance.devices.update', $device) }}" class="flex gap-2">@csrf @method('PATCH')<input type="hidden" name="action" value="approve"><input name="reason" required maxlength="1000" placeholder="Approval reason" aria-label="Device approval reason" class="w-36 rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] px-2 text-xs"><button class="rounded-md bg-[var(--app-primary)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)]">Approve</button></form>@endif @if ($device->status !== 'revoked')<form method="POST" action="{{ route('admin.attendance.devices.update', $device) }}" class="flex gap-2">@csrf @method('PATCH')<input type="hidden" name="action" value="revoke"><input name="reason" required maxlength="1000" placeholder="Revocation reason" aria-label="Device revocation reason" class="w-36 rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] px-2 text-xs"><button class="rounded-md border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-700">Revoke</button></form>@endif</div></div>@empty<p class="text-sm text-[var(--app-muted)]">No device registrations yet.</p>@endforelse</div>
+            </section>
 
             <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
                 <div class="flex flex-wrap items-end justify-between gap-4">
@@ -153,7 +211,7 @@
                     <form
                         method="POST"
                         action="{{ route('admin.attendance.update') }}"
-                        class="overflow-hidden rounded-2xl border border-[#c8a24a]/15 bg-[#11100d] shadow-xl shadow-black/10"
+                        class="overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] shadow-xl"
                     >
                         @csrf
 
@@ -199,8 +257,8 @@
 
                             {{-- Photo --}}
                             <div>
-                                <p class="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#a89567]">
-                                    Login Photo
+                                <p class="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--app-muted)]">
+                                    Attendance Photo
                                 </p>
 
                                 @if ($row?->selfie_path)
@@ -208,7 +266,7 @@
                                         href="{{ route('admin.attendance.selfie', $row) }}"
                                         target="_blank"
                                         rel="noopener"
-                                        class="group block overflow-hidden rounded-2xl border border-[#c8a24a]/25 bg-black"
+                                            class="group block overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]"
                                         title="View captured attendance photo"
                                     >
                                         <div class="aspect-[4/5] w-full overflow-hidden">
@@ -230,11 +288,15 @@
                                             <circle cx="12" cy="13" r="3.5"/>
                                         </svg>
 
-                                        <p class="text-xs font-medium text-[#a89567]">
+                                        <p class="text-xs font-medium text-[var(--app-muted)]">
                                             No attendance photo
                                         </p>
                                     </div>
                                 @endif
+                                @if ($row?->latitude !== null)
+                                    <p class="mt-2 text-xs leading-5 text-[var(--app-muted)]">GPS {{ number_format($row->distance_from_salon_meters) }} m from salon · ±{{ number_format($row->gps_accuracy_meters) }} m</p>
+                                @endif
+                                <p class="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs font-semibold text-amber-800">{{ str_replace('_', ' ', ucfirst($row?->verification_status ?? 'not verified')) }}{{ $row?->verification_reason ? ' · '.$row->verification_reason : '' }}</p>
                             </div>
 
                             {{-- Attendance controls --}}
@@ -276,6 +338,16 @@
                                             <span class="mr-2 h-2 w-2 rounded-full {{ $row ? 'bg-[#d5a93b]' : 'bg-[#5d5749]' }}"></span>
                                             {{ $sourceLabel }}
                                         </div>
+                                    </div>
+
+                                    <div class="sm:col-span-2">
+                                        <label for="verification-status-{{ $member->id }}" class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)]">Verification Result</label>
+                                        <select id="verification-status-{{ $member->id }}" name="verification_status" class="w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-sm text-[var(--app-text)]">
+                                            @foreach (['review_required', 'verified', 'rejected'] as $verificationOption)
+                                                <option value="{{ $verificationOption }}" @selected(($row?->verification_status ?? 'review_required') === $verificationOption)>{{ str_replace('_', ' ', ucfirst($verificationOption)) }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p class="mt-1 text-xs text-[var(--app-muted)]">Choosing Verified is an administrator override. Enter the reason below; the original result is retained in the audit history.</p>
                                     </div>
 
                                     {{-- Check in --}}

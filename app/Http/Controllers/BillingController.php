@@ -208,6 +208,7 @@ class BillingController extends Controller
             'split_payments.*.amount' => ['exclude_unless:payment_method,split', 'required', 'numeric', 'min:0.01'],
             'idempotency_key' => ['required', 'string', 'max:100'],
             'billed_at' => [$backdated ? 'required' : 'nullable', 'date_format:Y-m-d', 'after_or_equal:'.$earliestDate, 'before_or_equal:'.$businessToday->toDateString()],
+            'backdating_reason' => [$backdated ? 'required' : 'exclude', 'string', 'max:1000'],
         ]);
 
         if ($existing = Bill::query()->where('idempotency_key', $validated['idempotency_key'])->first()) {
@@ -361,6 +362,16 @@ class BillingController extends Controller
                     'total_spent' => DB::raw('total_spent + '.$this->fromCents($grandCents)),
                     'last_visit_at' => now('Asia/Kolkata'),
                 ]);
+
+                if ($backdated) {
+                    DB::table('backdated_billing_audits')->insert([
+                        'bill_id' => $bill->id,
+                        'admin_id' => $request->user()->id,
+                        'business_date' => $validated['billed_at'],
+                        'reason' => $validated['backdating_reason'],
+                        'created_at' => now(),
+                    ]);
+                }
 
                 return $bill;
             });

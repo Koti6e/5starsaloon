@@ -49,7 +49,9 @@ class AuthenticatedSessionController extends Controller
             if ($verifiedToday) {
                 $request->session()->put('staff_selfie_attendance_id', $verifiedToday->id);
             } elseif (! $weeklyOff) {
-                return redirect()->intended(route('staff.selfie.create', absolute: false));
+                // Attendance verification must happen before honoring a stale
+                // intended dashboard URL left in the session after logout.
+                return redirect()->to(route('staff.selfie.create', [], false));
             }
         }
 

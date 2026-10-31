@@ -55,7 +55,7 @@ class User extends Authenticatable
 
     public function requiresLoginSelfie(): bool
     {
-        return $this->isStaff() && in_array(Str::lower((string) $this->username), ['staff1', 'staff2'], true);
+        return $this->isStaff();
     }
 
     public function isActive(): bool

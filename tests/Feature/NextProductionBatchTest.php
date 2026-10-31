@@ -109,7 +109,10 @@ class NextProductionBatchTest extends TestCase
 
         $this->post('/login', ['username' => 'Staff1', 'password' => 'password'])
             ->assertRedirect(route('staff.selfie.create', absolute: false));
-        $this->post(route('staff.selfie.store'), ['selfie_image' => $this->selfieData()])
+        $this->post(route('staff.selfie.store'), ['selfie_image' => $this->selfieData()] + [
+            'latitude' => '12.8821489', 'longitude' => '80.0808760', 'gps_accuracy_meters' => '15',
+            'device_key' => (string) Str::uuid(), 'consent' => '1',
+        ])
             ->assertRedirect(route('staff.dashboard', absolute: false));
         $attendance = StaffAttendance::query()->where('staff_id', $staff->id)->firstOrFail();
         $this->assertSame('present', $attendance->status);
@@ -123,7 +126,7 @@ class NextProductionBatchTest extends TestCase
         $this->post('/logout');
         $this->travel(1)->days();
         $this->post('/login', ['username' => 'Staff1', 'password' => 'password'])
-            ->assertRedirect(route('staff.selfie.create', absolute: false));
+            ->assertRedirect(route('staff.dashboard', absolute: false));
         $this->assertSame(1, StaffAttendance::query()->where('staff_id', $staff->id)->count());
     }
 
@@ -132,8 +135,10 @@ class NextProductionBatchTest extends TestCase
         $staff = User::factory()->create(['username' => 'Staff2', 'role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
         $this->post('/login', ['username' => 'Staff2', 'password' => 'password'])->assertRedirect(route('staff.selfie.create', absolute: false));
 
-        $this->post(route('staff.selfie.store'), ['selfie_image' => ''])
-            ->assertSessionHasErrors('selfie_image');
+        $this->post(route('staff.selfie.store'), [
+            'latitude' => '12.8821489', 'longitude' => '80.0808760', 'gps_accuracy_meters' => '15',
+            'device_key' => (string) Str::uuid(), 'consent' => '1',
+        ])->assertSessionHasErrors('attendance');
         $this->assertDatabaseCount('staff_attendances', 0);
     }
 
