@@ -19,7 +19,6 @@
         ['label' => 'Backdated Billing', 'short' => 'Backdate', 'route' => 'admin.backdated-billing.create', 'match' => ['admin.backdated-billing.*'], 'icon' => 'billing'],
         ['label' => 'Customer Notifications', 'short' => 'Notify', 'route' => 'admin.customer-notifications.index', 'match' => ['admin.customer-notifications.*'], 'icon' => 'reports'],
         ['label' => 'Settings', 'short' => 'Settings', 'route' => 'admin.settings.edit', 'match' => ['admin.settings.*'], 'icon' => 'settings'],
-        ['label' => 'About SalonOS', 'short' => 'About', 'route' => 'admin.about-salonos', 'match' => ['admin.about-salonos'], 'icon' => 'about'],
     ];
 
     $items = collect($user->isAdmin() ? array_merge($baseItems, $adminItems) : $baseItems)

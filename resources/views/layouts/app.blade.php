@@ -59,6 +59,7 @@
                 --app-bg: var(--bg-app);
                 --app-surface: var(--bg-surface);
                 --app-surface-elevated: var(--bg-surface-elevated);
+                --app-card: var(--bg-surface);
                 --app-text: var(--text-primary);
                 --app-muted: var(--text-secondary);
                 --app-subtle: var(--text-muted);
@@ -144,6 +145,7 @@
                 --app-bg: var(--bg-app);
                 --app-surface: var(--bg-surface);
                 --app-surface-elevated: var(--bg-surface-elevated);
+                --app-card: var(--bg-surface);
                 --app-text: var(--text-primary);
                 --app-muted: var(--text-secondary);
                 --app-subtle: var(--text-muted);
@@ -237,10 +239,8 @@
 
                 <x-admin.flash />
 
-                <main class="mx-auto max-w-7xl pb-6 pt-2 sm:pb-10 sm:pt-4 {{ request()->routeIs('*.billing.create') ? 'px-2 sm:px-3 lg:px-4' : 'px-3 sm:px-6 lg:px-8' }}">
-                    <div class="{{ request()->routeIs('*.billing.create', '*.backdated-billing.*') ? 'rounded-2xl p-0 sm:p-2' : 'rounded-3xl p-3 sm:p-4 lg:rounded-[32px]' }} border border-[var(--app-border)] bg-[var(--app-surface)]/95 shadow-[var(--shadow-card)]">
-                        {{ $slot }}
-                    </div>
+                <main class="mx-auto max-w-screen-2xl px-3 pb-6 pt-3 sm:px-6 sm:pb-10 sm:pt-5 lg:px-8">
+                    {{ $slot }}
                 </main>
             </div>
 

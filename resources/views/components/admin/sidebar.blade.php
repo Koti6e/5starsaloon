@@ -35,16 +35,6 @@
                 </a>
             @endforeach
 
-            <a
-                href="{{ route('home') }}"
-                class="group flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-semibold text-[var(--app-muted)] transition duration-200 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-primary)]"
-                @click="sidebarOpen = false"
-            >
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--app-surface-elevated)] text-[var(--app-muted)] group-hover:text-[var(--app-primary)]">
-                    <x-app-icon name="public" />
-                </span>
-                <span class="truncate" x-show="! collapsed" x-transition>Public Website</span>
-            </a>
         </div>
     </nav>
 
