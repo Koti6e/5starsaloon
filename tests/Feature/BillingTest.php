@@ -2,13 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\Bill;
 use App\Models\Appointment;
+use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class BillingTest extends TestCase
@@ -17,13 +18,13 @@ class BillingTest extends TestCase
 
     protected function tearDown(): void
     {
-        \Illuminate\Support\Carbon::setTestNow();
+        Carbon::setTestNow();
         parent::tearDown();
     }
 
     public function test_backdated_billing_is_admin_only_and_keeps_record_creation_time_current(): void
     {
-        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
+        Carbon::setTestNow(Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
         $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
         $service = $this->service();
@@ -32,30 +33,43 @@ class BillingTest extends TestCase
         $response = $this->actingAs($admin)->post(route('admin.backdated-billing.store'), [
             'customer_mobile' => '9876543210', 'customer_name' => 'Demo Customer',
             'items' => [['service_id' => $service->id, 'quantity' => 1]],
-            'payment_method' => 'cash', 'idempotency_key' => 'backdate-window-start', 'billed_at' => '2026-09-22',
+            'payment_method' => 'cash', 'idempotency_key' => 'backdate-window-start', 'billed_at' => '2016-01-15',
             'backdating_reason' => 'Recorded from the paper invoice log.',
         ]);
         $response->assertRedirect()->assertSessionHasNoErrors();
         $bill = Bill::query()->where('idempotency_key', 'backdate-window-start')->firstOrFail();
-        $this->assertSame('2026-09-22', $bill->billed_at->timezone('Asia/Kolkata')->toDateString());
+        $this->assertSame('2016-01-15', $bill->billed_at->timezone('Asia/Kolkata')->toDateString());
         $this->assertSame('2026-10-22', $bill->created_at->timezone('Asia/Kolkata')->toDateString());
         $this->assertSame($admin->id, $bill->created_by);
         $this->assertSame(1, Bill::query()->where('idempotency_key', 'backdate-window-start')->count());
         $this->assertDatabaseHas('backdated_billing_audits', [
             'bill_id' => $bill->id,
             'admin_id' => $admin->id,
-            'business_date' => '2026-09-22',
+            'business_date' => '2016-01-15',
             'reason' => 'Recorded from the paper invoice log.',
         ]);
-        \Illuminate\Support\Carbon::setTestNow();
+        $this->assertDatabaseHas('backdated_billing_audits', [
+            'bill_id' => $bill->id,
+            'created_at' => '2026-10-22 12:00:00',
+        ]);
+        $this->actingAs($admin)
+            ->get(route('admin.reports.sales', ['period' => 'monthly', 'month' => '2016-01']))
+            ->assertOk()
+            ->assertSee($bill->invoice_number);
+        $this->assertDatabaseHas('bills', [
+            'id' => $bill->id,
+            'billed_at' => '2016-01-15 00:00:00',
+            'created_at' => '2026-10-22 12:00:00',
+        ]);
+        Carbon::setTestNow();
     }
 
-    public function test_backdated_billing_rejects_dates_outside_window_and_future_dates(): void
+    public function test_backdated_billing_rejects_future_dates(): void
     {
-        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
+        Carbon::setTestNow(Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
         $service = $this->service();
-        foreach (['2026-09-21', '2026-10-23'] as $index => $date) {
+        foreach (['2026-10-23'] as $index => $date) {
             $this->actingAs($admin)->post(route('admin.backdated-billing.store'), [
                 'customer_mobile' => '9876543210', 'customer_name' => 'Demo Customer',
                 'items' => [['service_id' => $service->id, 'quantity' => 1]],
@@ -63,12 +77,12 @@ class BillingTest extends TestCase
             ])->assertSessionHasErrors('billed_at');
         }
         $this->assertDatabaseCount('bills', 0);
-        \Illuminate\Support\Carbon::setTestNow();
+        Carbon::setTestNow();
     }
 
     public function test_backdated_billing_requires_an_audit_reason(): void
     {
-        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
+        Carbon::setTestNow(Carbon::parse('2026-10-22 12:00:00', 'Asia/Kolkata'));
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
         $service = $this->service();
 
@@ -79,7 +93,7 @@ class BillingTest extends TestCase
         ])->assertSessionHasErrors('backdating_reason');
 
         $this->assertDatabaseCount('bills', 0);
-        \Illuminate\Support\Carbon::setTestNow();
+        Carbon::setTestNow();
     }
 
     public function test_staff_can_open_billing_desk(): void
@@ -281,12 +295,15 @@ class BillingTest extends TestCase
             'home_visit_charge' => '50.00',
             'payment_method' => 'cash',
             'idempotency_key' => 'staff-bill-1',
+            'billed_at' => '2016-01-15',
         ]);
 
         $bill = Bill::query()->with('items', 'payments', 'customer')->firstOrFail();
         $response->assertRedirect(route('staff.billing.success', $bill, false));
         $this->assertSame($staff->id, $bill->billed_by);
         $this->assertSame($staff->id, $bill->created_by);
+        $this->assertSame(now('Asia/Kolkata')->toDateString(), $bill->billed_at->timezone('Asia/Kolkata')->toDateString());
+        $this->assertDatabaseMissing('backdated_billing_audits', ['bill_id' => $bill->id]);
         $this->assertSame($staff->id, $bill->items->first()->service_performed_by);
         $this->assertSame('950.00', $bill->grand_total);
         $this->assertSame('cash', $bill->payments->first()->payment_method);

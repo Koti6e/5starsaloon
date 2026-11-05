@@ -9,12 +9,15 @@ use App\Models\SalonSetting;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
+use App\Services\CustomerCodeGenerator;
+use App\Services\WhatsApp\WhatsAppInvoiceService;
 use App\Support\Money;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -64,6 +67,7 @@ class BillingController extends Controller
     public function createBackdated(Request $request): View
     {
         abort_unless($request->user()?->isAdmin(), 403);
+
         return $this->create($request)->with('backdatedBilling', true);
     }
 
@@ -131,10 +135,11 @@ class BillingController extends Controller
         $customerDetails = $customers->mapWithKeys(function (Customer $entry) use ($visitStats, $lastBills, $request): array {
             $visits = $visitStats->get($entry->id);
             $lastBill = $lastBills->get($entry->id);
+
             return [$entry->id => [
                 'total_visits' => (int) ($visits->visit_count ?? 0),
                 'last_visit_at' => $visits?->last_visit_at
-                    ? \Illuminate\Support\Carbon::parse($visits->last_visit_at)->timezone('Asia/Kolkata')->format('d M Y')
+                    ? Carbon::parse($visits->last_visit_at)->timezone('Asia/Kolkata')->format('d M Y')
                     : null,
                 'last_bill_amount' => $lastBill?->grand_total,
                 'last_services' => $lastBill?->items->pluck('service_name_snapshot')->filter()->unique()->values() ?? collect(),
@@ -164,7 +169,6 @@ class BillingController extends Controller
         $backdated = $request->routeIs('admin.backdated-billing.store');
         abort_if($backdated && ! $request->user()?->isAdmin(), 403);
         $businessToday = now((string) config('app.timezone', 'Asia/Kolkata'))->startOfDay();
-        $earliestDate = $businessToday->copy()->subDays(30)->toDateString();
         $supportsWhatsAppConsent = Schema::hasColumn('customers', 'whatsapp_invoice_opt_in');
         $validated = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
@@ -187,7 +191,9 @@ class BillingController extends Controller
             'split_payments.*.method' => ['exclude_unless:payment_method,split', 'required', 'in:cash,upi,card,other'],
             'split_payments.*.amount' => ['exclude_unless:payment_method,split', 'required', 'numeric', 'min:0.01'],
             'idempotency_key' => ['required', 'string', 'max:100'],
-            'billed_at' => [$backdated ? 'required' : 'nullable', 'date_format:Y-m-d', 'after_or_equal:'.$earliestDate, 'before_or_equal:'.$businessToday->toDateString()],
+            'billed_at' => $backdated
+                ? ['required', 'date_format:Y-m-d', 'before_or_equal:'.$businessToday->toDateString()]
+                : ['exclude'],
             'backdating_reason' => [$backdated ? 'required' : 'exclude', 'string', 'max:1000'],
         ]);
 
@@ -306,7 +312,7 @@ class BillingController extends Controller
                     'idempotency_key' => $validated['idempotency_key'],
                     'invoice_public_token' => (string) Str::uuid(),
                     'billed_at' => $backdated
-                        ? \Illuminate\Support\Carbon::parse($validated['billed_at'], (string) config('app.timezone', 'Asia/Kolkata'))->startOfDay()
+                        ? Carbon::parse($validated['billed_at'], (string) config('app.timezone', 'Asia/Kolkata'))->startOfDay()
                         : now((string) config('app.timezone', 'Asia/Kolkata')),
                 ]);
 
@@ -386,9 +392,9 @@ class BillingController extends Controller
         $this->ensureInvoicePdf($bill);
 
         try {
-            app(\App\Services\WhatsApp\WhatsAppInvoiceService::class)->sendInvoice($bill->fresh());
+            app(WhatsAppInvoiceService::class)->sendInvoice($bill->fresh());
         } catch (\Throwable $exception) {
-            \Illuminate\Support\Facades\Log::error('WhatsApp invoice sending failed unexpectedly.', [
+            Log::error('WhatsApp invoice sending failed unexpectedly.', [
                 'bill_id' => $bill->id,
                 'exception_class' => get_class($exception),
             ]);
@@ -602,7 +608,7 @@ class BillingController extends Controller
 
     private function nextCustomerCode(): string
     {
-        return (new \App\Services\CustomerCodeGenerator)->generate();
+        return (new CustomerCodeGenerator)->generate();
     }
 
     private function luxuryWhatsAppBillMessage(Bill $bill): string
@@ -706,5 +712,4 @@ class BillingController extends Controller
         Storage::disk('local')->put($path, $pdf->output());
         $bill->forceFill(['invoice_pdf_path' => $path])->save();
     }
-
 }
