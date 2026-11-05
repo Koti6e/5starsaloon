@@ -58,9 +58,9 @@
 
                 <section class="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
                     <h2 class="font-serif text-xl text-[var(--app-text)]">Staff Attendance Location</h2>
-                    <p class="mt-1 text-sm text-[var(--app-text-muted)]">GPS is required for staff selfie check-in. Location is checked on the server. A successful location check does not establish selfie liveness or prove device hardware identity; those submissions remain available for review.</p>
+                    <p class="mt-1 text-sm text-[var(--app-text-muted)]">Staff 1 and Staff 2 must sign in within 200 metres of the registered salon coordinates. Location is checked on the server. Browser-reported GPS can be spoofed, and a camera capture alone does not establish liveness or prove device identity.</p>
                     <div class="mt-5 grid gap-4 sm:grid-cols-2">
-                        <label class="block"><span class="text-sm font-semibold text-[var(--app-text)]">Salon geofence radius (metres)</span><input name="attendance_geofence_radius_meters" type="number" min="50" max="5000" required value="{{ old('attendance_geofence_radius_meters', $settings['attendance_geofence_radius_meters'] ?? '200') }}" class="mt-1 w-full rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"><x-input-error :messages="$errors->get('attendance_geofence_radius_meters')" class="mt-2" /></label>
+                        <p class="rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-text)]">Registered location: 12.8821489, 80.0808760 · 200 metre radius</p>
                         <label class="block"><span class="text-sm font-semibold text-[var(--app-text)]">Maximum accepted GPS accuracy (metres)</span><input name="attendance_gps_accuracy_threshold_meters" type="number" min="10" max="500" required value="{{ old('attendance_gps_accuracy_threshold_meters', $settings['attendance_gps_accuracy_threshold_meters'] ?? '100') }}" class="mt-1 w-full rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"><x-input-error :messages="$errors->get('attendance_gps_accuracy_threshold_meters')" class="mt-2" /></label>
                     </div>
                 </section>

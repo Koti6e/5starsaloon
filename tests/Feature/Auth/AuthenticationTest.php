@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Database\Seeders\DefaultAdminSeeder;
 use Database\Seeders\InternalStaffSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -33,7 +34,7 @@ class AuthenticationTest extends TestCase
 
     public function test_default_admin_seeder_credentials_authenticate(): void
     {
-        $this->seed(\Database\Seeders\DefaultAdminSeeder::class);
+        $this->seed(DefaultAdminSeeder::class);
 
         $response = $this->post('/login', [
             'username' => 'admin',
@@ -56,6 +57,9 @@ class AuthenticationTest extends TestCase
             $response = $this->post('/login', [
                 'username' => $username,
                 'password' => 'password',
+                'latitude' => '12.8821489',
+                'longitude' => '80.0808760',
+                'gps_accuracy_meters' => '15',
             ]);
 
             $this->assertAuthenticated();

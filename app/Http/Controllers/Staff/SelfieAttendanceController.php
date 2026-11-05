@@ -3,15 +3,14 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
-use App\Models\StaffAttendance;
 use App\Models\AttendanceVerificationAttempt;
+use App\Models\StaffAttendance;
 use App\Models\StaffAttendanceDevice;
 use App\Services\AttendanceGeofence;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SelfieAttendanceController extends Controller
@@ -23,10 +22,6 @@ class SelfieAttendanceController extends Controller
         }
 
         $now = now('Asia/Kolkata');
-        if (mb_strtolower((string) $request->user()->weekly_off) === mb_strtolower($now->format('l'))) {
-            return redirect()->route('staff.dashboard');
-        }
-
         $verifiedToday = StaffAttendance::query()
             ->where('staff_id', $request->user()->id)
             ->whereDate('attendance_date', $now->toDateString())
@@ -34,6 +29,7 @@ class SelfieAttendanceController extends Controller
             ->first();
         if ($verifiedToday) {
             $request->session()->put('staff_selfie_attendance_id', $verifiedToday->id);
+
             return redirect()->route('staff.dashboard', absolute: false);
         }
 
@@ -41,7 +37,9 @@ class SelfieAttendanceController extends Controller
             return redirect()->route('staff.dashboard', absolute: false);
         }
 
-        return view('staff.selfie');
+        return view('staff.selfie', [
+            'requiresGps' => $request->user()->requiresLoginGeofence(),
+        ]);
     }
 
     public function store(Request $request, AttendanceGeofence $geofence): RedirectResponse
@@ -49,10 +47,6 @@ class SelfieAttendanceController extends Controller
         abort_unless($request->user()->requiresLoginSelfie(), 404);
 
         $today = now('Asia/Kolkata');
-        if (mb_strtolower((string) $request->user()->weekly_off) === mb_strtolower($today->format('l'))) {
-            return redirect()->route('staff.dashboard');
-        }
-
         $validated = $request->validate([
             'selfie_image' => ['nullable', 'string', 'max:6000000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
@@ -66,7 +60,11 @@ class SelfieAttendanceController extends Controller
         $latitude = isset($validated['latitude']) ? (float) $validated['latitude'] : null;
         $longitude = isset($validated['longitude']) ? (float) $validated['longitude'] : null;
         $accuracy = isset($validated['gps_accuracy_meters']) ? (float) $validated['gps_accuracy_meters'] : null;
-        $location = $geofence->evaluate($latitude, $longitude, $accuracy);
+        $requiresGps = $request->user()->requiresLoginGeofence();
+        $location = $requiresGps
+            ? $geofence->evaluate($latitude, $longitude, $accuracy)
+            : ['distance' => INF, 'radius' => 200.0, 'accuracy_limit' => null, 'allowed' => true, 'reason' => null];
+        $distance = is_finite($location['distance']) ? $location['distance'] : null;
         $deviceHash = filled($validated['device_key'] ?? null) ? hash('sha256', $validated['device_key']) : null;
         $device = $deviceHash
             ? StaffAttendanceDevice::query()->firstOrCreate(
@@ -78,14 +76,15 @@ class SelfieAttendanceController extends Controller
             $device->forceFill(['last_seen_at' => $now])->save();
         }
 
-        $logRejectedAttempt = function (string $reason) use ($request, $now, $device, $latitude, $longitude, $accuracy, $location): RedirectResponse {
+        $logRejectedAttempt = function (string $reason) use ($request, $now, $device, $latitude, $longitude, $accuracy, $distance): RedirectResponse {
             AttendanceVerificationAttempt::query()->create([
                 'staff_id' => $request->user()->id,
                 'device_id' => $device?->id,
+                'attempt_type' => 'attendance_selfie',
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'gps_accuracy_meters' => $accuracy,
-                'distance_from_salon_meters' => is_finite($location['distance']) ? $location['distance'] : null,
+                'distance_from_salon_meters' => $distance,
                 'decision' => 'rejected',
                 'reason' => $reason,
                 'attempted_at' => $now,
@@ -121,6 +120,7 @@ class SelfieAttendanceController extends Controller
             ->whereDate('attendance_date', $now->toDateString())
             ->first();
         $sessionId = $request->session()->getId();
+        $isWeeklyOff = mb_strtolower((string) $request->user()->weekly_off) === mb_strtolower($now->format('l'));
         $path = 'staff-selfies/'.$now->format('Y/m/d').'/staff-'.$request->user()->id.'-'.Str::uuid().'.'.$extension;
 
         Storage::disk('local')->put($path, $binary);
@@ -128,7 +128,13 @@ class SelfieAttendanceController extends Controller
         $reviewReason = $device->status !== 'approved'
             ? 'New device registration is pending administrator review. '
             : '';
-        $reviewReason .= 'Face matching and liveness verification are not configured; a camera capture alone does not prove identity or prevent replay.';
+        $reviewReason .= $requiresGps
+            ? 'GPS geofence passed; '
+            : 'GPS geofencing does not apply to this staff account; ';
+        $reviewReason .= 'face matching and liveness verification are not configured, so a camera capture alone does not prove identity or prevent replay.';
+        $verificationNote = $requiresGps
+            ? 'GPS geofence passed; selfie is awaiting human review because no face/liveness service is configured.'
+            : 'Selfie is awaiting human review because no face/liveness service is configured.';
 
         if ($existingAttendance?->source === 'manual_admin') {
             $attendance = $existingAttendance;
@@ -139,7 +145,23 @@ class SelfieAttendanceController extends Controller
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'gps_accuracy_meters' => $accuracy,
-                'distance_from_salon_meters' => $location['distance'],
+                'distance_from_salon_meters' => $distance,
+                'device_id' => $device->id,
+                'verification_status' => 'review_required',
+                'verification_reason' => $reviewReason,
+                'face_verification_status' => 'unavailable',
+                'consent_at' => $now,
+            ])->save();
+        } elseif ($isWeeklyOff && $existingAttendance) {
+            $attendance = $existingAttendance;
+            $attendance->forceFill([
+                'login_session_id' => $sessionId,
+                'selfie_path' => $path,
+                'selfie_captured_at' => $now,
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'gps_accuracy_meters' => $accuracy,
+                'distance_from_salon_meters' => $distance,
                 'device_id' => $device->id,
                 'verification_status' => 'review_required',
                 'verification_reason' => $reviewReason,
@@ -150,8 +172,8 @@ class SelfieAttendanceController extends Controller
             $attendance = StaffAttendance::query()->updateOrCreate(
                 ['staff_id' => $request->user()->id, 'attendance_date' => $now->toDateString()],
                 [
-                    'status' => 'present',
-                    'check_in_time' => $existingAttendance?->check_in_time ?: $now->format('H:i:s'),
+                    'status' => $isWeeklyOff ? 'weekly_off' : 'present',
+                    'check_in_time' => $isWeeklyOff ? null : ($existingAttendance?->check_in_time ?: $now->format('H:i:s')),
                     'source' => 'selfie_login',
                     'login_session_id' => $sessionId,
                     'selfie_path' => $path,
@@ -159,13 +181,13 @@ class SelfieAttendanceController extends Controller
                     'latitude' => $latitude,
                     'longitude' => $longitude,
                     'gps_accuracy_meters' => $accuracy,
-                    'distance_from_salon_meters' => $location['distance'],
+                    'distance_from_salon_meters' => $distance,
                     'device_id' => $device->id,
                     'verification_status' => 'review_required',
                     'verification_reason' => $reviewReason,
                     'face_verification_status' => 'unavailable',
                     'consent_at' => $now,
-                    'notes' => 'GPS geofence passed; selfie is awaiting human review because no face/liveness service is configured.',
+                    'notes' => $verificationNote,
                 ],
             );
         }
@@ -174,10 +196,11 @@ class SelfieAttendanceController extends Controller
             'staff_id' => $request->user()->id,
             'attendance_id' => $attendance->id,
             'device_id' => $device->id,
+            'attempt_type' => 'attendance_selfie',
             'latitude' => $latitude,
             'longitude' => $longitude,
             'gps_accuracy_meters' => $accuracy,
-            'distance_from_salon_meters' => $location['distance'],
+            'distance_from_salon_meters' => $distance,
             'decision' => 'review_required',
             'reason' => $reviewReason,
             'selfie_path' => $path,

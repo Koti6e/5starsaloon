@@ -123,7 +123,8 @@ class NextProductionBatchTest extends TestCase
     public function test_invalid_or_cancelled_selfie_does_not_mark_attendance(): void
     {
         $staff = User::factory()->create(['username' => 'Staff2', 'role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
-        $this->post('/login', ['username' => 'Staff2', 'password' => 'password'])->assertRedirect(route('staff.selfie.create', absolute: false));
+        $this->post('/login', ['username' => 'Staff2', 'password' => 'password'] + $this->salonLocation())
+            ->assertRedirect(route('staff.selfie.create', absolute: false));
 
         $this->post(route('staff.selfie.store'), [
             'latitude' => '12.8821489', 'longitude' => '80.0808760', 'gps_accuracy_meters' => '15',
@@ -160,7 +161,12 @@ class NextProductionBatchTest extends TestCase
             'line_total' => $amount,
             'price_was_confirmed' => true,
         ]);
+
         return $bill;
     }
 
+    private function salonLocation(): array
+    {
+        return ['latitude' => '12.8821489', 'longitude' => '80.0808760', 'gps_accuracy_meters' => '15'];
+    }
 }

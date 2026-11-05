@@ -85,6 +85,35 @@
             </section>
 
             <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-semibold text-[var(--app-text)]">Staff 1 and Staff 2 Login History</h2>
+                        <p class="mt-1 text-sm text-[var(--app-text-muted)]">GPS result and submitted location for recent login attempts. Device-reported GPS can be spoofed.</p>
+                    </div>
+                    <span class="rounded-full border border-[var(--app-border)] px-3 py-1 text-xs font-semibold text-[var(--app-muted)]">{{ $loginAttempts->count() }} recent</span>
+                </div>
+                <div class="mt-4 space-y-2">
+                    @forelse ($loginAttempts as $attempt)
+                        <article class="rounded-lg border border-[var(--app-border)] p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <p class="font-semibold text-[var(--app-text)]">{{ $attempt->staff?->name ?? 'Former staff' }} · {{ $attempt->attempted_at?->timezone('Asia/Kolkata')->format('d M Y, h:i:s A') }}</p>
+                                    <p class="mt-1 text-sm text-[var(--app-muted)]">{{ $attempt->reason }}</p>
+                                    <p class="mt-1 text-xs text-[var(--app-subtle)]">GPS: {{ $attempt->latitude ?? 'not provided' }}, {{ $attempt->longitude ?? 'not provided' }} · accuracy {{ $attempt->gps_accuracy_meters !== null ? number_format((float) $attempt->gps_accuracy_meters).' m' : 'unavailable' }} · distance {{ $attempt->distance_from_salon_meters !== null ? number_format((float) $attempt->distance_from_salon_meters).' m' : 'not calculated' }}</p>
+                                </div>
+                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold {{ $attempt->decision === 'verified' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700' : 'border-red-500/30 bg-red-500/10 text-red-700' }}">{{ ucfirst($attempt->decision) }}</span>
+                            </div>
+                        </article>
+                    @empty
+                        <p class="rounded-lg border border-dashed border-[var(--app-border)] p-5 text-center text-sm text-[var(--app-muted)]">No GPS login attempts recorded yet.</p>
+                    @endforelse
+                </div>
+                @if ($loginAttempts->hasPages())
+                    <div class="mt-4">{{ $loginAttempts->links() }}</div>
+                @endif
+            </section>
+
+            <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
                 <div class="flex items-center justify-between gap-3"><div><h2 class="text-xl font-semibold text-[var(--app-text)]">Attendance Verification Review</h2><p class="mt-1 text-sm text-[var(--app-text-muted)]">GPS failures and unverified selfie/device submissions. Review decisions require an explanation.</p></div><span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700">{{ $verificationAttempts->count() }} pending</span></div>
                 <div class="mt-4 space-y-3">
                     @forelse ($verificationAttempts as $attempt)

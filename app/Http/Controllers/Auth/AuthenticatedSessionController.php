@@ -36,19 +36,15 @@ class AuthenticatedSessionController extends Controller
 
         if ($request->user()->requiresLoginSelfie()) {
             $now = now('Asia/Kolkata');
-            $weeklyOff = mb_strtolower((string) $request->user()->weekly_off) === mb_strtolower($now->format('l'));
-            $verifiedToday = null;
-            if (! $weeklyOff) {
-                $verifiedToday = StaffAttendance::query()
-                    ->where('staff_id', $request->user()->id)
-                    ->whereDate('attendance_date', $now->toDateString())
-                    ->whereNotNull('selfie_captured_at')
-                    ->first();
-            }
+            $verifiedToday = StaffAttendance::query()
+                ->where('staff_id', $request->user()->id)
+                ->whereDate('attendance_date', $now->toDateString())
+                ->whereNotNull('selfie_captured_at')
+                ->first();
 
             if ($verifiedToday) {
                 $request->session()->put('staff_selfie_attendance_id', $verifiedToday->id);
-            } elseif (! $weeklyOff) {
+            } else {
                 // Attendance verification must happen before honoring a stale
                 // intended dashboard URL left in the session after logout.
                 return redirect()->to(route('staff.selfie.create', [], false));

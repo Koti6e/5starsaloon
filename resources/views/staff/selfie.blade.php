@@ -28,16 +28,18 @@
                 <p class="mt-4 rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-text)]" x-text="message" role="status"></p>
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <button type="button" @click="requestLocation()" class="rounded-md border border-[var(--app-border)] px-4 py-3 text-sm font-semibold text-[var(--app-text)]">Verify Salon Location</button>
-                    <button type="button" @click="startCamera()" :disabled="!locationReady" class="rounded-md border border-[var(--app-border)] px-4 py-3 text-sm font-semibold text-[var(--app-text)] disabled:opacity-50">Enable Camera</button>
-                    <button type="button" @click="capture()" :disabled="!ready || !locationReady" class="rounded-md bg-[var(--app-primary)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] disabled:cursor-not-allowed disabled:opacity-50">Capture Selfie</button>
+                    @if ($requiresGps)
+                        <button type="button" @click="requestLocation()" class="rounded-md border border-[var(--app-border)] px-4 py-3 text-sm font-semibold text-[var(--app-text)]">Verify Salon Location</button>
+                    @endif
+                    <button type="button" @click="startCamera()" :disabled="gpsRequired && !locationReady" class="rounded-md border border-[var(--app-border)] px-4 py-3 text-sm font-semibold text-[var(--app-text)] disabled:opacity-50">Enable Camera</button>
+                    <button type="button" @click="capture()" :disabled="!ready || (gpsRequired && !locationReady)" class="rounded-md bg-[var(--app-primary)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] disabled:cursor-not-allowed disabled:opacity-50">Capture Selfie</button>
                 </div>
 
-                <label class="mt-4 flex items-start gap-3 rounded-lg border border-[var(--app-border)] p-3 text-sm text-[var(--app-text)]"><input type="checkbox" name="consent" value="1" x-model="consentChecked" required class="mt-1 rounded border-[var(--app-border)] text-[var(--app-primary)]"><span>I consent to storing this attendance selfie and GPS check-in details for attendance review by salon administrators. I understand that this camera capture does not perform face matching or liveness detection.</span></label>
+                <label class="mt-4 flex items-start gap-3 rounded-lg border border-[var(--app-border)] p-3 text-sm text-[var(--app-text)]"><input type="checkbox" name="consent" value="1" x-model="consentChecked" required class="mt-1 rounded border-[var(--app-border)] text-[var(--app-primary)]"><span>I consent to storing this attendance selfie{{ $requiresGps ? ' and GPS check-in details' : '' }} for attendance review by salon administrators. I understand that this camera capture does not perform face matching or liveness detection.</span></label>
 
                 <div x-show="photoData" x-cloak class="mt-3 grid gap-3 sm:grid-cols-2">
                     <button type="button" @click="retake()" class="rounded-md border border-[var(--app-border)] px-4 py-3 text-sm font-semibold text-[var(--app-text)]">Retake</button>
-                    <button type="submit" :disabled="submitting || !locationReady || !consentChecked" class="rounded-md bg-[var(--app-primary)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50">Submit check-in</button>
+                    <button type="submit" :disabled="submitting || (gpsRequired && !locationReady) || !consentChecked" class="rounded-md bg-[var(--app-primary)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50">Submit check-in</button>
                 </div>
                 <p class="mt-3 text-xs leading-5 text-[var(--app-muted)]">A new browser installation is recorded as a device request. Browser IDs do not prove hardware identity. Check-ins remain yellow for administrator review until a suitable face and liveness service is configured.</p>
             </form>
@@ -47,6 +49,7 @@
     <script>
         function loginSelfie() {
             return {
+                gpsRequired: @js($requiresGps),
                 stream: null,
                 ready: false,
                 photoData: '',
@@ -57,7 +60,7 @@
                 locationReady: false,
                 deviceKey: '',
                 consentChecked: false,
-                message: 'Verify your salon location and capture an attendance selfie to continue.',
+                message: @js($requiresGps ? 'Verify your salon location and capture an attendance selfie to continue.' : 'Capture an attendance selfie to continue.'),
                 init() {
                     try {
                         this.deviceKey = localStorage.getItem('salonos-attendance-device') || '';
@@ -95,7 +98,7 @@
                     }, {enableHighAccuracy: true, maximumAge: 0, timeout: 20000});
                 },
                 async startCamera() {
-                    if (!this.locationReady) {
+                    if (this.gpsRequired && !this.locationReady) {
                         this.message = 'Verify your GPS location before opening the camera.';
                         return;
                     }
@@ -127,7 +130,9 @@
                     canvas.height = video.videoHeight || 960;
                     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
                     this.photoData = canvas.toDataURL('image/jpeg', 0.82);
-                    this.message = 'Selfie captured. Submit check-in for server-side GPS verification and administrator review.';
+                    this.message = this.gpsRequired
+                        ? 'Selfie captured. Submit check-in for server-side GPS verification and administrator review.'
+                        : 'Selfie captured. Submit check-in for administrator review.';
                     this.stopCamera();
                 },
                 retake() {

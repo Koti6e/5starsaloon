@@ -11,8 +11,11 @@
 
     <x-auth-session-status class="mt-6 rounded-2xl border border-[var(--auth-primary)]/25 bg-[var(--auth-primary-soft)] px-4 py-3 text-sm text-white" :status="session('status')" />
 
-    <form method="POST" action="{{ route('login') }}" class="mt-8 space-y-5">
+    <form id="login-form" method="POST" action="{{ route('login') }}" class="mt-8 space-y-5">
         @csrf
+        <input type="hidden" name="latitude" id="login-latitude">
+        <input type="hidden" name="longitude" id="login-longitude">
+        <input type="hidden" name="gps_accuracy_meters" id="login-gps-accuracy">
 
         <div>
             <x-input-label for="username" :value="__('Username or Email')" class="sr-only" />
@@ -98,6 +101,38 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('login-form');
+            const usernameInput = document.getElementById('username');
+            let gpsSubmitAllowed = false;
+            let gpsLookupInProgress = false;
+
+            loginForm?.addEventListener('submit', function(event) {
+                const username = usernameInput?.value.trim().toLowerCase();
+                if (gpsSubmitAllowed || !['staff1', 'staff2'].includes(username)) return;
+
+                event.preventDefault();
+                if (gpsLookupInProgress) return;
+                gpsLookupInProgress = true;
+
+                const submitWithLocation = () => {
+                    gpsSubmitAllowed = true;
+                    gpsLookupInProgress = false;
+                    loginForm.requestSubmit(event.submitter || undefined);
+                };
+
+                if (!navigator.geolocation) {
+                    submitWithLocation();
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(position => {
+                    document.getElementById('login-latitude').value = position.coords.latitude;
+                    document.getElementById('login-longitude').value = position.coords.longitude;
+                    document.getElementById('login-gps-accuracy').value = position.coords.accuracy;
+                    submitWithLocation();
+                }, submitWithLocation, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+            });
+
             const togglePassword = document.getElementById('togglePassword');
             const passwordInput = document.getElementById('password');
 

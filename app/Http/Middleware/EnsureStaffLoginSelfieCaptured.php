@@ -15,10 +15,6 @@ class EnsureStaffLoginSelfieCaptured
 
         if ($user?->requiresLoginSelfie()) {
             $now = now('Asia/Kolkata');
-            if (mb_strtolower((string) $user->weekly_off) === mb_strtolower($now->format('l'))) {
-                return $next($request);
-            }
-
             $attendance = StaffAttendance::query()
                 ->where('staff_id', $user->id)
                 ->whereDate('attendance_date', $now->toDateString())

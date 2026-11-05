@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceVerificationAttempt;
-use App\Models\StaffAttendanceDevice;
 use App\Models\StaffAttendance;
+use App\Models\StaffAttendanceDevice;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -50,11 +50,18 @@ class AttendanceController extends Controller
                 $row = $records->get($day->toDateString());
                 $isWeeklyOff = $weeklyOff !== '' && strtolower($day->format('l')) === $weeklyOff;
                 $status = $row?->status ?? ($isWeeklyOff ? 'weekly_off' : 'not_marked');
-                if (! $isWeeklyOff) $workingDays++;
-                if (in_array($status, ['present', 'late'], true)) $present++;
-                elseif ($status === 'absent') $absent++;
-                elseif ($status === 'leave') $leave++;
-                elseif ($status === 'half_day') $halfDay++;
+                if (! $isWeeklyOff) {
+                    $workingDays++;
+                }
+                if (in_array($status, ['present', 'late'], true)) {
+                    $present++;
+                } elseif ($status === 'absent') {
+                    $absent++;
+                } elseif ($status === 'leave') {
+                    $leave++;
+                } elseif ($status === 'half_day') {
+                    $halfDay++;
+                }
                 $days->push(['date' => $day->toDateString(), 'status' => $status, 'row' => $row]);
             }
 
@@ -85,8 +92,12 @@ class AttendanceController extends Controller
                 $day = $month->copy()->day($dayNumber);
                 $row = $records->get($day->toDateString());
                 $status = $row?->status ?? (($weeklyOff !== '' && strtolower($day->format('l')) === $weeklyOff) ? 'weekly_off' : 'not_marked');
-                if (array_key_exists($status, $counts)) $counts[$status]++;
-                if ($status === 'late') $counts['present']++;
+                if (array_key_exists($status, $counts)) {
+                    $counts[$status]++;
+                }
+                if ($status === 'late') {
+                    $counts['present']++;
+                }
                 $daily->push(['date' => $day->toDateString(), 'status' => $status, 'row' => $row]);
             }
 
@@ -102,7 +113,13 @@ class AttendanceController extends Controller
             'weekStart' => $weekStart,
             'weekEnd' => $weekEnd,
             'weeklySummary' => $weeklySummary,
-            'verificationAttempts' => AttendanceVerificationAttempt::query()->with('staff')->whereNull('reviewed_at')->latest('attempted_at')->limit(30)->get(),
+            'verificationAttempts' => AttendanceVerificationAttempt::query()->with('staff')->where('attempt_type', 'attendance_selfie')->whereNull('reviewed_at')->latest('attempted_at')->limit(30)->get(),
+            'loginAttempts' => AttendanceVerificationAttempt::query()
+                ->with('staff')
+                ->where('attempt_type', 'login_gps')
+                ->latest('attempted_at')
+                ->paginate(50, ['*'], 'login_page')
+                ->withQueryString(),
             'attendanceDevices' => StaffAttendanceDevice::query()->with('staff')->whereIn('status', ['pending', 'approved'])->latest('last_seen_at')->limit(50)->get(),
             'selectedStaff' => (int) ($filters['staff'] ?? 0),
         ]);
@@ -165,6 +182,8 @@ class AttendanceController extends Controller
 
     public function reviewAttempt(Request $request, AttendanceVerificationAttempt $attempt): RedirectResponse
     {
+        abort_unless($attempt->attempt_type === 'attendance_selfie', 404);
+
         $validated = $request->validate([
             'decision' => ['required', Rule::in(['approved', 'rejected'])],
             'review_reason' => ['required', 'string', 'max:1000'],
