@@ -7,7 +7,6 @@ use App\Models\Customer;
 use App\Models\StaffAttendance;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -51,7 +50,7 @@ class NextProductionBatchTest extends TestCase
         $this->assertSame($customer->id, $old->customer_id);
     }
 
-    public function test_todays_bills_show_creator_names_and_grouped_counts_and_sales(): void
+    public function test_quick_billing_no_longer_renders_today_bill_history(): void
     {
         $admin = User::factory()->create(['name' => 'Salon Admin', 'role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
         $staff = User::factory()->create(['name' => 'Staff One', 'role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
@@ -62,12 +61,9 @@ class NextProductionBatchTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.billing.create'))
             ->assertOk()
-            ->assertSee('Staff One')
-            ->assertSee('Salon Admin')
-            ->assertSee('2 bills')
-            ->assertSee('1 bills')
-            ->assertSee('Created by Staff One')
-            ->assertSee('Overall: 3 bills');
+            ->assertDontSee('Today’s Bills')
+            ->assertDontSee('Created by Staff One')
+            ->assertDontSee('Overall: 3 bills');
     }
 
     public function test_new_billing_form_does_not_restore_split_amounts_from_old_input(): void
@@ -101,33 +97,27 @@ class NextProductionBatchTest extends TestCase
         $this->assertDatabaseHas('customers', ['id' => $customer->id, 'name' => 'After Name', 'mobile' => '9876543212']);
     }
 
-    public function test_staff_selfie_verification_is_required_once_per_working_day(): void
+    public function test_staff_dashboard_only_lists_their_bills_for_today(): void
     {
-        Storage::fake('local');
         $staff = User::factory()->create(['username' => 'Staff1', 'role' => 'staff', 'status' => 'active', 'must_change_password' => false, 'weekly_off' => 'Sunday']);
         $this->travelTo(now('Asia/Kolkata')->setTime(10, 0));
+        StaffAttendance::query()->create([
+            'staff_id' => $staff->id,
+            'attendance_date' => now('Asia/Kolkata')->toDateString(),
+            'status' => 'present',
+            'selfie_captured_at' => now('Asia/Kolkata'),
+        ]);
+        $customer = Customer::factory()->create();
+        $todayBill = $this->createBill($customer, $staff, 100, now('Asia/Kolkata'), 'completed', 'Cut');
+        $historicalBill = $this->createBill($customer, $staff, 200, now('Asia/Kolkata')->subDay(), 'completed', 'Color');
 
-        $this->post('/login', ['username' => 'Staff1', 'password' => 'password'])
-            ->assertRedirect(route('staff.selfie.create', absolute: false));
-        $this->post(route('staff.selfie.store'), ['selfie_image' => $this->selfieData()] + [
-            'latitude' => '12.8821489', 'longitude' => '80.0808760', 'gps_accuracy_meters' => '15',
-            'device_key' => (string) Str::uuid(), 'consent' => '1',
-        ])
-            ->assertRedirect(route('staff.dashboard', absolute: false));
-        $attendance = StaffAttendance::query()->where('staff_id', $staff->id)->firstOrFail();
-        $this->assertSame('present', $attendance->status);
-        $this->assertNotNull($attendance->selfie_captured_at);
+        $response = $this->actingAs($staff)
+            ->get(route('staff.dashboard', ['date' => now('Asia/Kolkata')->subDay()->toDateString()]))
+            ->assertOk();
 
-        $this->post('/logout')->assertRedirect(route('login', absolute: false));
-        $this->post('/login', ['username' => 'Staff1', 'password' => 'password'])
-            ->assertRedirect(route('staff.dashboard', absolute: false));
-        $this->assertSame(1, StaffAttendance::query()->where('staff_id', $staff->id)->count());
-
-        $this->post('/logout');
-        $this->travel(1)->days();
-        $this->post('/login', ['username' => 'Staff1', 'password' => 'password'])
-            ->assertRedirect(route('staff.dashboard', absolute: false));
-        $this->assertSame(1, StaffAttendance::query()->where('staff_id', $staff->id)->count());
+        $this->assertSame([$todayBill->id], $response->viewData('recentBills')->pluck('id')->all());
+        $this->assertNotContains($historicalBill->id, $response->viewData('recentBills')->pluck('id')->all());
+        $response->assertDontSee('date="'.now('Asia/Kolkata')->subDay()->toDateString().'"', false);
     }
 
     public function test_invalid_or_cancelled_selfie_does_not_mark_attendance(): void
@@ -173,8 +163,4 @@ class NextProductionBatchTest extends TestCase
         return $bill;
     }
 
-    private function selfieData(): string
-    {
-        return 'data:image/jpeg;base64,'.base64_encode(random_bytes(12_000));
-    }
 }

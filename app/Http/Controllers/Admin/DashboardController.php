@@ -11,14 +11,18 @@ use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\StaffAttendance;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(Request $request): View
     {
         $today = now('Asia/Kolkata')->toDateString();
+        $selectedDate = $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.$today],
+        ])['date'] ?? $today;
         $activeStaff = User::query()->where('role', 'staff')->where('status', 'active')->count();
         $attendance = StaffAttendance::query()->whereDate('attendance_date', $today)->get();
         $presentToday = $attendance->whereIn('status', ['present', 'late'])->count();
@@ -42,10 +46,19 @@ class DashboardController extends Controller
         $todayBillQuery = Bill::query()->where('status', 'completed')->where('billed_at', '>=', $dayStart)->where('billed_at', '<', $dayEnd);
         $todaySales = (clone $todayBillQuery)->sum('grand_total');
         $todayBillCount = (clone $todayBillQuery)->count();
+        $selectedBillStart = \Illuminate\Support\Carbon::parse($selectedDate, 'Asia/Kolkata')->startOfDay();
+        $selectedBillEnd = $selectedBillStart->copy()->addDay();
+        $selectedBillQuery = Bill::query()
+            ->where('status', 'completed')
+            ->where('billed_at', '>=', $selectedBillStart)
+            ->where('billed_at', '<', $selectedBillEnd);
 
         return view('admin.dashboard', [
             'todaySales' => $todaySales,
             'todayBills' => $todayBillCount,
+            'selectedBillDate' => $selectedDate,
+            'selectedBillCount' => (clone $selectedBillQuery)->count(),
+            'selectedBillSales' => (clone $selectedBillQuery)->sum('grand_total'),
             'customersServed' => (clone $todayBillQuery)->distinct('customer_id')->count('customer_id'),
             'averageBillValue' => $todayBillCount > 0 ? $todaySales / $todayBillCount : 0,
             'todayAppointments' => $todayAppointments,
@@ -69,7 +82,7 @@ class DashboardController extends Controller
                     'staff' => $staff,
                     'attendance' => $attendance->firstWhere('staff_id', $staff->id),
                 ]),
-            'todayBillRows' => (clone $todayBillQuery)->with(['customer', 'items', 'payments'])->latest('billed_at')->limit(8)->get(),
+            'todayBillRows' => (clone $selectedBillQuery)->with(['customer', 'items', 'payments'])->latest('billed_at')->limit(50)->get(),
             'recentBills' => Bill::query()->with(['customer', 'items', 'payments'])
                 ->latest('billed_at')->limit(6)->get(),
             'topServicesToday' => BillItem::query()

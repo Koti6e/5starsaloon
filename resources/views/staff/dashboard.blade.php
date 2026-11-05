@@ -45,7 +45,7 @@
 
             <section class="rounded-lg border border-[#c8a24a]/20 bg-[#11100d] p-5">
                 <div class="flex items-center justify-between">
-                    <h2 class="font-serif text-xl text-[#f4d27a]">Recent Bills</h2>
+                    <h2 class="font-serif text-xl text-[#f4d27a]">Today’s Bills</h2>
                     <a href="{{ route('staff.billing.create') }}" class="text-sm font-semibold text-[#f4d27a]">New bill</a>
                 </div>
                 <div class="mt-5 space-y-3">
@@ -59,7 +59,7 @@
                             <p class="font-semibold text-[#f4d27a]">{{ \App\Support\Money::inr($bill->grand_total) }}</p>
                         </a>
                     @empty
-                        <p class="rounded-md border border-[#c8a24a]/15 bg-black p-4 text-[#d8c8a3]">No bills created today.</p>
+                        <p class="rounded-md border border-[#c8a24a]/15 bg-black p-4 text-[#d8c8a3]">No bills created by you today.</p>
                     @endforelse
                 </div>
             </section>

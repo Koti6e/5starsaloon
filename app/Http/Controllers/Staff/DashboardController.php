@@ -45,8 +45,9 @@ class DashboardController extends Controller
             'recentBills' => Bill::query()
                 ->with('customer')
                 ->where('billed_by', $user->id)
+                ->whereDate('billed_at', $today)
                 ->latest('billed_at')
-                ->limit(5)
+                ->limit(50)
                 ->get(),
         ]);
     }

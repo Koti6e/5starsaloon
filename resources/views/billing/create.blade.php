@@ -339,34 +339,6 @@
                     </div>
                 </section>
 
-                <details class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2.5 text-sm text-[var(--app-text)]">
-                    <summary class="cursor-pointer font-semibold text-[var(--app-primary)]">Today’s Bills ({{ $todayOverall->bill_count }})</summary>
-                    <div class="mt-2 space-y-1.5">
-                        <div class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-xs">
-                            <p class="font-bold text-[var(--app-text)]">Overall: {{ $todayOverall->bill_count }} bills · {{ \App\Support\Money::inr($todayOverall->total_sales) }}</p>
-                            @foreach ($todayBillSummary as $creatorSummary)
-                                <p class="mt-1 text-[var(--app-muted)]">
-                                    {{ $creatorSummary->createdBy?->name ?? 'Creator unknown (historical)' }}:
-                                    {{ $creatorSummary->bill_count }} bills · {{ \App\Support\Money::inr($creatorSummary->total_sales) }}
-                                    @if ($creatorSummary->createdBy?->isAdmin()) · Admin @elseif ($creatorSummary->createdBy?->isStaff()) · Staff @endif
-                                </p>
-                            @endforeach
-                        </div>
-                        @forelse ($todayBills as $todayBill)
-                            <a href="{{ route($routeRoot.'.billing.show', $todayBill, false) }}" class="flex items-center justify-between gap-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2">
-                                <span class="min-w-0">
-                                    <span class="block truncate text-xs font-semibold">{{ $todayBill->invoice_number }}</span>
-                                    <span class="block truncate text-xs text-[var(--app-muted)]">{{ $todayBill->customer->name }}</span>
-                                    <span class="block truncate text-[11px] text-[var(--app-muted)]">{{ $todayBill->billed_at->timezone('Asia/Kolkata')->format('h:i A') }} · Created by {{ $todayBill->createdBy?->name ?? 'Unknown (historical)' }}{{ $todayBill->createdBy?->isAdmin() ? ' · Admin' : ($todayBill->createdBy?->isStaff() ? ' · Staff' : '') }}</span>
-                                </span>
-                                <span class="shrink-0 text-xs font-bold text-[var(--app-primary)]">{{ \App\Support\Money::inr($todayBill->grand_total) }}</span>
-                            </a>
-                        @empty
-                            <p class="rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-[var(--app-muted)]">No bills created today.</p>
-                        @endforelse
-                    </div>
-                </details>
-
                 <div class="fixed inset-x-0 bottom-[82px] z-30 px-3 lg:bottom-5 lg:left-auto lg:right-6 lg:w-[360px]">
                     <div class="mx-auto flex max-w-2xl items-center gap-3 rounded-full border border-[var(--app-border)] bg-[var(--app-surface)]/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
                         <div class="min-w-0 flex-1 pl-3">

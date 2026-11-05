@@ -125,21 +125,28 @@
             <div class="flex flex-col gap-3 border-b border-[var(--app-border)] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <h2 class="text-xl font-bold text-[var(--app-text)]">Today's Bills</h2>
+                        <h2 class="text-xl font-bold text-[var(--app-text)]">
+                            {{ $selectedBillDate === now('Asia/Kolkata')->toDateString() ? "Today's Bills" : 'Bills for '.\Illuminate\Support\Carbon::parse($selectedBillDate)->format('d M Y') }}
+                        </h2>
                         <span class="rounded-full bg-[var(--app-primary-soft)] px-2.5 py-1 text-xs font-bold text-[var(--app-primary)]">
-                            {{ $todayBills }} Bills
+                            {{ $selectedBillCount }} Bills
                         </span>
                     </div>
                     <p class="mt-1 text-sm text-[var(--app-muted)]">
-                        Completed bills issued today
+                        Completed bills for {{ \Illuminate\Support\Carbon::parse($selectedBillDate)->format('l, d M Y') }}
                     </p>
                     <p class="mt-2 text-xl font-bold text-[var(--app-primary)]">
-                        {{ \App\Support\Money::inr($todaySales) }}
+                        {{ \App\Support\Money::inr($selectedBillSales) }}
                     </p>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('admin.reports.sales', ['period' => 'daily', 'date' => now('Asia/Kolkata')->toDateString()]) }}"
+                    <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
+                        <label for="dashboard-bill-date" class="sr-only">View bills for date</label>
+                        <input id="dashboard-bill-date" name="date" type="date" value="{{ $selectedBillDate }}" max="{{ now('Asia/Kolkata')->toDateString() }}" class="min-h-10 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]">
+                        <button type="submit" class="min-h-10 rounded-lg border border-[var(--app-border)] px-3 py-2 text-xs font-semibold text-[var(--app-text)] hover:bg-[var(--app-bg)]">View date</button>
+                    </form>
+                    <a href="{{ route('admin.reports.sales', ['period' => 'daily', 'date' => $selectedBillDate]) }}"
                        class="rounded-lg border border-[var(--app-border)] px-3 py-2 text-xs font-semibold text-[var(--app-text)] hover:bg-[var(--app-bg)]">
                         View Daily Report
                     </a>
@@ -215,7 +222,7 @@
                             <tr>
                                 <td colspan="7" class="px-5 py-12 text-center">
                                     <p class="font-semibold text-[var(--app-text)]">No bills issued today</p>
-                                    <p class="mt-1 text-xs text-[var(--app-muted)]">New completed bills will appear here.</p>
+                            <p class="mt-1 text-xs text-[var(--app-muted)]">No completed bills on this date.</p>
                                     <a href="{{ route('admin.billing.create') }}"
                                        class="mt-4 inline-flex rounded-lg bg-[var(--app-primary)] px-4 py-2 text-xs font-bold text-[var(--on-accent)]">
                                         Create First Bill

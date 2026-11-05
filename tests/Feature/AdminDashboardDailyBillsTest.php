@@ -46,6 +46,24 @@ class AdminDashboardDailyBillsTest extends TestCase
         $this->actingAs($staff)->get(route('admin.dashboard'))->assertForbidden();
     }
 
+    public function test_admin_can_select_a_previous_business_date_for_dashboard_bills(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
+        $today = $this->bill('TODAY-002', '100.00', '2026-10-22 10:00:00');
+        $historical = $this->bill('PAST-001', '250.00', '2026-10-01 10:00:00');
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.dashboard', ['date' => '2026-10-01']))
+            ->assertOk();
+
+        $this->assertSame('2026-10-01', $response->viewData('selectedBillDate'));
+        $this->assertSame(1, $response->viewData('selectedBillCount'));
+        $this->assertSame('250.00', number_format((float) $response->viewData('selectedBillSales'), 2, '.', ''));
+        $this->assertSame([$historical->id], $response->viewData('todayBillRows')->pluck('id')->all());
+        $this->assertSame(1, $response->viewData('todayBills'));
+        $this->assertNotContains($today->id, $response->viewData('todayBillRows')->pluck('id')->all());
+    }
+
     private function bill(string $number, string $amount, string $billedAt): Bill
     {
         $customer = Customer::factory()->create();

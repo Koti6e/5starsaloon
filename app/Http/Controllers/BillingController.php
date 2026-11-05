@@ -51,30 +51,10 @@ class BillingController extends Controller
                 ->find($request->integer('appointment_id'));
         }
 
-        $todayBillsQuery = Bill::query()
-            ->with(['customer', 'payments', 'createdBy'])
-            ->whereDate('billed_at', now('Asia/Kolkata')->toDateString())
-            ->latest('billed_at');
-
-        if ($request->user()->isStaff()) {
-            $todayBillsQuery->where('billed_by', $request->user()->id);
-        }
-
-        $todayBillSummary = (clone $todayBillsQuery)
-            ->reorder()
-            ->selectRaw('created_by, COUNT(*) as bill_count, SUM(grand_total) as total_sales')
-            ->groupBy('created_by')
-            ->with('createdBy')
-            ->get();
-        $todayOverall = (clone $todayBillsQuery)->reorder()->selectRaw('COUNT(*) as bill_count, COALESCE(SUM(grand_total), 0) as total_sales')->first();
-
         return view('billing.create', [
             'services' => $services,
             'categories' => $categories,
             'appointment' => $appointment,
-            'todayBills' => (clone $todayBillsQuery)->limit(10)->get(),
-            'todayBillSummary' => $todayBillSummary,
-            'todayOverall' => $todayOverall,
             'staff' => User::query()->where('role', 'staff')->where('status', 'active')->orderBy('name')->get(),
             'biller' => $request->user(),
             'idempotencyKey' => old('idempotency_key', (string) Str::uuid()),
