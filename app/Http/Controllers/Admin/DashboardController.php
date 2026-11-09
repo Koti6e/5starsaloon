@@ -39,7 +39,7 @@ class DashboardController extends Controller
 
         $dayStart = now('Asia/Kolkata')->startOfDay();
         $dayEnd = $dayStart->copy()->addDay();
-        $todayBillQuery = Bill::query()->where('status', 'completed')->where('billed_at', '>=', $dayStart)->where('billed_at', '<', $dayEnd);
+        $todayBillQuery = Bill::query()->where('status', 'completed')->where('billing_date', $today);
         $todaySales = (clone $todayBillQuery)->sum('grand_total');
         $todayBillCount = (clone $todayBillQuery)->count();
 
@@ -51,9 +51,9 @@ class DashboardController extends Controller
             'todayAppointments' => $todayAppointments,
             'staffPresentToday' => $presentToday,
             'staffAbsentToday' => max(0, $activeStaff - $presentToday - $leaveToday),
-            'cashSales' => Payment::query()->where('paid_at', '>=', $dayStart)->where('paid_at', '<', $dayEnd)->where('payment_method', 'cash')->whereHas('bill', fn ($query) => $query->where('status', 'completed'))->sum('amount'),
-            'upiSales' => Payment::query()->where('paid_at', '>=', $dayStart)->where('paid_at', '<', $dayEnd)->where('payment_method', 'upi')->whereHas('bill', fn ($query) => $query->where('status', 'completed'))->sum('amount'),
-            'cardSales' => Payment::query()->where('paid_at', '>=', $dayStart)->where('paid_at', '<', $dayEnd)->where('payment_method', 'card')->whereHas('bill', fn ($query) => $query->where('status', 'completed'))->sum('amount'),
+            'cashSales' => Payment::query()->where('payment_method', 'cash')->whereHas('bill', fn ($query) => $query->where('status', 'completed')->where('billing_date', $today))->sum('amount'),
+            'upiSales' => Payment::query()->where('payment_method', 'upi')->whereHas('bill', fn ($query) => $query->where('status', 'completed')->where('billing_date', $today))->sum('amount'),
+            'cardSales' => Payment::query()->where('payment_method', 'card')->whereHas('bill', fn ($query) => $query->where('status', 'completed')->where('billing_date', $today))->sum('amount'),
             'pendingHomeVisits' => $pendingHomeVisits,
             'activeStaff' => $activeStaff,
             'serviceCount' => Service::query()->count(),
@@ -74,7 +74,7 @@ class DashboardController extends Controller
                 ->latest('billed_at')->limit(6)->get(),
             'topServicesToday' => BillItem::query()
                 ->select('service_name_snapshot', DB::raw('SUM(quantity) as quantity'), DB::raw('SUM(line_total) as total'))
-                ->whereHas('bill', fn ($query) => $query->whereDate('billed_at', $today))
+                ->whereHas('bill', fn ($query) => $query->where('billing_date', $today))
                 ->groupBy('service_name_snapshot')
                 ->orderByDesc('quantity')
                 ->limit(5)

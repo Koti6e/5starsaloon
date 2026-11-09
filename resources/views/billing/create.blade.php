@@ -113,11 +113,11 @@
             <form method="POST" action="{{ !empty($backdatedBilling) ? route('admin.backdated-billing.store', [], false) : route($routeRoot.'.billing.store', [], false) }}" class="space-y-2.5 pb-28 lg:pb-24" @submit.prevent="submitBilling($event)">
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
-                @if (!empty($backdatedBilling))
+                @if (!empty($backdatedBilling) || auth()->user()->isAdmin())
                     <section class="rounded-xl border border-[var(--accent-border)] bg-[var(--app-surface)] p-3">
-                        <label for="billed_at" class="block text-sm font-semibold text-[var(--app-text)]">Service / bill date</label>
-                        <p class="mb-2 text-xs text-[var(--app-muted)]">Choose a date within the previous 30 days. The record creation time remains unchanged.</p>
-                        <input id="billed_at" name="billed_at" type="date" required min="{{ now(config('app.timezone'))->subDays(30)->toDateString() }}" max="{{ now(config('app.timezone'))->toDateString() }}" value="{{ old('billed_at') }}" class="min-h-11 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 text-[var(--app-text)]">
+                        <label for="billed_at" class="block text-sm font-semibold text-[var(--app-text)]">Billing date</label>
+                        <p class="mb-2 text-xs text-[var(--app-muted)]">Admins may select any previous calendar date. The actual creation timestamp remains unchanged.</p>
+                        <input id="billed_at" name="billed_at" type="date" max="{{ now(config('app.timezone'))->toDateString() }}" value="{{ old('billed_at', now(config('app.timezone'))->toDateString()) }}" class="min-h-11 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 text-[var(--app-text)]">
                         @error('billed_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </section>
                 @endif

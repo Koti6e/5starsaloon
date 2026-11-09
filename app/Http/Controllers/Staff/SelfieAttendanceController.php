@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Models\StaffAttendance;
+use App\Services\AttendanceGeofence;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -41,7 +42,7 @@ class SelfieAttendanceController extends Controller
         return view('staff.selfie');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AttendanceGeofence $geofence): RedirectResponse
     {
         abort_unless($request->user()->requiresLoginSelfie(), 404);
 
@@ -52,7 +53,10 @@ class SelfieAttendanceController extends Controller
 
         $validated = $request->validate([
             'selfie_image' => ['required', 'string'],
+            'latitude' => ['nullable', 'string'], 'longitude' => ['nullable', 'string'], 'accuracy' => ['nullable', 'string'],
         ]);
+
+        $location = $geofence->verify($validated['latitude'] ?? null, $validated['longitude'] ?? null, $validated['accuracy'] ?? null);
 
         if (! preg_match('/^data:image\/(jpeg|jpg|png|webp);base64,/', $validated['selfie_image'], $matches)) {
             throw ValidationException::withMessages(['selfie_image' => 'Capture a fresh selfie using the camera and try again.']);
@@ -80,6 +84,7 @@ class SelfieAttendanceController extends Controller
                 'login_session_id' => $sessionId,
                 'selfie_path' => $path,
                 'selfie_captured_at' => $now,
+                'check_in_latitude' => $location['latitude'], 'check_in_longitude' => $location['longitude'], 'check_in_gps_accuracy' => $location['accuracy'], 'check_in_distance_from_salon' => $location['distance'], 'check_in_gps_verification_status' => $location['status'], 'check_in_location_captured_at' => $now,
             ])->save();
         } else {
             $attendance = StaffAttendance::query()->updateOrCreate(
@@ -92,6 +97,7 @@ class SelfieAttendanceController extends Controller
                     'selfie_path' => $path,
                     'selfie_captured_at' => $now,
                     'notes' => 'Selfie verified at login.',
+                    'check_in_latitude' => $location['latitude'], 'check_in_longitude' => $location['longitude'], 'check_in_gps_accuracy' => $location['accuracy'], 'check_in_distance_from_salon' => $location['distance'], 'check_in_gps_verification_status' => $location['status'], 'check_in_location_captured_at' => $now,
                 ],
             );
         }

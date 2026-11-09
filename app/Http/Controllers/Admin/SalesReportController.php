@@ -42,8 +42,8 @@ class SalesReportController extends Controller
         $now = CarbonImmutable::now($tz);
         $billsFor = fn ($from, $to) => Bill::query()
             ->where('bills.status', 'completed')
-            ->where('bills.billed_at', '>=', $from->format('Y-m-d H:i:s'))
-            ->where('bills.billed_at', '<', $to->format('Y-m-d H:i:s'));
+            ->where('bills.billing_date', '>=', $from->toDateString())
+            ->where('bills.billing_date', '<', $to->toDateString());
         $summary = $billsFor($start, $end)
             ->selectRaw('COUNT(*) as bill_count, COALESCE(SUM(grand_total), 0) as total_sales')
             ->first();
@@ -85,15 +85,15 @@ class SalesReportController extends Controller
                 return $row;
             });
 
-        $bills = $billsFor($start, $end)->with(['customer', 'items', 'payments', 'billedBy'])->orderBy('billed_at')->get();
+        $bills = $billsFor($start, $end)->with(['customer', 'items', 'payments', 'billedBy'])->orderBy('billing_date')->orderBy('billed_at')->get();
         $daily = [];
         for ($day = $start; $day < $end; $day = $day->addDay()) {
-            $dayBills = $bills->filter(fn (Bill $bill) => $bill->billed_at?->timezone($tz)->toDateString() === $day->toDateString());
+            $dayBills = $bills->filter(fn (Bill $bill) => $bill->billing_date?->toDateString() === $day->toDateString());
             $daily[] = ['date' => $day, 'sales' => (float) $dayBills->sum('grand_total'), 'count' => $dayBills->count()];
         }
         $hourly = $period === 'daily' ? $bills->groupBy(fn (Bill $bill) => $bill->billed_at?->timezone($tz)->hour)->map(fn ($rows, $hour) => (object) ['hour' => $hour, 'total' => $rows->sum('grand_total'), 'bill_count' => $rows->count()])->sortKeys()->values() : collect();
         $paymentBreakdown = DB::table('payments')->join('bills', 'payments.bill_id', '=', 'bills.id')
-            ->where('bills.status', 'completed')->where('payments.paid_at', '>=', $start->format('Y-m-d H:i:s'))->where('payments.paid_at', '<', $end->format('Y-m-d H:i:s'))
+            ->where('bills.status', 'completed')->where('bills.billing_date', '>=', $start->toDateString())->where('bills.billing_date', '<', $end->toDateString())
             ->selectRaw('payments.payment_method, SUM(payments.amount) as total, COUNT(*) as count')->groupBy('payments.payment_method')->orderBy('payments.payment_method')->get();
         return view('admin.reports.sales', [
             'period' => $period, 'selectedDate' => $start->toDateString(), 'week' => $start->toDateString(), 'month' => $start->format('Y-m'),
@@ -169,14 +169,14 @@ class SalesReportController extends Controller
     {
         [$period, $start, $end, $timezone] = $this->range($request);
         $previousStart = match ($period) { 'daily' => $start->subDay(), 'weekly' => $start->subWeek(), default => $start->subMonth() };
-        $previous = Bill::query()->where('status', 'completed')->where('billed_at', '>=', $previousStart->format('Y-m-d H:i:s'))->where('billed_at', '<', $start->format('Y-m-d H:i:s'));
+        $previous = Bill::query()->where('status', 'completed')->where('billing_date', '>=', $previousStart->toDateString())->where('billing_date', '<', $start->toDateString());
         $previousSales = (float) (clone $previous)->sum('grand_total');
         $previousBills = (int) (clone $previous)->count();
         $bills = Bill::query()->with(['customer', 'billedBy', 'items', 'payments'])->where('status', 'completed')
-            ->where('billed_at', '>=', $start->format('Y-m-d H:i:s'))->where('billed_at', '<', $end->format('Y-m-d H:i:s'))->orderBy('billed_at')->get();
+            ->where('billing_date', '>=', $start->toDateString())->where('billing_date', '<', $end->toDateString())->orderBy('billing_date')->orderBy('billed_at')->get();
         $totalSales = (float) $bills->sum('grand_total');
         $paymentBreakdown = DB::table('payments')->join('bills', 'payments.bill_id', '=', 'bills.id')
-            ->where('bills.status', 'completed')->where('payments.paid_at', '>=', $start->format('Y-m-d H:i:s'))->where('payments.paid_at', '<', $end->format('Y-m-d H:i:s'))
+            ->where('bills.status', 'completed')->where('bills.billing_date', '>=', $start->toDateString())->where('bills.billing_date', '<', $end->toDateString())
             ->selectRaw('payments.payment_method, SUM(payments.amount) as total, COUNT(*) as count')->groupBy('payments.payment_method')->orderBy('payments.payment_method')->get();
         $billers = $bills->groupBy('billed_by')->map(function ($rows) use ($totalSales): array {
             $sales = (float) $rows->sum('grand_total');
@@ -189,7 +189,7 @@ class SalesReportController extends Controller
             ->sortBy(fn ($row) => mb_strtolower($row['name']))->values();
         $dailyRows = [];
         for ($day = $start; $day < $end; $day = $day->addDay()) {
-            $dayBills = $bills->filter(fn (Bill $bill) => $bill->billed_at?->timezone($timezone)->toDateString() === $day->toDateString());
+            $dayBills = $bills->filter(fn (Bill $bill) => $bill->billing_date?->toDateString() === $day->toDateString());
             $dailyRows[] = ['date' => $day, 'sales' => (float) $dayBills->sum('grand_total'), 'count' => $dayBills->count()];
         }
         return [

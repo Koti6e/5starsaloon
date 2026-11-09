@@ -66,8 +66,9 @@
                         <p class="truncate text-xs text-[var(--app-subtle)]">{{ $user->username }}</p>
                     </div>
                     <x-dropdown-link :href="route('profile.edit')" class="text-[var(--app-text)] hover:bg-[var(--app-primary-soft)]">Profile</x-dropdown-link>
-                    <form method="POST" action="{{ route('logout') }}">
+                    <form method="POST" action="{{ route('logout') }}" @if($user->isStaff()) data-staff-logout @endif>
                         @csrf
+                        @if($user->isStaff()) <input type="hidden" name="latitude"><input type="hidden" name="longitude"><input type="hidden" name="accuracy"> @endif
                         <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();" class="text-[var(--app-text)] hover:bg-[var(--app-primary-soft)]">Log Out</x-dropdown-link>
                     </form>
                 </x-slot>
@@ -75,3 +76,14 @@
         </div>
     </div>
 </div>
+@if($user->isStaff())
+<script>
+document.querySelector('[data-staff-logout]')?.addEventListener('submit', function (event) {
+    const form = this;
+    if (form.dataset.locationReady === '1') return;
+    event.preventDefault();
+    if (! navigator.geolocation) { alert('Location is required to check out. Enable location on this device and retry.'); return; }
+    navigator.geolocation.getCurrentPosition(position => { form.latitude.value = position.coords.latitude; form.longitude.value = position.coords.longitude; form.accuracy.value = position.coords.accuracy; form.dataset.locationReady = '1'; form.submit(); }, error => alert(error.code === 1 ? 'Location permission is required to check out. Enable location for this site and retry.' : error.code === 3 ? 'GPS timed out. Please retry checkout.' : 'Location is unavailable. Enable device location and retry.'), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+});
+</script>
+@endif

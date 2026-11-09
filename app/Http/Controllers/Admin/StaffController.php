@@ -47,11 +47,14 @@ class StaffController extends Controller
             $details = $expectedStaff->map(function (User $member) use ($rows) {
                 $row = $rows->get($member->id);
                 $present = in_array($row?->status, ['present', 'late'], true);
+                $recorded = $row !== null;
 
                 return [
                     'name' => $member->name,
-                    'status' => $present ? 'Present' : ($row?->status ? Str::headline($row->status) : 'Absent'),
+                    'status' => $present ? 'Present' : ($recorded ? Str::headline($row->status) : 'Not yet recorded'),
+                    'state' => $present ? 'present' : ($recorded ? 'absent' : 'pending'),
                     'present' => $present,
+                    'recorded' => $recorded,
                     'time' => $row?->check_in_time,
                     'selfie_url' => $row?->selfie_path ? route('admin.attendance.selfie', $row) : null,
                 ];

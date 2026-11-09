@@ -41,6 +41,9 @@ class SalonSettingSeeder extends Seeder
             'promotion_button_text' => 'Book Now',
             'promotion_button_link' => '/book-appointment',
             'promotion_image' => '',
+            'attendance_latitude' => '12.8821489',
+            'attendance_longitude' => '80.0808760',
+            'attendance_geofence_radius' => '200',
         ];
 
         foreach ($settings as $key => $value) {

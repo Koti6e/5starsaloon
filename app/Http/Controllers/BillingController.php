@@ -53,7 +53,7 @@ class BillingController extends Controller
 
         $todayBillsQuery = Bill::query()
             ->with(['customer', 'payments', 'createdBy'])
-            ->whereDate('billed_at', now('Asia/Kolkata')->toDateString())
+            ->whereDate('billing_date', now('Asia/Kolkata')->toDateString())
             ->latest('billed_at');
 
         if ($request->user()->isStaff()) {
@@ -181,10 +181,10 @@ class BillingController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $backdated = $request->routeIs('admin.backdated-billing.store');
-        abort_if($backdated && ! $request->user()?->isAdmin(), 403);
+        $canChooseBillingDate = $request->user()?->isAdmin();
+        $backdated = $canChooseBillingDate && ($request->routeIs('admin.backdated-billing.store') || $request->filled('billed_at'));
+        abort_if($request->routeIs('admin.backdated-billing.store') && ! $canChooseBillingDate, 403);
         $businessToday = now((string) config('app.timezone', 'Asia/Kolkata'))->startOfDay();
-        $earliestDate = $businessToday->copy()->subDays(30)->toDateString();
         $supportsWhatsAppConsent = Schema::hasColumn('customers', 'whatsapp_invoice_opt_in');
         $validated = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
@@ -207,7 +207,7 @@ class BillingController extends Controller
             'split_payments.*.method' => ['exclude_unless:payment_method,split', 'required', 'in:cash,upi,card,other'],
             'split_payments.*.amount' => ['exclude_unless:payment_method,split', 'required', 'numeric', 'min:0.01'],
             'idempotency_key' => ['required', 'string', 'max:100'],
-            'billed_at' => [$backdated ? 'required' : 'nullable', 'date_format:Y-m-d', 'after_or_equal:'.$earliestDate, 'before_or_equal:'.$businessToday->toDateString()],
+            'billed_at' => $backdated ? ['required', 'date_format:Y-m-d', 'before_or_equal:'.$businessToday->toDateString()] : ['nullable', 'prohibited'],
         ]);
 
         if ($existing = Bill::query()->where('idempotency_key', $validated['idempotency_key'])->first()) {
@@ -221,7 +221,7 @@ class BillingController extends Controller
         $customerName = $this->normalizeCustomerName($validated['customer_name']);
 
         try {
-            $bill = DB::transaction(function () use ($request, $validated, $mobile, $customerName, $backdated, $supportsWhatsAppConsent): Bill {
+            $bill = DB::transaction(function () use ($request, $validated, $mobile, $customerName, $backdated, $supportsWhatsAppConsent, $businessToday): Bill {
                 $appointment = null;
                 if (filled($validated['appointment_id'] ?? null)) {
                     $appointment = Appointment::query()
@@ -324,9 +324,8 @@ class BillingController extends Controller
                     'status' => 'completed',
                     'idempotency_key' => $validated['idempotency_key'],
                     'invoice_public_token' => (string) Str::uuid(),
-                    'billed_at' => $backdated
-                        ? \Illuminate\Support\Carbon::parse($validated['billed_at'], (string) config('app.timezone', 'Asia/Kolkata'))->startOfDay()
-                        : now((string) config('app.timezone', 'Asia/Kolkata')),
+                    'billed_at' => now((string) config('app.timezone', 'Asia/Kolkata')),
+                    'billing_date' => $backdated ? $validated['billed_at'] : $businessToday->toDateString(),
                 ]);
 
                 foreach ($items as $item) {

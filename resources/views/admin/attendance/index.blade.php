@@ -240,6 +240,16 @@
                             {{-- Attendance controls --}}
                             <div class="min-w-0">
                                 <div class="grid gap-4 sm:grid-cols-2">
+                                    @if ($row?->check_in_gps_verification_status || $row?->check_out_gps_verification_status)
+                                        <div class="sm:col-span-2 rounded-xl border border-[#c8a24a]/15 bg-black/50 p-3 text-xs text-[#d8c8a3]">
+                                            <p class="mb-2 font-semibold uppercase tracking-wider text-[#a89567]">GPS Verification</p>
+                                            <div class="grid gap-2 sm:grid-cols-2">
+                                                <p>Check-in: {{ $row->check_in_gps_verification_status === 'poor_accuracy_review' ? 'Poor accuracy · review' : ($row->check_in_gps_verification_status ? 'Verified' : '—') }} @if($row->check_in_distance_from_salon !== null) · {{ round($row->check_in_distance_from_salon) }}m from salon · ±{{ round($row->check_in_gps_accuracy) }}m @endif</p>
+                                                <p>Check-out: {{ $row->check_out_gps_verification_status === 'poor_accuracy_review' ? 'Poor accuracy · review' : ($row->check_out_gps_verification_status ? 'Verified' : '—') }} @if($row->check_out_distance_from_salon !== null) · {{ round($row->check_out_distance_from_salon) }}m from salon · ±{{ round($row->check_out_gps_accuracy) }}m @endif</p>
+                                            </div>
+                                            <p class="mt-2 break-all text-[#a89567]">@if($row->check_in_latitude !== null) In: {{ $row->check_in_latitude }}, {{ $row->check_in_longitude }} @endif @if($row->check_out_latitude !== null) · Out: {{ $row->check_out_latitude }}, {{ $row->check_out_longitude }} @endif</p>
+                                        </div>
+                                    @endif
 
                                     {{-- Status --}}
                                     <div>

@@ -14,6 +14,9 @@
             <form method="POST" action="{{ route('staff.selfie.store') }}" x-data="loginSelfie()" class="rounded-lg border border-[#c8a24a]/20 bg-[#11100d] p-4 shadow-xl shadow-black/25" @submit="submitting = true">
                 @csrf
                 <input type="hidden" name="selfie_image" :value="photoData">
+                <input type="hidden" name="latitude" :value="latitude">
+                <input type="hidden" name="longitude" :value="longitude">
+                <input type="hidden" name="accuracy" :value="accuracy">
 
                 <div class="overflow-hidden rounded-lg border border-[#c8a24a]/20 bg-black">
                     <video x-ref="video" x-show="!photoData" class="aspect-[3/4] w-full object-cover" autoplay playsinline muted></video>
@@ -43,6 +46,7 @@
                 ready: false,
                 photoData: '',
                 submitting: false,
+                latitude: '', longitude: '', accuracy: '',
                 message: 'Camera access is required for Staff1 and Staff2 login attendance.',
                 init() {
                     this.startCamera();
@@ -76,7 +80,7 @@
                     canvas.height = video.videoHeight || 960;
                     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
                     this.photoData = canvas.toDataURL('image/jpeg', 0.82);
-                    this.message = 'Selfie captured. Continue to enter the staff dashboard.';
+                    this.message = 'Selfie captured. Tap Continue to verify your location once and finish attendance.';
                     this.stopCamera();
                 },
                 retake() {
@@ -89,7 +93,22 @@
                     }
                     this.ready = false;
                 },
+                locate() {
+                    return new Promise((resolve, reject) => {
+                        if (! navigator.geolocation) return reject(new Error('unsupported'));
+                        navigator.geolocation.getCurrentPosition(position => {
+                            this.latitude = position.coords.latitude; this.longitude = position.coords.longitude; this.accuracy = position.coords.accuracy; resolve();
+                        }, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+                    });
+                },
             };
         }
+        document.querySelector('form[x-data="loginSelfie()"]')?.addEventListener('submit', async function (event) {
+            const component = this._x_dataStack?.[0];
+            if (! component || (component.latitude && component.longitude && component.accuracy)) return;
+            event.preventDefault(); component.submitting = true;
+            try { await component.locate(); this.submit(); }
+            catch (error) { component.submitting = false; component.message = error.code === 1 ? 'Location permission is required. Enable location for this site and tap Continue again.' : error.code === 3 ? 'GPS timed out. Check location is enabled and retry.' : 'Location is unavailable. Move outdoors or enable device location and retry.'; }
+        });
     </script>
 </x-app-layout>

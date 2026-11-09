@@ -8,6 +8,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Bill extends Model
 {
+    protected static function booted(): void
+    {
+        static::creating(function (Bill $bill): void {
+            if (blank($bill->billing_date) && filled($bill->billed_at)) {
+                $bill->billing_date = $bill->billed_at->timezone('Asia/Kolkata')->toDateString();
+            }
+        });
+    }
+
     protected $fillable = [
         'invoice_number',
         'customer_id',
@@ -33,6 +42,7 @@ class Bill extends Model
         'whatsapp_invoice_status_at',
         'notes',
         'billed_at',
+        'billing_date',
     ];
 
     protected function casts(): array
@@ -43,6 +53,7 @@ class Bill extends Model
             'home_visit_charge' => 'decimal:2',
             'grand_total' => 'decimal:2',
             'billed_at' => 'datetime',
+            'billing_date' => 'date',
             'whatsapp_invoice_sent_at' => 'datetime',
             'whatsapp_invoice_status_at' => 'datetime',
             'invoice_access_expires_at' => 'datetime',

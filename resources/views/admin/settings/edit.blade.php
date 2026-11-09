@@ -55,6 +55,15 @@
                         </div>
                     </section>
                 @endforeach
+                <section class="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
+                    <h2 class="font-serif text-xl text-[var(--app-text)]">Staff Attendance GPS</h2>
+                    <p class="mt-1 text-sm text-[var(--app-text-muted)]">Staff check-in and check-out require location permission and must be within the configured radius.</p>
+                    <div class="mt-5 grid gap-4 sm:grid-cols-3">
+                        @foreach ([['attendance_latitude', 'Salon Latitude'], ['attendance_longitude', 'Salon Longitude'], ['attendance_geofence_radius', 'Geofence Radius (metres)']] as [$key, $label])
+                            <label class="block"><span class="text-sm font-semibold text-[var(--app-text)]">{{ $label }}</span><input name="{{ $key }}" type="number" step="any" required value="{{ old($key, $settings[$key] ?? ($key === 'attendance_latitude' ? '12.8821489' : ($key === 'attendance_longitude' ? '80.0808760' : '200'))) }}" class="mt-1 w-full rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"><x-input-error :messages="$errors->get($key)" class="mt-2" /></label>
+                        @endforeach
+                    </div>
+                </section>
 
                 @php
                     $weeklyHours = \App\Support\WorkingHours::schedule($settings);

@@ -11,8 +11,9 @@
 
     <x-auth-session-status class="mt-6 rounded-2xl border border-[var(--auth-primary)]/25 bg-[var(--auth-primary-soft)] px-4 py-3 text-sm text-white" :status="session('status')" />
 
-    <form method="POST" action="{{ route('login') }}" class="mt-8 space-y-5">
+    <form method="POST" action="{{ route('login') }}" class="mt-8 space-y-5" id="login-form">
         @csrf
+        <input type="hidden" name="latitude" id="login-latitude"><input type="hidden" name="longitude" id="login-longitude"><input type="hidden" name="accuracy" id="login-accuracy">
 
         <div>
             <x-input-label for="username" :value="__('Username or Email')" class="sr-only" />
@@ -100,6 +101,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const togglePassword = document.getElementById('togglePassword');
             const passwordInput = document.getElementById('password');
+            const form = document.getElementById('login-form');
 
             if (! togglePassword || ! passwordInput) return;
 
@@ -112,6 +114,18 @@
                 icon.innerHTML = isPassword
                     ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.9 4.24A10.45 10.45 0 0 1 12 4c4.48 0 8.27 2.94 9.54 7a10.58 10.58 0 0 1-3.14 4.61"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.53 6.53A10.58 10.58 0 0 0 2.46 11c1.27 4.06 5.06 7 9.54 7 1.47 0 2.86-.32 4.1-.89"/>'
                     : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+            });
+            form.addEventListener('submit', function(event) {
+                if (! navigator.geolocation || form.dataset.locationReady === '1') return;
+                event.preventDefault();
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    document.getElementById('login-latitude').value = position.coords.latitude;
+                    document.getElementById('login-longitude').value = position.coords.longitude;
+                    document.getElementById('login-accuracy').value = position.coords.accuracy;
+                    form.dataset.locationReady = '1'; form.submit();
+                }, function(error) {
+                    alert(error.code === 1 ? 'Location permission is required for staff attendance. Enable location for this site and retry.' : error.code === 3 ? 'GPS timed out. Please retry.' : 'Location is unavailable. Enable device location and retry.');
+                }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
             });
         });
     </script>

@@ -18,10 +18,10 @@ class ReportController extends Controller
         $monthStart = now('Asia/Kolkata')->startOfMonth();
 
         return view('admin.reports.index', [
-            'todaySales' => Bill::query()->whereDate('billed_at', $today)->sum('grand_total'),
-            'todayBills' => Bill::query()->whereDate('billed_at', $today)->count(),
-            'monthSales' => Bill::query()->where('billed_at', '>=', $monthStart)->sum('grand_total'),
-            'monthBills' => Bill::query()->where('billed_at', '>=', $monthStart)->count(),
+            'todaySales' => Bill::query()->where('billing_date', $today)->sum('grand_total'),
+            'todayBills' => Bill::query()->where('billing_date', $today)->count(),
+            'monthSales' => Bill::query()->where('billing_date', '>=', $monthStart->toDateString())->sum('grand_total'),
+            'monthBills' => Bill::query()->where('billing_date', '>=', $monthStart->toDateString())->count(),
             'paymentBreakdown' => Payment::query()
                 ->select('payment_method', DB::raw('SUM(amount) as total'), DB::raw('COUNT(*) as count'))
                 ->where('paid_at', '>=', $monthStart)
@@ -30,7 +30,7 @@ class ReportController extends Controller
                 ->get(),
             'topServices' => BillItem::query()
                 ->select('service_name_snapshot', DB::raw('SUM(quantity) as quantity'), DB::raw('SUM(line_total) as total'))
-                ->whereHas('bill', fn ($query) => $query->where('billed_at', '>=', $monthStart))
+                ->whereHas('bill', fn ($query) => $query->where('billing_date', '>=', $monthStart->toDateString()))
                 ->groupBy('service_name_snapshot')
                 ->orderByDesc('quantity')
                 ->limit(10)

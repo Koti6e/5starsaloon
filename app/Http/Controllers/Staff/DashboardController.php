@@ -39,8 +39,8 @@ class DashboardController extends Controller
             'greeting' => $greeting,
             'today' => $now,
             'attendance' => $attendance,
-            'todayBills' => Bill::query()->where('billed_by', $user->id)->whereDate('billed_at', $today)->count(),
-            'todaySales' => Bill::query()->where('billed_by', $user->id)->whereDate('billed_at', $today)->sum('grand_total'),
+            'todayBills' => Bill::query()->where('billed_by', $user->id)->where('billing_date', $today)->count(),
+            'todaySales' => Bill::query()->where('billed_by', $user->id)->where('billing_date', $today)->sum('grand_total'),
             'assignedAppointments' => $assignedAppointments,
             'recentBills' => Bill::query()
                 ->with('customer')

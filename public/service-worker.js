@@ -4,7 +4,7 @@ try {
     console.error('SalonOS background notifications could not be initialized.', error);
 }
 
-const CACHE_NAME = 'salonos-pwa-v2';
+const CACHE_NAME = 'salonos-pwa-v3-gps-attendance';
 const STATIC_ASSETS = [
     '/offline.html',
     '/favicon.ico',
