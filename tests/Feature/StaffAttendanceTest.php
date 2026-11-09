@@ -222,6 +222,26 @@ class StaffAttendanceTest extends TestCase
             ->assertSee('Aug 3');
     }
 
+    public function test_admin_custom_attendance_range_uses_weekly_off_and_excludes_future_work_days(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
+        $staff = User::factory()->create(['role' => 'staff', 'status' => 'active', 'must_change_password' => false, 'weekly_off' => 'Sunday']);
+        $this->travelTo(Carbon::parse('2026-10-07 10:00:00', 'Asia/Kolkata'));
+        StaffAttendance::query()->create(['staff_id' => $staff->id, 'attendance_date' => '2026-10-05', 'status' => 'present']);
+        StaffAttendance::query()->create(['staff_id' => $staff->id, 'attendance_date' => '2026-10-06', 'status' => 'absent']);
+        StaffAttendance::query()->create(['staff_id' => $staff->id, 'attendance_date' => '2026-10-09', 'status' => 'present']);
+
+        $response = $this->actingAs($admin)->get(route('admin.attendance.index', [
+            'period' => 'custom', 'start_date' => '2026-10-05', 'end_date' => '2026-10-12',
+        ]))->assertOk()->assertSee('Custom Range Attendance');
+
+        $summary = $response->viewData('rangeSummary')->get($staff->id);
+        $this->assertSame(3, $summary['working_days']);
+        $this->assertSame(1, $summary['present']);
+        $this->assertSame(1, $summary['absent']);
+        $this->assertSame(33.3, $summary['attendance']);
+    }
+
     public function test_server_rejects_outside_geofence_and_records_failed_attempt(): void
     {
         $staff = User::factory()->create(['username' => 'staff1', 'role' => 'staff', 'status' => 'active', 'must_change_password' => false]);

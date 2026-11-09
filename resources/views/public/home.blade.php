@@ -1,4 +1,4 @@
-<x-layouts.public :settings="$settings" title="5 Star New Look A/C | Hair, Skin & Grooming Services" description="Explore salon services, grooming, hair care and facial treatments at 5 Star New Look A/C. Browse services and book an appointment online.">
+<x-layouts.public :settings="$settings" title="5 Star Newlook A/C | Salon in Vandalur, Tamil Nadu" description="Visit 5 Star Newlook A/C in Ottery, Vandalur for haircuts, grooming, facials and hair care. Explore services and request an appointment online.">
     <!-- Hero Section -->
     <section class="relative min-h-[calc(100vh-72px)] overflow-hidden" data-hero>
         <img

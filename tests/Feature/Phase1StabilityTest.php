@@ -285,7 +285,7 @@ class Phase1StabilityTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.appointments.index'))
+            ->get(route('admin.appointments.index', ['period' => 'daily', 'date' => $appointment->date->toDateString()]))
             ->assertOk()
             ->assertSee($appointment->booking_number)
             ->assertSee('View Bill')
@@ -296,6 +296,35 @@ class Phase1StabilityTest extends TestCase
             ->assertOk()
             ->assertSee($appointment->booking_number)
             ->assertSee('Assign Staff');
+    }
+
+    public function test_appointment_calendar_handles_leap_month_and_keeps_search_and_status_filters(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'must_change_password' => false]);
+        $customer = Customer::factory()->create(['name' => 'Calendar Customer']);
+        $appointment = Appointment::factory()->create([
+            'customer_id' => $customer->id,
+            'date' => '2024-02-29',
+            'start_time' => '23:50:00',
+            'status' => 'pending',
+        ]);
+        $cancelledAppointment = Appointment::factory()->create(['date' => '2024-02-28', 'status' => 'cancelled']);
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.appointments.index', [
+                'period' => 'monthly', 'month' => '2024-02', 'view' => 'calendar',
+                'filter' => 'pending', 'q' => 'Calendar Customer',
+            ]))
+            ->assertOk()
+            ->assertSee('Calendar Customer')
+            ->assertSee('11:50 PM')
+            ->assertSee('Appointment display mode')
+            ->assertDontSee($cancelledAppointment->booking_number);
+
+        self::assertSame('calendar', $response->viewData('viewMode'));
+        self::assertCount(35, $response->viewData('calendarDays'));
+        self::assertSame(29, $response->viewData('calendarDays')->where('inPeriod', true)->count());
+        self::assertSame([$appointment->id], $response->viewData('appointments')->pluck('id')->all());
     }
 
     public function test_admin_can_assign_active_staff_and_update_appointment_status(): void

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Support\ReportingPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,33 +18,58 @@ class CustomerController extends Controller
 {
     public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'period' => ['nullable', 'in:daily,weekly,monthly,custom'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'week' => ['nullable', 'date_format:Y-m-d'],
+            'month' => ['nullable', 'date_format:Y-m'],
+            'start_date' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d'],
+            'end_date' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'search' => ['nullable', 'string', 'max:100'],
+            'filter' => ['nullable', 'string', 'max:40'],
+        ]);
+        $periodSelected = collect(['period', 'date', 'week', 'month', 'start_date', 'end_date'])->contains(fn (string $key) => array_key_exists($key, $filters));
+        $period = ReportingPeriod::fromInput($filters);
+        $periodBills = fn (Builder $bills): Builder => $bills
+            ->where('status', 'completed')
+            ->where('billed_at', '>=', $period->start->format('Y-m-d H:i:s'))
+            ->where('billed_at', '<', $period->endExclusive->format('Y-m-d H:i:s'));
+        $customers = Customer::query()
+            ->when($periodSelected, fn (Builder $query) => $query
+                ->withCount(['bills as report_visit_count' => $periodBills])
+                ->withSum(['bills as report_total_spent' => $periodBills], 'grand_total')
+                ->withMax(['bills as report_last_visit' => $periodBills], 'billed_at'))
+            ->when($request->filled('search'), function ($query) use ($request): void {
+                $search = $request->string('search')->toString();
+                $query->where(function ($query) use ($search): void {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%")
+                        ->orWhere('customer_code', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('filter'), function (Builder $query) use ($request): void {
+                match ($request->string('filter')->toString()) {
+                    'regular' => $query->where('total_visits', '>=', 2),
+                    'vip' => $query->where('total_spent', '>=', 5000),
+                    'new' => $query->where('total_visits', '<=', 1),
+                    'birthdays' => $query->whereMonth('date_of_birth', now('Asia/Kolkata')->month),
+                    'not_visited_30' => $query->where(fn ($query) => $query->whereNull('last_visit_at')->orWhere('last_visit_at', '<', now('Asia/Kolkata')->subDays(30))),
+                    'not_visited_60' => $query->where(fn ($query) => $query->whereNull('last_visit_at')->orWhere('last_visit_at', '<', now('Asia/Kolkata')->subDays(60))),
+                    'not_visited_90' => $query->where(fn ($query) => $query->whereNull('last_visit_at')->orWhere('last_visit_at', '<', now('Asia/Kolkata')->subDays(90))),
+                    'top_spending' => $query->orderByDesc($periodSelected ? 'report_total_spent' : 'total_spent'),
+                    'inactive' => $query->where('status', 'inactive'),
+                    default => $query->where('status', 'active'),
+                };
+            })
+            ->when($periodSelected, fn (Builder $query) => $query->whereHas('bills', $periodBills))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
         return view('admin.customers.index', [
-            'customers' => Customer::query()
-                ->when($request->filled('search'), function ($query) use ($request): void {
-                    $search = $request->string('search')->toString();
-                    $query->where(function ($query) use ($search): void {
-                        $query->where('name', 'like', "%{$search}%")
-                            ->orWhere('mobile', 'like', "%{$search}%")
-                            ->orWhere('customer_code', 'like', "%{$search}%");
-                    });
-                })
-                ->when($request->filled('filter'), function (Builder $query) use ($request): void {
-                    match ($request->string('filter')->toString()) {
-                        'regular' => $query->where('total_visits', '>=', 2),
-                        'vip' => $query->where('total_spent', '>=', 5000),
-                        'new' => $query->where('total_visits', '<=', 1),
-                        'birthdays' => $query->whereMonth('date_of_birth', now('Asia/Kolkata')->month),
-                        'not_visited_30' => $query->where(fn ($query) => $query->whereNull('last_visit_at')->orWhere('last_visit_at', '<', now('Asia/Kolkata')->subDays(30))),
-                        'not_visited_60' => $query->where(fn ($query) => $query->whereNull('last_visit_at')->orWhere('last_visit_at', '<', now('Asia/Kolkata')->subDays(60))),
-                        'not_visited_90' => $query->where(fn ($query) => $query->whereNull('last_visit_at')->orWhere('last_visit_at', '<', now('Asia/Kolkata')->subDays(90))),
-                        'top_spending' => $query->orderByDesc('total_spent'),
-                        'inactive' => $query->where('status', 'inactive'),
-                        default => $query->where('status', 'active'),
-                    };
-                })
-                ->latest()
-                ->paginate(20)
-                ->withQueryString(),
+            'period' => $period,
+            'periodSelected' => $periodSelected,
+            'customers' => $customers,
         ]);
     }
 

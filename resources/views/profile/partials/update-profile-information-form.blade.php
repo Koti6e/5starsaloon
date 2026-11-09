@@ -1,10 +1,10 @@
 <section>
     <header>
-        <h2 class="text-lg font-medium text-[#fff9ea]">
+        <h2 class="text-lg font-medium text-[var(--app-text)]">
             {{ __('Profile Information') }}
         </h2>
 
-        <p class="mt-1 text-sm text-[#d8c8a3]">
+        <p class="mt-1 text-sm text-[var(--app-muted)]">
             {{ __("Update your account's profile information.") }}
         </p>
     </header>
@@ -15,33 +15,33 @@
 
         <div class="flex items-center gap-4">
             @if ($user->profilePhotoUrl())
-                <img src="{{ $user->profilePhotoUrl() }}" alt="{{ $user->name }}" class="h-16 w-16 rounded-full border border-[#c8a24a]/40 object-cover">
+                <img src="{{ $user->profilePhotoUrl() }}" alt="{{ $user->name }}" class="h-16 w-16 rounded-full border border-[var(--app-border)] object-cover">
             @else
-                <div class="flex h-16 w-16 items-center justify-center rounded-full border border-[#c8a24a]/40 bg-[#d5a93b] text-lg font-bold text-black">
+                <div class="flex h-16 w-16 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-primary)] text-lg font-bold text-[var(--on-accent)]">
                     {{ $user->initials() }}
                 </div>
             @endif
             <div class="flex-1">
-                <x-input-label for="profile_photo" :value="__('Profile Photo')" class="text-[#f8efd8]" />
-                <input id="profile_photo" name="profile_photo" type="file" accept="image/png,image/jpeg,image/webp" class="mt-1 block w-full rounded-md border border-[#c8a24a]/30 bg-black px-3 py-2 text-sm text-[#fff9ea] file:mr-4 file:rounded-md file:border-0 file:bg-[#d5a93b] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black">
+                <x-input-label for="profile_photo" :value="__('Profile Photo')" class="text-[var(--app-text)]" />
+                <input id="profile_photo" name="profile_photo" type="file" accept="image/png,image/jpeg,image/webp" class="mt-1 block w-full rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-text)] file:mr-4 file:rounded-md file:border-0 file:bg-[var(--app-primary)] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[var(--on-accent)]">
                 <x-input-error class="mt-2" :messages="$errors->get('profile_photo')" />
             </div>
         </div>
 
         <div>
-            <x-input-label for="name" :value="__('Name')" class="text-[#f8efd8]" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full border-[#c8a24a]/30 bg-black text-[#fff9ea]" :value="old('name', $user->name)" required autofocus autocomplete="name" />
+            <x-input-label for="name" :value="__('Name')" class="text-[var(--app-text)]" />
+            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]" :value="old('name', $user->name)" required autofocus autocomplete="name" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
         <div>
-            <x-input-label for="email" :value="__('Email')" class="text-[#f8efd8]" />
-            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full border-[#c8a24a]/30 bg-black text-[#fff9ea]" :value="old('email', $user->email)" autocomplete="email" />
+            <x-input-label for="email" :value="__('Email')" class="text-[var(--app-text)]" />
+            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]" :value="old('email', $user->email)" autocomplete="email" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
         </div>
 
         <div class="flex items-center gap-4">
-            <x-primary-button class="bg-[#d5a93b] text-[#111]">{{ __('Save') }}</x-primary-button>
+            <x-primary-button class="bg-[var(--app-primary)] text-[var(--on-accent)]">{{ __('Save') }}</x-primary-button>
 
             @if (session('status') === 'profile-updated')
                 <p
@@ -49,7 +49,7 @@
                     x-show="show"
                     x-transition
                     x-init="setTimeout(() => show = false, 2000)"
-                    class="text-sm text-[#d8c8a3]"
+                    class="text-sm text-[var(--app-muted)]"
                 >{{ __('Saved.') }}</p>
             @endif
         </div>

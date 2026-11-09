@@ -35,8 +35,7 @@
     $salonName = $settings['salon_name'] ?? '5 Star New Look A/C';
     $tagline = $settings['tagline'] ?? 'Look Good. Feel Great. Be Confident.';
     $metaDescription = $description ?? ($settings['meta_description'] ?? 'Explore salon, hair care, skin care and grooming services at 5 Star New Look A/C. Browse services and book an appointment online.');
-    $publicBaseUrl = rtrim(config('app.url'), '/');
-    if (app()->environment('production')) $publicBaseUrl = 'https://'.parse_url($publicBaseUrl, PHP_URL_HOST);
+    $publicBaseUrl = 'https://5star.sushako.in';
     $weeklyHours = \App\Support\WorkingHours::schedule($settings);
     $schemaHours = collect($weeklyHours)->filter(fn ($hours) => $hours['open'])->flatMap(function ($hours, $day): array {
         $specification = fn (string $dayName, string $opens, string $closes) => [
@@ -51,16 +50,18 @@
         return [$specification($day, $hours['opens'], '23:59'), $specification($nextDay, '00:00', $hours['closes'])];
     })->values()->all();
     $businessSchema = array_filter([
-        '@context' => 'https://schema.org', '@type' => 'BeautySalon', 'name' => $salonName,
+        '@context' => 'https://schema.org', '@type' => 'BeautySalon', 'name' => '5 Star Newlook A/C',
         'url' => $publicBaseUrl, 'telephone' => $settings['primary_phone'] ?? null,
         'image' => secure_asset($settings['og_image'] ?? 'images/salon/premium-salon-hero.webp'),
         'hasMap' => $settings['google_maps_url'] ?? null,
         'identifier' => $settings['google_place_id'] ?? null,
         'geo' => is_numeric($settings['latitude'] ?? null) && is_numeric($settings['longitude'] ?? null) ? ['@type' => 'GeoCoordinates', 'latitude' => (float) $settings['latitude'], 'longitude' => (float) $settings['longitude']] : null,
-        'address' => filled($settings['address'] ?? null) ? array_filter([
-            '@type' => 'PostalAddress', 'streetAddress' => $settings['address'], 'addressLocality' => $settings['city'] ?? ($settings['area'] ?? null),
-            'addressRegion' => $settings['state'] ?? null, 'postalCode' => $settings['pincode'] ?? null, 'addressCountry' => 'IN',
-        ]) : null,
+        'address' => [
+            '@type' => 'PostalAddress',
+            'streetAddress' => '4/123, Grand Southern Trunk Road, Main Road, Ottery',
+            'addressLocality' => 'Vandalur', 'addressRegion' => 'Tamil Nadu',
+            'postalCode' => '600048', 'addressCountry' => 'IN',
+        ],
         'openingHoursSpecification' => $schemaHours ?: null,
         'sameAs' => array_values(array_filter([$settings['instagram_url'] ?? null, $settings['facebook_url'] ?? null, $settings['youtube_url'] ?? null])),
     ], fn ($value) => $value !== null && $value !== '');
@@ -104,6 +105,7 @@
         <meta property="og:description" content="{{ $metaDescription }}">
         <meta property="og:url" content="{{ $canonicalUrl }}">
         <meta property="og:image" content="{{ secure_asset($settings['og_image'] ?? 'images/salon/premium-salon-hero.webp') }}">
+        <meta property="og:image:alt" content="{{ $settings['og_image_alt'] ?? $salonName.' salon in Vandalur, Tamil Nadu' }}">
         <script type="application/ld+json">{!! json_encode($businessSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
         <link rel="icon" href="{{ asset('favicon.ico') }}">
         <link rel="apple-touch-icon" href="{{ asset('images/brand/5-star-new-look-salon-logo.png') }}">

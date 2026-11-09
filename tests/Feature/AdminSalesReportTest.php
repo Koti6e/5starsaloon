@@ -90,10 +90,12 @@ class AdminSalesReportTest extends TestCase
             ->assertSee('44.4%')
             ->assertSee('55.6%')
             ->assertSee('3 bills')
+            ->assertSee('Cancelled bills')
             ->assertSee('bills.billed_by')
             ->assertSee('bills.grand_total');
 
         $this->assertSame(3, (int) $response->viewData('totalBills'));
+        $this->assertSame(1, (int) $response->viewData('cancelledBills'));
         $this->assertSame('4500.00', number_format((float) $response->viewData('totalSales'), 2, '.', ''));
         $this->assertSame(
             '4500.00',
@@ -159,8 +161,10 @@ class AdminSalesReportTest extends TestCase
         $admin = $this->user('admin', 'Salon Admin');
         $staff = $this->user('staff', '=Formula');
         $this->bill($staff, '100.00', '2026-10-05 10:00:00');
+        $this->bill($staff, '900.00', '2026-10-05 11:00:00', ['status' => 'cancelled']);
         $response = $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'daily', 'date' => '2026-10-05', 'export' => 'csv']))->assertOk();
         $this->assertStringContainsString("'=Formula", $response->streamedContent());
+        $this->assertStringContainsString('"Cancelled bills",1', $response->streamedContent());
         $this->actingAs($admin)->get(route('admin.reports.sales', ['period' => 'weekly', 'week' => '2026-10-05', 'export' => 'pdf']))->assertOk()->assertHeader('content-type', 'application/pdf');
     }
 

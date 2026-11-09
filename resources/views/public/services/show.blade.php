@@ -1,4 +1,4 @@
-<x-layouts.public :settings="$settings" title="{{ $service->name }} | 5 Star New Look A/C" description="{{ \Illuminate\Support\Str::limit(strip_tags($service->detailed_description ?: $service->short_description ?: $service->name.' at 5 Star New Look A/C.'), 155) }}">
+<x-layouts.public :settings="$settings" title="{{ $service->name }} in Vandalur | 5 Star Newlook A/C" description="{{ \Illuminate\Support\Str::limit(strip_tags(($service->short_description ?: $service->detailed_description ?: $service->name.' service').' at 5 Star Newlook A/C in Vandalur, Tamil Nadu.'), 155) }}">
     @php
         $serviceSchema = array_filter([
             '@context' => 'https://schema.org',
@@ -6,7 +6,7 @@
             'name' => $service->name,
             'serviceType' => $service->publicCategoryName(),
             'description' => $service->detailed_description ?: $service->short_description,
-            'url' => route('services.show', $service),
+            'url' => 'https://5star.sushako.in'.route('services.show', $service, false),
             'provider' => ['@type' => 'BeautySalon', 'name' => $settings['salon_name'] ?? '5 Star New Look A/C'],
             'offers' => $service->price_type !== 'contact' && $service->currentPrice() ? [
                 '@type' => 'Offer', 'price' => $service->currentPrice(), 'priceCurrency' => $service->currency_code ?: 'INR',

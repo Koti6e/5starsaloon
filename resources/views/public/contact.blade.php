@@ -2,7 +2,7 @@
     $whatsappDigits = preg_replace('/\D+/', '', (string) ($settings['whatsapp_number'] ?? ''));
     $whatsappDestination = strlen($whatsappDigits) === 10 ? '91'.$whatsappDigits : $whatsappDigits;
 @endphp
-<x-layouts.public :settings="$settings" title="Contact & Location | 5 Star New Look A/C" description="Contact 5 Star New Look A/C to ask about salon services or book an appointment. See the configured address and opening hours.">
+<x-layouts.public :settings="$settings" title="Contact 5 Star Newlook A/C | Ottery, Vandalur" description="Find 5 Star Newlook A/C at 4/123 Grand Southern Trunk Road, Ottery, Vandalur, Tamil Nadu 600048. Contact us about salon services or appointments.">
     <section class="bg-[#0d0b08] px-4 py-12 sm:px-6 lg:px-8">
         <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr]">
             <div>

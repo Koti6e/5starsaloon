@@ -10,7 +10,7 @@
             @csrf
             <label class="text-sm">Date<input required type="date" name="date" class="mt-1 w-full rounded-lg border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"></label>
             <label class="text-sm">Name or reason (optional)<input type="text" name="name" maxlength="120" placeholder="Diwali Holiday" class="mt-1 w-full rounded-lg border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"></label>
-            <button class="self-end rounded-lg bg-[var(--app-primary-strong)] px-4 py-2 font-semibold text-black">Add closure</button>
+            <button class="self-end rounded-lg bg-[var(--app-primary-strong)] px-4 py-2 font-semibold text-[var(--on-accent)]">Add closure</button>
         </form>
         <div class="overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)]">
             @forelse ($closedDates as $closedDate)

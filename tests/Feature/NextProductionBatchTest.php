@@ -27,7 +27,7 @@ class NextProductionBatchTest extends TestCase
         $xml = new \DOMDocument;
         $this->assertTrue($xml->loadXML($sitemap->getContent()));
         $this->assertSame('urlset', $xml->documentElement?->localName);
-        $this->assertStringContainsString(route('services.index'), $sitemap->getContent());
+        $this->assertStringContainsString('https://5star.sushako.in/services', $sitemap->getContent());
 
         $robots = file_get_contents(public_path('robots.txt'));
         $this->assertStringContainsString('Sitemap: https://5star.sushako.in/sitemap.xml', $robots);

@@ -5,17 +5,19 @@
 
     $baseItems = [
         ['label' => 'Dashboard', 'short' => 'Home', 'route' => $routeRoot.'.dashboard', 'match' => [$routeRoot.'.dashboard'], 'icon' => 'dashboard'],
-        ['label' => 'Quick Billing', 'short' => 'Billing', 'route' => $routeRoot.'.billing.create', 'match' => [$routeRoot.'.billing.*'], 'icon' => 'billing'],
+        ['label' => 'Quick Billing', 'short' => 'Billing', 'route' => $routeRoot.'.billing.create', 'match' => [$routeRoot.'.billing.create', $routeRoot.'.billing.show', $routeRoot.'.billing.success', $routeRoot.'.billing.complete'], 'icon' => 'billing'],
     ];
 
     $adminItems = [
         ['label' => 'Appointments', 'short' => 'Appts', 'route' => 'admin.appointments.index', 'match' => ['admin.appointments.*'], 'icon' => 'appointments'],
+        ['label' => 'Bills Register', 'short' => 'Bills', 'route' => 'admin.billing.index', 'match' => ['admin.billing.index'], 'icon' => 'billing'],
         ['label' => 'Customers', 'short' => 'Customers', 'route' => 'admin.customers.index', 'match' => ['admin.customers.*'], 'icon' => 'customers'],
         ['label' => 'Services', 'short' => 'Services', 'route' => 'admin.services.index', 'match' => ['admin.services.*'], 'icon' => 'services'],
         ['label' => 'Attendance', 'short' => 'Day', 'route' => 'admin.attendance.index', 'match' => ['admin.attendance.*'], 'icon' => 'attendance'],
         ['label' => 'Staff', 'short' => 'Staff', 'route' => 'admin.staff.index', 'match' => ['admin.staff.*'], 'icon' => 'staff'],
         ['label' => 'Reports', 'short' => 'Reports', 'route' => 'admin.reports.index', 'match' => ['admin.reports.*'], 'icon' => 'reports'],
         ['label' => 'Sales Report', 'short' => 'Sales', 'route' => 'admin.reports.sales', 'match' => ['admin.reports.sales'], 'icon' => 'reports'],
+        ['label' => 'Payment Report', 'short' => 'Payments', 'route' => 'admin.reports.payments', 'match' => ['admin.reports.payments'], 'icon' => 'reports'],
         ['label' => 'Backdated Billing', 'short' => 'Backdate', 'route' => 'admin.backdated-billing.create', 'match' => ['admin.backdated-billing.*'], 'icon' => 'billing'],
         ['label' => 'Customer Notifications', 'short' => 'Notify', 'route' => 'admin.customer-notifications.index', 'match' => ['admin.customer-notifications.*'], 'icon' => 'reports'],
         ['label' => 'Settings', 'short' => 'Settings', 'route' => 'admin.settings.edit', 'match' => ['admin.settings.*'], 'icon' => 'settings'],

@@ -125,7 +125,7 @@
                     </div>
                 </section>
 
-                <button class="w-full rounded-md bg-[var(--app-primary-strong)] px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] text-black sm:w-auto">Save Settings</button>
+                <button class="w-full rounded-md bg-[var(--app-primary-strong)] px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] text-[var(--on-accent)] sm:w-auto">Save Settings</button>
             </form>
         </div>
     </div>

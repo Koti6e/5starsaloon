@@ -1,19 +1,21 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-1">
-            <h1 class="font-serif text-2xl text-[#f4d27a]">Staff Attendance</h1>
-            <p class="text-sm text-[#a89567]">Manage daily attendance, check-in/out times and captured staff photos.</p>
+            <h1 class="font-serif text-2xl text-[var(--app-primary)]">Staff Attendance</h1>
+            <p class="text-sm text-[var(--app-subtle)]">Manage daily attendance, check-in/out times and captured staff photos.</p>
         </div>
     </x-slot>
 
     <div class="py-8">
         <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 
+            <x-admin.period-filter :period="$period" :action="route('admin.attendance.index')" :preserve="['staff' => request('staff')]" />
+
             {{-- Flash message --}}
             @if (session('status'))
-                <div class="mb-6 flex items-center gap-3 rounded-xl border border-[#c8a24a]/25 bg-[#11100d] px-4 py-3 shadow-lg shadow-black/10">
-                    <span class="flex h-2.5 w-2.5 shrink-0 rounded-full bg-[#d5a93b]"></span>
-                    <p class="text-sm text-[#f4d27a]">{{ session('status') }}</p>
+                <div class="mb-6 flex items-center gap-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] px-4 py-3 shadow-lg shadow-black/10">
+                    <span class="flex h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--app-primary)]"></span>
+                    <p class="text-sm text-[var(--app-primary)]">{{ session('status') }}</p>
                 </div>
             @endif
 
@@ -22,7 +24,7 @@
                 <x-admin.card class="p-5">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <label for="attendance-date" class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#a89567]">
+                            <label for="attendance-date" class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-subtle)]">
                                 Attendance Date
                             </label>
 
@@ -31,7 +33,7 @@
                                 type="date"
                                 name="date"
                                 value="{{ $date }}"
-                                class="w-full rounded-xl border-[#c8a24a]/30 bg-black px-4 py-3 text-sm font-medium text-[#fff9ea] outline-none transition focus:border-[#d5a93b] focus:ring-1 focus:ring-[#d5a93b] sm:w-56"
+                                class="w-full rounded-xl border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3 text-sm font-medium text-[var(--app-text)] outline-none transition focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--app-focus)] sm:w-56"
                             >
                         </div>
 
@@ -83,6 +85,18 @@
                 </div>
                 <p class="mt-3 text-xs text-[var(--app-text-muted)]">Activity dots show recorded attendance. Gray indicates no record or a weekly day off.</p>
             </section>
+
+            @if ($period->mode === 'custom')
+                <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
+                    <div class="mb-4"><h2 class="text-xl font-semibold text-[var(--app-text)]">Custom Range Attendance</h2><p class="mt-1 text-sm text-[var(--app-text-muted)]">{{ $period->label() }} · working-day denominator excludes each staff member’s weekly off and dates in the future.</p></div>
+                    <div class="overflow-x-auto"><table class="w-full min-w-[680px] text-left text-sm"><thead class="text-xs uppercase text-[var(--app-text-muted)]"><tr><th class="p-2">Staff</th><th class="p-2 text-right">Working Days</th><th class="p-2 text-right">Present</th><th class="p-2 text-right">Absent</th><th class="p-2 text-right">Leave</th><th class="p-2 text-right">Half Day</th><th class="p-2 text-right">Attendance</th></tr></thead><tbody class="divide-y divide-[var(--app-border)]">
+                        @foreach ($staff as $member)
+                            @php $summary = $rangeSummary[$member->id]; @endphp
+                            <tr><th class="p-2 font-medium text-[var(--app-text)]">{{ $member->name }}</th><td class="p-2 text-right">{{ $summary['working_days'] }}</td><td class="p-2 text-right">{{ $summary['present'] }}</td><td class="p-2 text-right">{{ $summary['absent'] }}</td><td class="p-2 text-right">{{ $summary['leave'] }}</td><td class="p-2 text-right">{{ $summary['half_day'] }}</td><td class="p-2 text-right font-semibold">{{ $summary['attendance'] }}%</td></tr>
+                        @endforeach
+                    </tbody></table></div>
+                </section>
+            @endif
 
             <section class="mb-6 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-5">
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -140,7 +154,7 @@
                         <label class="text-sm text-[var(--app-text)]">Month<input type="month" name="month" value="{{ $month->format('Y-m') }}" class="mt-1 block rounded-md border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-text)]"></label>
                         <a href="{{ route('admin.attendance.index', ['month' => $month->copy()->subMonth()->format('Y-m'), 'date' => $date]) }}" class="rounded-md border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-text)]">Previous</a>
                         <a href="{{ route('admin.attendance.index', ['month' => $month->copy()->addMonth()->format('Y-m'), 'date' => $date]) }}" class="rounded-md border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-text)]">Next</a>
-                        <button class="rounded-md bg-[var(--app-primary-strong)] px-4 py-2 text-sm font-semibold text-black">View</button>
+                        <button class="rounded-md bg-[var(--app-primary-strong)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]">View</button>
                     </form>
                 </div>
                 <div class="mt-5 overflow-x-auto"><table class="w-full min-w-[760px] text-left text-sm"><thead class="text-xs uppercase text-[var(--app-text-muted)]"><tr><th class="p-2">Staff</th><th class="p-2">Working Days</th><th class="p-2">Present</th><th class="p-2">Absent</th><th class="p-2">Leave</th><th class="p-2">Half Day</th><th class="p-2">Attendance</th></tr></thead><tbody class="divide-y divide-[var(--app-border)]">
@@ -184,24 +198,24 @@
             @endphp
 
             <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <div class="rounded-xl border border-emerald-400/15 bg-[#11100d] p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-[#a89567]">Present</p>
+                <div class="rounded-xl border border-emerald-400/15 bg-[var(--app-surface-elevated)] p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]">Present</p>
                     <p class="mt-1 text-2xl font-semibold text-emerald-300">{{ $presentCount }}</p>
                 </div>
 
-                <div class="rounded-xl border border-red-400/15 bg-[#11100d] p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-[#a89567]">Absent</p>
+                <div class="rounded-xl border border-red-400/15 bg-[var(--app-surface-elevated)] p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]">Absent</p>
                     <p class="mt-1 text-2xl font-semibold text-red-300">{{ $absentCount }}</p>
                 </div>
 
-                <div class="rounded-xl border border-[#c8a24a]/15 bg-[#11100d] p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-[#a89567]">Not Marked</p>
-                    <p class="mt-1 text-2xl font-semibold text-[#f4d27a]">{{ $notMarkedCount }}</p>
+                <div class="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]">Not Marked</p>
+                    <p class="mt-1 text-2xl font-semibold text-[var(--app-primary)]">{{ $notMarkedCount }}</p>
                 </div>
 
-                <div class="rounded-xl border border-[#c8a24a]/15 bg-[#11100d] p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-[#a89567]">Other</p>
-                    <p class="mt-1 text-2xl font-semibold text-[#d8c8a3]">{{ $otherCount }}</p>
+                <div class="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]">Other</p>
+                    <p class="mt-1 text-2xl font-semibold text-[var(--app-muted)]">{{ $otherCount }}</p>
                 </div>
             </div>
 
@@ -229,7 +243,7 @@
                             'leave' => 'border-sky-400/20 bg-sky-400/10 text-sky-300',
                             'half_day' => 'border-violet-400/20 bg-violet-400/10 text-violet-300',
                             'weekly_off' => 'border-slate-400/20 bg-slate-400/10 text-slate-300',
-                            default => 'border-[#c8a24a]/20 bg-[#c8a24a]/5 text-[#d8c8a3]',
+                            default => 'border-[var(--app-border)] bg-[var(--app-primary-soft)] text-[var(--app-muted)]',
                         };
 
                         $sourceLabel = in_array($row?->source, ['automatic_login', 'automatic_logout'], true)
@@ -248,19 +262,19 @@
                         <input type="hidden" name="staff_id" value="{{ $member->id }}">
 
                         {{-- Card header --}}
-                        <div class="flex flex-col gap-4 border-b border-[#c8a24a]/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex flex-col gap-4 border-b border-[var(--app-border)] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
                             <div class="flex min-w-0 items-center gap-4">
                                 {{-- Staff avatar --}}
-                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#c8a24a]/30 bg-black text-lg font-semibold text-[#f4d27a]">
+                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] text-lg font-semibold text-[var(--app-primary)]">
                                     {{ strtoupper(substr($member->name, 0, 1)) }}
                                 </div>
 
                                 <div class="min-w-0">
-                                    <h2 class="truncate text-lg font-semibold text-[#fff9ea]">
+                                    <h2 class="truncate text-lg font-semibold text-[var(--app-text)]">
                                         {{ $member->name }}
                                     </h2>
 
-                                    <p class="mt-1 text-xs text-[#a89567]">
+                                    <p class="mt-1 text-xs text-[var(--app-subtle)]">
                                         Shift:
                                         {{ $member->shift_start ?: 'Not set' }}
                                         –
@@ -275,7 +289,7 @@
                                     {{ $statusLabel }}
                                 </span>
 
-                                <span class="hidden rounded-full border border-[#c8a24a]/15 bg-black px-3 py-1.5 text-[11px] font-medium text-[#a89567] sm:inline-flex">
+                                <span class="hidden rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-1.5 text-[11px] font-medium text-[var(--app-subtle)] sm:inline-flex">
                                     {{ $sourceLabel }}
                                 </span>
                             </div>
@@ -306,13 +320,13 @@
                                             >
                                         </div>
 
-                                        <div class="border-t border-[#c8a24a]/15 px-3 py-2.5 text-center text-xs font-semibold text-[#f4d27a]">
+                                        <div class="border-t border-[var(--app-border)] px-3 py-2.5 text-center text-xs font-semibold text-[var(--app-primary)]">
                                             View Captured Photo
                                         </div>
                                     </a>
                                 @else
-                                    <div class="flex aspect-[4/5] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#c8a24a]/20 bg-black/50 px-4 text-center">
-                                        <svg class="mb-3 h-8 w-8 text-[#a89567]/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <div class="flex aspect-[4/5] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--app-border)] bg-[var(--app-bg)]/50 px-4 text-center">
+                                        <svg class="mb-3 h-8 w-8 text-[var(--app-subtle)]/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h3l1.5-2h7L17 7h3v12H4V7Z"/>
                                             <circle cx="12" cy="13" r="3.5"/>
                                         </svg>
@@ -336,7 +350,7 @@
                                     <div>
                                         <label
                                             for="status-{{ $member->id }}"
-                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[#a89567]"
+                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]"
                                         >
                                             Attendance Status
                                         </label>
@@ -344,7 +358,7 @@
                                         <select
                                             id="status-{{ $member->id }}"
                                             name="status"
-                                            class="w-full rounded-xl border-[#c8a24a]/30 bg-black px-3 py-3 text-sm text-[#fff9ea] outline-none focus:border-[#d5a93b] focus:ring-1 focus:ring-[#d5a93b]"
+                                            class="w-full rounded-xl border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-sm text-[var(--app-text)] outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--app-focus)]"
                                         >
                                             @foreach (['not_marked', 'present', 'absent', 'late', 'leave', 'half_day', 'weekly_off'] as $statusOption)
                                                 <option
@@ -359,12 +373,12 @@
 
                                     {{-- Source --}}
                                     <div>
-                                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[#a89567]">
+                                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]">
                                             Attendance Source
                                         </label>
 
-                                        <div class="flex min-h-[46px] items-center rounded-xl border border-[#c8a24a]/15 bg-black px-3 text-sm text-[#d8c8a3]">
-                                            <span class="mr-2 h-2 w-2 rounded-full {{ $row ? 'bg-[#d5a93b]' : 'bg-[#5d5749]' }}"></span>
+                                        <div class="flex min-h-[46px] items-center rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] px-3 text-sm text-[var(--app-muted)]">
+                                            <span class="mr-2 h-2 w-2 rounded-full {{ $row ? 'bg-[var(--app-primary)]' : 'bg-[var(--app-border)]' }}"></span>
                                             {{ $sourceLabel }}
                                         </div>
                                     </div>
@@ -383,7 +397,7 @@
                                     <div>
                                         <label
                                             for="check-in-{{ $member->id }}"
-                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[#a89567]"
+                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]"
                                         >
                                             Check In
                                         </label>
@@ -393,7 +407,7 @@
                                             type="time"
                                             name="check_in_time"
                                             value="{{ $row?->check_in_time }}"
-                                            class="w-full rounded-xl border-[#c8a24a]/30 bg-black px-3 py-3 text-sm text-[#fff9ea] outline-none focus:border-[#d5a93b] focus:ring-1 focus:ring-[#d5a93b]"
+                                            class="w-full rounded-xl border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-sm text-[var(--app-text)] outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--app-focus)]"
                                         >
                                     </div>
 
@@ -401,7 +415,7 @@
                                     <div>
                                         <label
                                             for="check-out-{{ $member->id }}"
-                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[#a89567]"
+                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]"
                                         >
                                             Check Out
                                         </label>
@@ -411,7 +425,7 @@
                                             type="time"
                                             name="check_out_time"
                                             value="{{ $row?->check_out_time }}"
-                                            class="w-full rounded-xl border-[#c8a24a]/30 bg-black px-3 py-3 text-sm text-[#fff9ea] outline-none focus:border-[#d5a93b] focus:ring-1 focus:ring-[#d5a93b]"
+                                            class="w-full rounded-xl border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-sm text-[var(--app-text)] outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--app-focus)]"
                                         >
                                     </div>
 
@@ -419,7 +433,7 @@
                                     <div class="sm:col-span-2">
                                         <label
                                             for="reason-{{ $member->id }}"
-                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[#a89567]"
+                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]"
                                         >
                                             Correction Reason
                                         </label>
@@ -430,7 +444,7 @@
                                             required
                                             value="{{ old('correction_reason', $row?->correction_reason) }}"
                                             placeholder="Enter reason when correcting attendance"
-                                            class="w-full rounded-xl border-[#c8a24a]/30 bg-black px-3 py-3 text-sm text-[#fff9ea] placeholder:text-[#655d4c] outline-none focus:border-[#d5a93b] focus:ring-1 focus:ring-[#d5a93b]"
+                                            class="w-full rounded-xl border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-sm text-[var(--app-text)] placeholder:text-[var(--app-subtle)] outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--app-focus)]"
                                         >
                                     </div>
 
@@ -438,7 +452,7 @@
                                     <div class="sm:col-span-2">
                                         <label
                                             for="notes-{{ $member->id }}"
-                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[#a89567]"
+                                            class="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--app-subtle)]"
                                         >
                                             Notes
                                         </label>
@@ -448,20 +462,20 @@
                                             name="notes"
                                             rows="2"
                                             placeholder="Optional attendance notes"
-                                            class="w-full resize-none rounded-xl border-[#c8a24a]/30 bg-black px-3 py-3 text-sm text-[#fff9ea] placeholder:text-[#655d4c] outline-none focus:border-[#d5a93b] focus:ring-1 focus:ring-[#d5a93b]"
+                                            class="w-full resize-none rounded-xl border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-3 text-sm text-[var(--app-text)] placeholder:text-[var(--app-subtle)] outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--app-focus)]"
                                         >{{ $row?->notes }}</textarea>
                                     </div>
                                 </div>
 
                                 {{-- Action footer --}}
-                                <div class="mt-5 flex flex-col gap-3 border-t border-[#c8a24a]/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                                    <div class="text-xs text-[#756b58]">
+                                <div class="mt-5 flex flex-col gap-3 border-t border-[var(--app-border)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="text-xs text-[var(--app-subtle)]">
                                         Attendance for {{ \Illuminate\Support\Carbon::parse($date)->format('d M Y') }}
                                     </div>
 
                                     <button
                                         type="submit"
-                                        class="inline-flex w-full items-center justify-center rounded-xl bg-[#d5a93b] px-6 py-3 text-sm font-semibold text-[#111] transition hover:bg-[#e4bd55] focus:outline-none focus:ring-2 focus:ring-[#d5a93b]/50 sm:w-auto"
+                                        class="inline-flex w-full items-center justify-center rounded-xl bg-[var(--app-primary)] px-6 py-3 text-sm font-semibold text-[var(--on-accent)] transition hover:bg-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)] sm:w-auto"
                                     >
                                         Save Attendance
                                     </button>
@@ -474,8 +488,8 @@
 
             @if ($staff->isEmpty())
                 <x-admin.card class="p-10 text-center">
-                    <p class="font-serif text-xl text-[#f4d27a]">No staff found</p>
-                    <p class="mt-2 text-sm text-[#a89567]">There are no staff members available for this date.</p>
+                    <p class="font-serif text-xl text-[var(--app-primary)]">No staff found</p>
+                    <p class="mt-2 text-sm text-[var(--app-subtle)]">There are no staff members available for this date.</p>
                 </x-admin.card>
             @endif
         </div>

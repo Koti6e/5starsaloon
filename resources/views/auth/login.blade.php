@@ -5,8 +5,8 @@
             <h1 class="font-serif text-3xl font-bold tracking-tight text-[var(--auth-primary-strong)] sm:text-4xl">Welcome Back</h1>
             <span class="h-px w-16 bg-gradient-to-l from-transparent to-[var(--auth-primary-strong)]/70"></span>
         </div>
-        <p class="mt-3 text-base font-medium text-[#fff9ea]/90">Sign in to continue</p>
-        <p class="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#fff9ea]/68">Manage appointments, billing, customers and salon operations seamlessly.</p>
+        <p class="mt-3 text-base font-medium text-[var(--app-text)]/90">Sign in to continue</p>
+        <p class="mx-auto mt-3 max-w-sm text-sm leading-6 text-[var(--app-text)]/68">Manage appointments, billing, customers and salon operations seamlessly.</p>
     </div>
 
     <x-auth-session-status class="mt-6 rounded-2xl border border-[var(--auth-primary)]/25 bg-[var(--auth-primary-soft)] px-4 py-3 text-sm text-white" :status="session('status')" />
@@ -58,24 +58,24 @@
         </div>
 
         <div class="flex items-center justify-between gap-4 pt-1">
-            <label for="remember_me" class="inline-flex min-h-11 cursor-pointer select-none items-center gap-3 text-sm font-medium text-[#fff9ea]/78 transition hover:text-[#fff9ea]">
+            <label for="remember_me" class="inline-flex min-h-11 cursor-pointer select-none items-center gap-3 text-sm font-medium text-[var(--app-text)]/78 transition hover:text-[var(--app-text)]">
                 <input
                     id="remember_me"
                     type="checkbox"
-                    class="h-5 w-5 rounded-md border-white/20 bg-black/50 text-[var(--auth-primary)] focus:ring-[var(--auth-primary)] focus:ring-offset-0"
+                    class="h-5 w-5 rounded-md border-white/20 bg-[var(--app-bg)]/50 text-[var(--auth-primary)] focus:ring-[var(--auth-primary)] focus:ring-offset-0"
                     name="remember"
                 >
                 <span>{{ __('Remember me') }}</span>
             </label>
 
             @if (Route::has('password.request'))
-                <a href="{{ route('password.request') }}" class="min-h-11 content-center text-sm font-semibold text-[var(--auth-primary-strong)] transition hover:text-[#fff9ea]">
+                <a href="{{ route('password.request') }}" class="min-h-11 content-center text-sm font-semibold text-[var(--auth-primary-strong)] transition hover:text-[var(--app-text)]">
                     Forgot Password?
                 </a>
             @endif
         </div>
 
-        <x-primary-button class="auth-button flex min-h-14 w-full items-center justify-center rounded-[1.25rem] border-0 px-8 py-4 text-base font-bold uppercase tracking-wide text-black transition hover:brightness-110 focus:outline-none focus:ring-4 focus:ring-[var(--auth-primary-soft)] active:scale-[0.99]">
+        <x-primary-button class="auth-button flex min-h-14 w-full items-center justify-center rounded-[1.25rem] border-0 px-8 py-4 text-base font-bold uppercase tracking-wide text-[var(--on-accent)] transition hover:brightness-110 focus:outline-none focus:ring-4 focus:ring-[var(--auth-primary-soft)] active:scale-[0.99]">
             <span>{{ __('Sign In') }}</span>
             <svg class="ml-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0-7 7m7-7H3"/>
@@ -91,9 +91,9 @@
             <span class="h-px flex-1 bg-gradient-to-l from-transparent to-[var(--auth-primary)]/50"></span>
         </div>
 
-        <p class="text-center text-sm text-[#fff9ea]/58">
+        <p class="text-center text-sm text-[var(--app-text)]/58">
             Powered by
-            <a href="https://sushako.in" target="_blank" rel="noopener noreferrer" class="font-semibold text-[var(--auth-primary-strong)] transition hover:text-[#fff9ea]">
+            <a href="https://sushako.in" target="_blank" rel="noopener noreferrer" class="font-semibold text-[var(--auth-primary-strong)] transition hover:text-[var(--app-text)]">
                 Sushako Tech
             </a>
         </p>

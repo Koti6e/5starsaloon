@@ -3,95 +3,137 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Bill;
 use App\Models\BillItem;
 use App\Models\ContactEnquiry;
-use App\Models\Payment;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\StaffAttendance;
 use App\Models\User;
+use App\Services\BusinessReportingService;
+use App\Support\ReportingPeriod;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, BusinessReportingService $reports): View
     {
-        $today = now('Asia/Kolkata')->toDateString();
-        $selectedDate = $request->validate([
-            'date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.$today],
-        ])['date'] ?? $today;
-        $activeStaff = User::query()->where('role', 'staff')->where('status', 'active')->count();
-        $attendance = StaffAttendance::query()->whereDate('attendance_date', $today)->get();
-        $presentToday = $attendance->whereIn('status', ['present', 'late'])->count();
-        $leaveToday = $attendance->whereIn('status', ['leave', 'weekly_off'])->count();
-
-        $hasAppointmentsTable = \Illuminate\Support\Facades\Schema::hasTable('appointments');
+        $filters = $this->validatedPeriod($request);
+        $period = ReportingPeriod::fromInput($filters);
+        $summary = $reports->summary($period);
+        $hasAppointmentsTable = Schema::hasTable('appointments');
         if (! $hasAppointmentsTable) {
-            \Illuminate\Support\Facades\Log::warning('Appointments table is unavailable when accessing Admin Dashboard metrics.');
+            Log::warning('Appointments table is unavailable when accessing Admin Dashboard metrics.');
+        }
+        $appointments = $hasAppointmentsTable
+            ? DB::table('appointments')
+                ->where('date', '>=', $period->start->toDateString())
+                ->where('date', '<', $period->endExclusive->toDateString())
+            : null;
+        $activeStaff = User::query()->where('role', 'staff')->where('status', 'active')->orderBy('name')->get();
+        $attendance = StaffAttendance::query()
+            ->whereBetween('attendance_date', [$period->start->toDateString(), $period->endExclusive->subDay()->toDateString()])
+            ->get();
+        $presentCount = $attendance->whereIn('status', ['present', 'late'])->count();
+        $absentCount = $attendance->where('status', 'absent')->count();
+        $leaveCount = $attendance->whereIn('status', ['leave', 'weekly_off'])->count();
+
+        if ($period->mode === 'daily') {
+            $weeklyOff = $activeStaff->filter(fn (User $staff) => strtolower((string) $staff->weekly_off) === strtolower($period->start->format('l')))->count();
+            $absentCount = max(0, $activeStaff->count() - $presentCount - $leaveCount - $weeklyOff);
         }
 
-        $todayAppointments = $hasAppointmentsTable
-            ? DB::table('appointments')->whereDate('date', $today)->count()
-            : 0;
-
-        $pendingHomeVisits = $hasAppointmentsTable
-            ? DB::table('appointments')->where('appointment_type', 'home_service')->where('status', 'pending')->count()
-            : 0;
-
-        $dayStart = now('Asia/Kolkata')->startOfDay();
-        $dayEnd = $dayStart->copy()->addDay();
-        $todayBillQuery = Bill::query()->where('status', 'completed')->where('billed_at', '>=', $dayStart)->where('billed_at', '<', $dayEnd);
-        $todaySales = (clone $todayBillQuery)->sum('grand_total');
-        $todayBillCount = (clone $todayBillQuery)->count();
-        $selectedBillStart = \Illuminate\Support\Carbon::parse($selectedDate, 'Asia/Kolkata')->startOfDay();
-        $selectedBillEnd = $selectedBillStart->copy()->addDay();
-        $selectedBillQuery = Bill::query()
-            ->where('status', 'completed')
-            ->where('billed_at', '>=', $selectedBillStart)
-            ->where('billed_at', '<', $selectedBillEnd);
+        $paymentTotals = $summary['collections']->mapWithKeys(fn ($row) => [$row->payment_method => (float) $row->total]);
+        $periodBills = $reports->completedBills($period);
+        $selectedDayAttendance = $attendance->filter(fn (StaffAttendance $row) => $row->attendance_date->toDateString() === $period->start->toDateString())->keyBy('staff_id');
 
         return view('admin.dashboard', [
-            'todaySales' => $todaySales,
-            'todayBills' => $todayBillCount,
-            'selectedBillDate' => $selectedDate,
-            'selectedBillCount' => (clone $selectedBillQuery)->count(),
-            'selectedBillSales' => (clone $selectedBillQuery)->sum('grand_total'),
-            'customersServed' => (clone $todayBillQuery)->distinct('customer_id')->count('customer_id'),
-            'averageBillValue' => $todayBillCount > 0 ? $todaySales / $todayBillCount : 0,
-            'todayAppointments' => $todayAppointments,
-            'staffPresentToday' => $presentToday,
-            'staffAbsentToday' => max(0, $activeStaff - $presentToday - $leaveToday),
-            'cashSales' => Payment::query()->where('paid_at', '>=', $dayStart)->where('paid_at', '<', $dayEnd)->where('payment_method', 'cash')->whereHas('bill', fn ($query) => $query->where('status', 'completed'))->sum('amount'),
-            'upiSales' => Payment::query()->where('paid_at', '>=', $dayStart)->where('paid_at', '<', $dayEnd)->where('payment_method', 'upi')->whereHas('bill', fn ($query) => $query->where('status', 'completed'))->sum('amount'),
-            'cardSales' => Payment::query()->where('paid_at', '>=', $dayStart)->where('paid_at', '<', $dayEnd)->where('payment_method', 'card')->whereHas('bill', fn ($query) => $query->where('status', 'completed'))->sum('amount'),
-            'pendingHomeVisits' => $pendingHomeVisits,
-            'activeStaff' => $activeStaff,
+            'period' => $period,
+            'summary' => $summary,
+            'todaySales' => $summary['net_sales'],
+            'todayBills' => $summary['bill_count'],
+            'selectedBillDate' => $period->start->toDateString(),
+            'selectedBillCount' => $summary['bill_count'],
+            'selectedBillSales' => $summary['net_sales'],
+            'customersServed' => $reports->customersServed($period),
+            'averageBillValue' => $summary['average_bill'],
+            'todayAppointments' => $appointments ? (clone $appointments)->count() : 0,
+            'staffPresentToday' => $presentCount,
+            'staffAbsentToday' => $absentCount,
+            'cashSales' => $paymentTotals->get('cash', 0),
+            'upiSales' => $paymentTotals->get('upi', 0),
+            'cardSales' => $paymentTotals->get('card', 0),
+            'otherSales' => (float) $summary['collections']->reject(fn ($row) => in_array($row->payment_method, ['cash', 'upi', 'card'], true))->sum('total'),
+            'pendingHomeVisits' => $appointments ? (clone $appointments)->where('appointment_type', 'home_service')->where('status', 'pending')->count() : 0,
+            'activeStaff' => $activeStaff->count(),
             'serviceCount' => Service::query()->count(),
             'categoryCount' => ServiceCategory::query()->count(),
             'unreadEnquiries' => ContactEnquiry::query()->where('status', 'unread')->count(),
-            'attendanceRows' => User::query()
-                ->where('role', 'staff')
-                ->where('status', 'active')
-                ->orderBy('name')
-                ->limit(8)
-                ->get()
-                ->map(fn (User $staff) => [
-                    'staff' => $staff,
-                    'attendance' => $attendance->firstWhere('staff_id', $staff->id),
-                ]),
-            'todayBillRows' => (clone $selectedBillQuery)->with(['customer', 'items', 'payments'])->latest('billed_at')->limit(50)->get(),
-            'recentBills' => Bill::query()->with(['customer', 'items', 'payments'])
-                ->latest('billed_at')->limit(6)->get(),
+            'attendanceRows' => $activeStaff->take(8)->map(fn (User $staff) => [
+                'staff' => $staff,
+                'attendance' => $selectedDayAttendance->get($staff->id),
+            ]),
+            'todayBillRows' => (clone $periodBills)->with(['customer', 'items', 'payments'])->latest('billed_at')->limit(12)->get(),
+            'recentBills' => $reports->completedBills(ReportingPeriod::fromInput([], 'daily'))->with(['customer', 'items', 'payments'])->latest('billed_at')->limit(6)->get(),
             'topServicesToday' => BillItem::query()
                 ->select('service_name_snapshot', DB::raw('SUM(quantity) as quantity'), DB::raw('SUM(line_total) as total'))
-                ->whereHas('bill', fn ($query) => $query->whereDate('billed_at', $today))
+                ->whereHas('bill', fn ($query) => $query
+                    ->where('status', 'completed')
+                    ->where('billed_at', '>=', $period->start->format('Y-m-d H:i:s'))
+                    ->where('billed_at', '<', $period->endExclusive->format('Y-m-d H:i:s')))
                 ->groupBy('service_name_snapshot')
                 ->orderByDesc('quantity')
                 ->limit(5)
                 ->get(),
+        ]);
+    }
+
+    public function liveMetrics(BusinessReportingService $reports): JsonResponse
+    {
+        $period = ReportingPeriod::fromInput(['period' => 'daily']);
+        abort_unless($period->isCurrentBusinessDay(), 404);
+
+        $summary = $reports->summary($period);
+        $collections = $summary['collections']->mapWithKeys(fn ($row) => [$row->payment_method => (float) $row->total]);
+        $start = $period->start->toDateString();
+        $end = $period->endExclusive->toDateString();
+        $attendance = StaffAttendance::query()->whereDate('attendance_date', $start)->get();
+        $activeStaff = User::query()->where('role', 'staff')->where('status', 'active')->get(['id', 'weekly_off']);
+        $present = $attendance->whereIn('status', ['present', 'late'])->count();
+        $leave = $attendance->whereIn('status', ['leave', 'weekly_off'])->count();
+        $weeklyOff = $activeStaff->filter(fn (User $staff) => strtolower((string) $staff->weekly_off) === strtolower($period->start->format('l')))->count();
+
+        return response()->json([
+            'sales' => $summary['net_sales'],
+            'bills' => $summary['bill_count'],
+            'average_bill' => $summary['average_bill'],
+            'customers' => $reports->customersServed($period),
+            'cash' => $collections->get('cash', 0),
+            'upi' => $collections->get('upi', 0),
+            'card' => $collections->get('card', 0),
+            'other' => (float) $summary['collections']->reject(fn ($row) => in_array($row->payment_method, ['cash', 'upi', 'card'], true))->sum('total'),
+            'pending_home_visits' => DB::table('appointments')->where('date', '>=', $start)->where('date', '<', $end)->where('appointment_type', 'home_service')->where('status', 'pending')->count(),
+            'appointments' => DB::table('appointments')->where('date', '>=', $start)->where('date', '<', $end)->count(),
+            'staff_present' => $present,
+            'staff_absent' => max(0, $activeStaff->count() - $present - $leave - $weeklyOff),
+            'updated_at' => now(ReportingPeriod::TIMEZONE)->toIso8601String(),
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedPeriod(Request $request): array
+    {
+        return $request->validate([
+            'period' => ['nullable', 'in:daily,weekly,monthly,custom'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'week' => ['nullable', 'date_format:Y-m-d'],
+            'month' => ['nullable', 'date_format:Y-m'],
+            'start_date' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d'],
+            'end_date' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
         ]);
     }
 }

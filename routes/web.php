@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\Admin\AboutSalonOsController;
 use App\Http\Controllers\Admin\AppointmentController;
+use App\Http\Controllers\Admin\BillRegisterController;
 use App\Http\Controllers\Admin\CustomerNotificationController;
 use App\Http\Controllers\Admin\SalonClosedDateController;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\PaymentReportController;
 use App\Http\Controllers\Admin\SalesReportController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
@@ -17,6 +19,7 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CustomerPushSubscriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicPageController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\PushDeviceController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
@@ -85,30 +88,18 @@ Route::get('/privacy-policy', function () {
         'settings' => \App\Models\SalonSetting::cached(),
     ]);
 })->name('privacy-policy');
-Route::get('/sitemap.xml', function () {
-    $baseUrl = rtrim(config('app.url'), '/');
-    if (app()->environment('production')) $baseUrl = 'https://'.parse_url($baseUrl, PHP_URL_HOST);
-
-    $urls = collect([
-        $baseUrl,
-        $baseUrl . '/services',
-        $baseUrl . '/gallery',
-        $baseUrl . '/about',
-        $baseUrl . '/contact',
-        $baseUrl . '/book-appointment',
-        $baseUrl . '/privacy-policy',
-    ]);
-    $serviceUrls = \App\Models\Service::query()->publiclyVisible()->orderBy('id')->get(['slug'])->map(fn ($service) => $baseUrl.'/services/'.$service->slug);
-    $urls = $urls->merge($serviceUrls);
-
-    $xml = view('public.sitemap', ['urls' => $urls])->render();
-
-    $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . $xml;
-
-    return response($xml, 200)
-        ->header('Content-Type', 'application/xml; charset=UTF-8')
-        ->header('Cache-Control', 'public, max-age=3600, s-maxage=86400, must-revalidate');
-})->withoutMiddleware([StartSession::class, AddQueuedCookiesToResponse::class, ShareErrorsFromSession::class, PreventRequestForgery::class])->name('sitemap');
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])
+    ->withoutMiddleware([StartSession::class, AddQueuedCookiesToResponse::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
+    ->name('sitemap');
+Route::get('/sitemap-services-{page}.xml', [SitemapController::class, 'services'])
+    ->whereNumber('page')
+    ->withoutMiddleware([StartSession::class, AddQueuedCookiesToResponse::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
+    ->name('sitemap.services');
+Route::get('/robots.txt', fn () => response(file_get_contents(public_path('robots.txt')), 200)
+    ->header('Content-Type', 'text/plain; charset=UTF-8')
+    ->header('Cache-Control', 'public, max-age=3600'))
+    ->withoutMiddleware([StartSession::class, AddQueuedCookiesToResponse::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
+    ->name('robots');
 Route::post('/contact', [PublicPageController::class, 'storeContact'])
     ->middleware('throttle:5,1')
     ->name('contact.store');
@@ -147,6 +138,7 @@ Route::prefix('admin')
     ->middleware(['auth', 'active', 'password.changed', 'auth.no-store', 'role:admin'])
     ->group(function (): void {
         Route::get('/dashboard', AdminDashboardController::class)->name('dashboard');
+        Route::get('/dashboard/live-metrics', [AdminDashboardController::class, 'liveMetrics'])->name('dashboard.live-metrics');
         Route::get('/customer-notifications', [CustomerNotificationController::class, 'index'])->name('customer-notifications.index');
         Route::post('/customer-notifications', [CustomerNotificationController::class, 'store'])
             ->middleware('throttle:2,1')
@@ -154,9 +146,11 @@ Route::prefix('admin')
         Route::get('/search', SearchController::class)->name('search');
         Route::get('/reports', AdminReportController::class)->name('reports.index');
         Route::get('/reports/sales', SalesReportController::class)->name('reports.sales');
+        Route::get('/reports/payments', PaymentReportController::class)->name('reports.payments');
         Route::get('/backdated-billing', [BillingController::class, 'createBackdated'])->name('backdated-billing.create');
         Route::post('/backdated-billing', [BillingController::class, 'store'])->name('backdated-billing.store');
         Route::get('/about-salonos', AboutSalonOsController::class)->name('about-salonos');
+        Route::get('/billing', BillRegisterController::class)->name('billing.index');
         Route::get('/billing/create', [BillingController::class, 'create'])->name('billing.create');
         Route::post('/billing', [BillingController::class, 'store'])->name('billing.store');
         Route::get('/billing/customer-lookup', [BillingController::class, 'lookupCustomer'])->name('billing.customer-lookup');
@@ -187,7 +181,7 @@ Route::prefix('admin')
         Route::put('/settings', [AdminSettingController::class, 'update'])->name('settings.update');
         Route::patch('/services/{service}/toggle', [AdminServiceController::class, 'toggle'])->name('services.toggle');
         Route::delete('/services/{service}/images/{image}', [AdminServiceController::class, 'destroyImage'])->name('services.images.destroy');
-        Route::resource('staff', AdminStaffController::class)->only(['index', 'create', 'store']);
+        Route::resource('staff', AdminStaffController::class)->only(['index', 'create', 'store', 'show']);
         Route::get('/attendance/{attendance}/selfie', [AdminStaffController::class, 'selfie'])->name('attendance.selfie');
         Route::get('/staff/{staff}/edit-password', [StaffPasswordController::class, 'edit'])->name('staff.edit-password');
         Route::put('/staff/{staff}/password', [StaffPasswordController::class, 'update'])->name('staff.update-password');

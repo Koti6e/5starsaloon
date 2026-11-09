@@ -1,4 +1,4 @@
-<x-layouts.public :settings="$settings" title="Privacy Policy | 5 Star New Look Salon">
+<x-layouts.public :settings="$settings" title="Privacy Policy | 5 Star Newlook A/C" description="Read how 5 Star Newlook A/C handles information submitted through salon enquiries and appointment requests.">
     <main class="bg-[#0d0b08] px-4 py-16 text-[#eadfca] sm:px-6 lg:px-8">
         <div class="mx-auto max-w-4xl">
             <div class="mb-10">

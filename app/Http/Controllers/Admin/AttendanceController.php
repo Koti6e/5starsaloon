@@ -7,6 +7,7 @@ use App\Models\AttendanceVerificationAttempt;
 use App\Models\StaffAttendance;
 use App\Models\StaffAttendanceDevice;
 use App\Models\User;
+use App\Support\ReportingPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -18,8 +19,20 @@ class AttendanceController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $request->validate(['date' => ['nullable', 'date_format:Y-m-d'], 'month' => ['nullable', 'date_format:Y-m'], 'staff' => ['nullable', 'integer']]);
-        $date = $filters['date'] ?? today('Asia/Kolkata')->toDateString();
+        $filters = $request->validate([
+            'period' => ['nullable', 'in:daily,weekly,monthly,custom'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'week' => ['nullable', 'date_format:Y-m-d'],
+            'month' => ['nullable', 'date_format:Y-m'],
+            'start_date' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d'],
+            'end_date' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'staff' => ['nullable', 'integer'],
+        ]);
+        $period = ReportingPeriod::fromInput($filters);
+        if ($period->mode === 'custom' && $period->start->diffInDays($period->endExclusive) > 366) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['end_date' => 'Attendance ranges may not exceed 366 days.']);
+        }
+        $date = $period->start->toDateString();
         $month = Carbon::createFromFormat('Y-m', $filters['month'] ?? Carbon::parse($date)->format('Y-m'), 'Asia/Kolkata')->startOfMonth();
         $staff = User::query()
             ->where('role', 'staff')
@@ -104,12 +117,45 @@ class AttendanceController extends Controller
             return [$member->id => [...$counts, 'working_days' => $workingDays, 'attendance' => $workingDays ? round((($counts['present'] + $counts['half_day'] * 0.5) / $workingDays) * 100, 1) : 0, 'daily' => $daily]];
         });
 
+        $rangeRecords = StaffAttendance::query()
+            ->whereBetween('attendance_date', [$period->start->toDateString(), $period->endExclusive->subDay()->toDateString()])
+            ->get()
+            ->groupBy('staff_id');
+        $lastRangeDay = $period->endExclusive->subDay()->min(Carbon::today('Asia/Kolkata'));
+        $rangeSummary = $staff->mapWithKeys(function (User $member) use ($rangeRecords, $period, $lastRangeDay): array {
+            $rows = $rangeRecords->get($member->id, collect())->keyBy(fn (StaffAttendance $row) => $row->attendance_date->toDateString());
+            $weeklyOff = strtolower((string) $member->weekly_off);
+            $counts = ['present' => 0, 'absent' => 0, 'leave' => 0, 'half_day' => 0, 'weekly_off' => 0, 'not_marked' => 0];
+            $workingDays = 0;
+            for ($day = $period->start; $day <= $lastRangeDay; $day = $day->addDay()) {
+                $row = $rows->get($day->toDateString());
+                $isWeeklyOff = $weeklyOff !== '' && strtolower($day->format('l')) === $weeklyOff;
+                $status = $row?->status ?? ($isWeeklyOff ? 'weekly_off' : 'not_marked');
+                if (! $isWeeklyOff) {
+                    $workingDays++;
+                }
+                if ($status === 'late') {
+                    $counts['present']++;
+                } elseif (array_key_exists($status, $counts)) {
+                    $counts[$status]++;
+                }
+            }
+
+            return [$member->id => [
+                ...$counts,
+                'working_days' => $workingDays,
+                'attendance' => $workingDays ? round((($counts['present'] + $counts['half_day'] * 0.5) / $workingDays) * 100, 1) : 0,
+            ]];
+        });
+
         return view('admin.attendance.index', [
             'date' => $date,
+            'period' => $period,
             'staff' => $staff,
             'attendance' => $attendance,
             'month' => $month,
             'monthlySummary' => $monthlySummary,
+            'rangeSummary' => $rangeSummary,
             'weekStart' => $weekStart,
             'weekEnd' => $weekEnd,
             'weeklySummary' => $weeklySummary,

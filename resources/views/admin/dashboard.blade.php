@@ -18,48 +18,71 @@
                 <h1 class="mt-1 text-2xl font-bold tracking-tight text-[var(--app-primary)] sm:text-3xl">
                     Welcome back, {{ auth()->user()->name }}
                 </h1>
-                <p class="mt-1 text-sm text-[var(--app-muted)]">
-                    Here's your salon's business overview for today.
-                </p>
+                <p class="mt-1 text-sm text-[var(--app-muted)]">Business overview for {{ $period->label() }}.</p>
             </div>
 
-            <div class="text-sm text-[var(--app-muted)]">
-                {{ now('Asia/Kolkata')->format('l, d F Y') }}
+            <div class="text-right text-sm text-[var(--app-muted)]">
+                <p>{{ now('Asia/Kolkata')->format('l, d F Y') }} · IST</p>
             </div>
         </div>
     </x-slot>
 
-    <div class="space-y-6 px-4 py-5 sm:px-6 lg:px-8">
+    @php($rangeQuery = $period->toQuery())
+    <div class="space-y-6 px-4 py-5 sm:px-6 lg:px-8"
+         x-data="{
+            live: @js($period->isCurrentBusinessDay()),
+            updatedAt: '',
+            metrics: {
+                sales: @js((float) $todaySales), bills: @js((int) $todayBills), customers: @js((int) $customersServed),
+                average_bill: @js((float) $averageBillValue), appointments: @js((int) $todayAppointments),
+                staff_present: @js((int) $staffPresentToday), staff_absent: @js((int) $staffAbsentToday),
+                cash: @js((float) $cashSales), upi: @js((float) $upiSales), card: @js((float) $cardSales), other: @js((float) $otherSales),
+                pending_home_visits: @js((int) $pendingHomeVisits)
+            },
+            money(value) { return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(Number(value || 0)); },
+            async refresh() {
+                if (!this.live) return;
+                try {
+                    const response = await fetch(@js(route('admin.dashboard.live-metrics')), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                    if (!response.ok) return;
+                    this.metrics = await response.json();
+                    this.updatedAt = new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(new Date(this.metrics.updated_at)) + ' IST';
+                } catch (error) { /* Keep the last successful snapshot during a brief network outage. */ }
+            },
+            init() { if (this.live) { window.setInterval(() => this.refresh(), 60000); } }
+         }">
+        <x-admin.period-filter :period="$period" :action="route('admin.dashboard')" />
+        <p x-show="live" x-cloak class="-mt-3 text-xs text-[var(--app-primary)]">Live dashboard · refreshes every minute<span x-show="updatedAt"> · Updated <span x-text="updatedAt"></span></span></p>
 
         {{-- BUSINESS OVERVIEW --}}
         <section>
             <div class="mb-3 flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-bold text-[var(--app-text)]">Business Overview</h2>
-                    <p class="text-xs text-[var(--app-muted)]">Today's performance at a glance</p>
+                    <p class="text-xs text-[var(--app-muted)]">Sales and operations for the selected reporting period</p>
                 </div>
-                <span class="rounded-full border border-[var(--app-border)] px-3 py-1 text-xs font-semibold text-[var(--app-muted)]">
-                    Today
-                </span>
+                <span class="rounded-full border border-[var(--app-border)] px-3 py-1 text-xs font-semibold text-[var(--app-muted)]">{{ $period->label() }}</span>
             </div>
 
-            <div class="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                 @foreach ([
-                    ['Today\'s Revenue', \App\Support\Money::inr($todaySales), route('admin.reports.index'), 'Revenue'],
-                    ['Total Bills', $todayBills, route('admin.billing.create'), 'Billing'],
-                    ['Customers Served', $customersServed, route('admin.customers.index'), 'Customers'],
-                    ['Average Bill', \App\Support\Money::inr($averageBillValue), route('admin.reports.index'), 'Average'],
-                    ['Appointments', $todayAppointments, route('admin.appointments.index'), 'Bookings'],
-                    ['Staff Present', $staffPresentToday, route('admin.attendance.index'), 'Attendance'],
-                ] as [$label, $value, $href, $type])
+                    ['Net Sales', 'sales', true, route('admin.reports.sales', $rangeQuery)],
+                    ['Completed Bills', 'bills', false, route('admin.billing.index', $rangeQuery)],
+                    ['Customers Served', 'customers', false, route('admin.customers.index', $rangeQuery)],
+                    ['Average Bill', 'average_bill', true, route('admin.reports.sales', $rangeQuery)],
+                    ['Appointments', 'appointments', false, route('admin.appointments.index', ['date' => $period->start->toDateString()])],
+                    ['Staff Present', 'staff_present', false, route('admin.attendance.index', ['date' => $period->start->toDateString()])],
+                    ['Staff Absent', 'staff_absent', false, route('admin.attendance.index', ['date' => $period->start->toDateString()])],
+                ] as [$label, $key, $money, $href])
                     <a href="{{ $href }}"
                        class="group rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-4 transition hover:-translate-y-0.5 hover:border-[var(--accent-border)] hover:shadow-md">
                         <p class="text-xs font-semibold text-[var(--app-muted)]">{{ $label }}</p>
-                        <p class="mt-3 break-words text-xl font-bold tracking-tight text-[var(--app-text)] sm:text-2xl">
-                            {{ $value }}
+                        <p class="mt-3 break-words text-xl font-bold tracking-tight text-[var(--app-text)] sm:text-2xl" aria-live="polite">
+                            <span x-show="live" x-cloak x-text="{{ $money ? 'money(metrics.'.$key.')' : 'metrics.'.$key }}"></span>
+                            <span x-show="!live" x-cloak>{{ $money ? \App\Support\Money::inr($key === 'sales' ? $todaySales : $averageBillValue) : match ($key) { 'bills' => $todayBills, 'customers' => $customersServed, 'appointments' => $todayAppointments, 'staff_present' => $staffPresentToday, default => $staffAbsentToday } }}</span>
                         </p>
                         <p class="mt-2 text-[11px] font-semibold text-[var(--app-primary)]">
-                            View {{ $type }} →
+                            View details →
                         </p>
                     </a>
                 @endforeach
@@ -69,19 +92,20 @@
         {{-- PAYMENT OVERVIEW --}}
         <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
             @foreach ([
-                ['Cash Collections', $cashSales],
-                ['UPI Collections', $upiSales],
-                ['Card Collections', $cardSales],
-                ['Pending Home Visits', $pendingHomeVisits],
-            ] as [$label, $value])
-                <div class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-4">
+                ['Cash Collections', 'cash', $cashSales, 'cash'],
+                ['UPI Collections', 'upi', $upiSales, 'upi'],
+                ['Card Collections', 'card', $cardSales, 'card'],
+                ['Other Collections', 'other', $otherSales, 'other'],
+                ['Pending Home Visits', 'pending_home_visits', $pendingHomeVisits, null],
+            ] as [$label, $key, $value, $method])
+                <a href="{{ $method ? route('admin.reports.payments', [...$rangeQuery, 'method' => $method]) : route('admin.appointments.index', ['filter' => 'home_visits', 'date' => $period->start->toDateString()]) }}" class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-4 transition hover:border-[var(--accent-border)] hover:bg-[var(--app-primary-soft)]">
                     <p class="text-xs font-semibold text-[var(--app-muted)]">{{ $label }}</p>
-                    <p class="mt-2 text-lg font-bold text-[var(--app-text)] sm:text-xl">
-                        {{ is_numeric($value) && $label !== 'Pending Home Visits'
-                            ? \App\Support\Money::inr($value)
-                            : $value }}
+                    <p class="mt-2 text-lg font-bold text-[var(--app-text)] sm:text-xl" aria-live="polite">
+                        <span x-show="live" x-cloak x-text="{{ $key === 'pending_home_visits' ? 'metrics.pending_home_visits' : 'money(metrics.'.$key.')' }}"></span>
+                        <span x-show="!live" x-cloak>{{ $key === 'pending_home_visits' ? $value : \App\Support\Money::inr($value) }}</span>
                     </p>
-                </div>
+                    <span class="mt-2 block text-[11px] font-semibold text-[var(--app-primary)]">View details →</span>
+                </a>
             @endforeach
         </section>
 
@@ -101,6 +125,16 @@
                 <a href="{{ route('admin.backdated-billing.create') }}"
                    class="flex min-h-16 items-center justify-center rounded-xl border border-[var(--accent-border)] bg-[var(--app-primary-soft)] px-3 py-3 text-center text-sm font-bold text-[var(--app-primary)] transition hover:opacity-80">
                     + Backdated Bill
+                </a>
+
+                <a href="{{ route('admin.billing.index', $rangeQuery) }}"
+                   class="flex min-h-16 items-center justify-center rounded-xl border border-[var(--app-border)] px-3 py-3 text-center text-sm font-semibold text-[var(--app-text)] transition hover:bg-[var(--app-bg)]">
+                    Bills Register
+                </a>
+
+                <a href="{{ route('admin.reports.sales', $rangeQuery) }}"
+                   class="flex min-h-16 items-center justify-center rounded-xl border border-[var(--app-border)] px-3 py-3 text-center text-sm font-semibold text-[var(--app-text)] transition hover:bg-[var(--app-bg)]">
+                    Sales Report
                 </a>
 
                 <a href="{{ route('admin.appointments.index') }}"
@@ -126,14 +160,14 @@
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
                         <h2 class="text-xl font-bold text-[var(--app-text)]">
-                            {{ $selectedBillDate === now('Asia/Kolkata')->toDateString() ? "Today's Bills" : 'Bills for '.\Illuminate\Support\Carbon::parse($selectedBillDate)->format('d M Y') }}
+                            Bills for {{ $period->label() }}
                         </h2>
                         <span class="rounded-full bg-[var(--app-primary-soft)] px-2.5 py-1 text-xs font-bold text-[var(--app-primary)]">
                             {{ $selectedBillCount }} Bills
                         </span>
                     </div>
                     <p class="mt-1 text-sm text-[var(--app-muted)]">
-                        Completed bills for {{ \Illuminate\Support\Carbon::parse($selectedBillDate)->format('l, d M Y') }}
+                        Completed invoices in this reporting period
                     </p>
                     <p class="mt-2 text-xl font-bold text-[var(--app-primary)]">
                         {{ \App\Support\Money::inr($selectedBillSales) }}
@@ -141,14 +175,9 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                        <label for="dashboard-bill-date" class="sr-only">View bills for date</label>
-                        <input id="dashboard-bill-date" name="date" type="date" value="{{ $selectedBillDate }}" max="{{ now('Asia/Kolkata')->toDateString() }}" class="min-h-10 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-text)] focus:border-[var(--app-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus)]">
-                        <button type="submit" class="min-h-10 rounded-lg border border-[var(--app-border)] px-3 py-2 text-xs font-semibold text-[var(--app-text)] hover:bg-[var(--app-bg)]">View date</button>
-                    </form>
-                    <a href="{{ route('admin.reports.sales', ['period' => 'daily', 'date' => $selectedBillDate]) }}"
+                    <a href="{{ route('admin.billing.index', $rangeQuery) }}"
                        class="rounded-lg border border-[var(--app-border)] px-3 py-2 text-xs font-semibold text-[var(--app-text)] hover:bg-[var(--app-bg)]">
-                        View Daily Report
+                        Open Bills Register
                     </a>
 
                     <a href="{{ route('admin.billing.create') }}"
@@ -282,11 +311,11 @@
         <section class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-4 sm:p-5">
             <div class="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                 <div>
-                    <h2 class="text-lg font-bold text-[var(--app-text)]">Today's Attendance</h2>
+                    <h2 class="text-lg font-bold text-[var(--app-text)]">Attendance for {{ $period->start->format('d M Y') }}</h2>
                     <p class="text-xs text-[var(--app-muted)]">Staff check-in and attendance overview</p>
                 </div>
 
-                <a href="{{ route('admin.attendance.index') }}"
+                <a href="{{ route('admin.attendance.index', ['date' => $period->start->toDateString()]) }}"
                    class="text-sm font-bold text-[var(--app-primary)] hover:underline">
                     Manage Attendance →
                 </a>
@@ -365,7 +394,7 @@
                         <h2 class="text-lg font-bold text-[var(--app-text)]">Recent Invoices</h2>
                         <p class="text-xs text-[var(--app-muted)]">Latest billing activity</p>
                     </div>
-                    <a href="{{ route('admin.reports.index') }}"
+                    <a href="{{ route('admin.billing.index', $rangeQuery) }}"
                        class="text-xs font-bold text-[var(--app-primary)] hover:underline">
                         All Reports →
                     </a>
@@ -419,8 +448,8 @@
             {{-- TOP SERVICES --}}
             <div class="rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-4 sm:p-5 xl:col-span-2">
                 <div class="mb-4">
-                    <h2 class="text-lg font-bold text-[var(--app-text)]">Top Services Today</h2>
-                    <p class="text-xs text-[var(--app-muted)]">Ranked by quantity served</p>
+                    <h2 class="text-lg font-bold text-[var(--app-text)]">Top Services</h2>
+                    <p class="text-xs text-[var(--app-muted)]">{{ $period->label() }} · ranked by quantity served</p>
                 </div>
 
                 <div class="space-y-4">
