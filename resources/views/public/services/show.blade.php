@@ -1,4 +1,4 @@
-<x-layouts.public :settings="$settings" title="{{ $service->name }} | 5 Star New Look A/C" description="{{ \Illuminate\Support\Str::limit(strip_tags($service->detailed_description ?: $service->short_description ?: $service->name.' at 5 Star New Look A/C.'), 155) }}">
+<x-layouts.public :settings="$settings" title="{{ $service->name }} in Vandalur | 5 Star New Look A/C" description="{{ \Illuminate\Support\Str::limit(strip_tags($service->detailed_description ?: $service->short_description ?: $service->name.' at 5 Star New Look A/C in Vandalur.'), 155) }}">
     @php
         $serviceSchema = array_filter([
             '@context' => 'https://schema.org',

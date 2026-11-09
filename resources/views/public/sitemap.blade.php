@@ -1,7 +1,8 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-@foreach ($urls as $url)
+@foreach ($entries as $entry)
     <url>
-        <loc>{{ $url }}</loc>
+        <loc>{{ $entry['loc'] }}</loc>
+        @if ($entry['lastmod'])<lastmod>{{ $entry['lastmod'] }}</lastmod>@endif
         <changefreq>weekly</changefreq>
     </url>
 @endforeach

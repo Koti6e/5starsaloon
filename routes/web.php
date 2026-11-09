@@ -86,22 +86,25 @@ Route::get('/privacy-policy', function () {
     ]);
 })->name('privacy-policy');
 Route::get('/sitemap.xml', function () {
-    $baseUrl = rtrim(config('app.url'), '/');
-    if (app()->environment('production')) $baseUrl = 'https://'.parse_url($baseUrl, PHP_URL_HOST);
-
-    $urls = collect([
-        $baseUrl,
-        $baseUrl . '/services',
-        $baseUrl . '/gallery',
-        $baseUrl . '/about',
-        $baseUrl . '/contact',
-        $baseUrl . '/book-appointment',
-        $baseUrl . '/privacy-policy',
+    $baseUrl = app()->environment('production') ? 'https://5star.sushako.in' : rtrim(config('app.url'), '/');
+    $staticPages = [
+        ['path' => '/', 'file' => 'public/home.blade.php'],
+        ['path' => '/services', 'file' => 'public/services/index.blade.php'],
+        ['path' => '/gallery', 'file' => 'public/gallery.blade.php'],
+        ['path' => '/about', 'file' => 'public/about.blade.php'],
+        ['path' => '/contact', 'file' => 'public/contact.blade.php'],
+        ['path' => '/book-appointment', 'file' => 'public/book-appointment.blade.php'],
+        ['path' => '/privacy-policy', 'file' => 'public/privacy-policy.blade.php'],
+    ];
+    $entries = collect($staticPages)->map(fn (array $page) => [
+        'loc' => $baseUrl.$page['path'],
+        'lastmod' => is_file(resource_path('views/'.$page['file'])) ? date(DATE_ATOM, filemtime(resource_path('views/'.$page['file']))) : null,
     ]);
-    $serviceUrls = \App\Models\Service::query()->publiclyVisible()->orderBy('id')->get(['slug'])->map(fn ($service) => $baseUrl.'/services/'.$service->slug);
-    $urls = $urls->merge($serviceUrls);
-
-    $xml = view('public.sitemap', ['urls' => $urls])->render();
+    $serviceEntries = \App\Models\Service::query()->publiclyVisible()->orderBy('id')->get(['slug', 'updated_at'])->map(fn ($service) => [
+        'loc' => $baseUrl.'/services/'.$service->slug,
+        'lastmod' => $service->updated_at?->toAtomString(),
+    ]);
+    $xml = view('public.sitemap', ['entries' => $entries->merge($serviceEntries)->unique('loc')->values()])->render();
 
     $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . $xml;
 

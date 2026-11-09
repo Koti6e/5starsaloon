@@ -1,4 +1,4 @@
-@props(['settings' => [], 'robots' => 'index,follow,max-image-preview:large'])
+@props(['settings' => [], 'title' => null, 'description' => null, 'robots' => 'index,follow,max-image-preview:large', 'image' => null])
 
 @php
     $searchServices = \App\Models\Service::query()
@@ -34,9 +34,14 @@
     $defaultTheme = 'gold';
     $salonName = $settings['salon_name'] ?? '5 Star New Look A/C';
     $tagline = $settings['tagline'] ?? 'Look Good. Feel Great. Be Confident.';
-    $metaDescription = $description ?? ($settings['meta_description'] ?? 'Explore salon, hair care, skin care and grooming services at 5 Star New Look A/C. Browse services and book an appointment online.');
-    $publicBaseUrl = rtrim(config('app.url'), '/');
-    if (app()->environment('production')) $publicBaseUrl = 'https://'.parse_url($publicBaseUrl, PHP_URL_HOST);
+    $metaDescription = $description ?: ($settings['meta_description'] ?? 'Explore salon, hair care, skin care and grooming services at 5 Star New Look A/C in Vandalur, Chennai. Browse services and book an appointment online.');
+    $publicBaseUrl = app()->environment('production') ? 'https://5star.sushako.in' : rtrim(config('app.url'), '/');
+    $businessAddress = $settings['address'] ?? '4/123, Grand Southern Trunk Road, Otteri Main Road';
+    $businessArea = $settings['area'] ?? 'Vandalur';
+    $businessCity = $settings['city'] ?? 'Chennai';
+    $businessState = $settings['state'] ?? 'Tamil Nadu';
+    $businessPincode = $settings['pincode'] ?? '600048';
+    $mapsUrl = $settings['google_maps_url'] ?? 'https://www.google.com/maps/search/?api=1&query='.rawurlencode($businessAddress.', '.$businessArea.', '.$businessCity.', '.$businessState.' '.$businessPincode.', India');
     $weeklyHours = \App\Support\WorkingHours::schedule($settings);
     $schemaHours = collect($weeklyHours)->filter(fn ($hours) => $hours['open'])->flatMap(function ($hours, $day): array {
         $specification = fn (string $dayName, string $opens, string $closes) => [
@@ -54,13 +59,9 @@
         '@context' => 'https://schema.org', '@type' => 'BeautySalon', 'name' => $salonName,
         'url' => $publicBaseUrl, 'telephone' => $settings['primary_phone'] ?? null,
         'image' => secure_asset($settings['og_image'] ?? 'images/salon/premium-salon-hero.webp'),
-        'hasMap' => $settings['google_maps_url'] ?? null,
+        'hasMap' => $mapsUrl,
         'identifier' => $settings['google_place_id'] ?? null,
-        'geo' => is_numeric($settings['latitude'] ?? null) && is_numeric($settings['longitude'] ?? null) ? ['@type' => 'GeoCoordinates', 'latitude' => (float) $settings['latitude'], 'longitude' => (float) $settings['longitude']] : null,
-        'address' => filled($settings['address'] ?? null) ? array_filter([
-            '@type' => 'PostalAddress', 'streetAddress' => $settings['address'], 'addressLocality' => $settings['city'] ?? ($settings['area'] ?? null),
-            'addressRegion' => $settings['state'] ?? null, 'postalCode' => $settings['pincode'] ?? null, 'addressCountry' => 'IN',
-        ]) : null,
+        'address' => ['@type' => 'PostalAddress', 'streetAddress' => $businessAddress, 'addressLocality' => $businessArea, 'addressRegion' => $businessState, 'postalCode' => $businessPincode, 'addressCountry' => 'IN'],
         'openingHoursSpecification' => $schemaHours ?: null,
         'sameAs' => array_values(array_filter([$settings['instagram_url'] ?? null, $settings['facebook_url'] ?? null, $settings['youtube_url'] ?? null])),
     ], fn ($value) => $value !== null && $value !== '');
@@ -79,6 +80,13 @@
         ['label' => 'About', 'route' => 'about'],
         ['label' => 'Contact', 'route' => 'contact'],
     ];
+    $canonicalPath = trim(request()->getPathInfo(), '/');
+    $canonicalUrl = $publicBaseUrl.($canonicalPath === '' ? '' : '/'.$canonicalPath);
+    $effectiveRobots = request()->query() !== [] ? 'noindex,follow' : $robots;
+    $pageTitle = $title ?: $salonName;
+    $breadcrumbItems = [['name' => 'Home', 'url' => $publicBaseUrl]];
+    if (! request()->routeIs('home')) $breadcrumbItems[] = ['name' => $pageTitle, 'url' => $canonicalUrl];
+    $breadcrumbSchema = count($breadcrumbItems) > 1 ? ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => collect($breadcrumbItems)->values()->map(fn ($item, $index) => ['@type' => 'ListItem', 'position' => $index + 1, 'name' => $item['name'], 'item' => $item['url']])->all()] : null;
 @endphp
 
 <!DOCTYPE html>
@@ -87,24 +95,21 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>{{ $title ?? $salonName }}</title>
+        <title>{{ $pageTitle }}</title>
         <meta name="description" content="{{ $metaDescription }}">
-        <meta name="robots" content="{{ $robots }}">
+        <meta name="robots" content="{{ $effectiveRobots }}">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ $title ?? $salonName }}">
+        <meta name="twitter:title" content="{{ $pageTitle }}">
         <meta name="twitter:description" content="{{ $metaDescription }}">
-        @php
-            $canonicalPath = trim(request()->getPathInfo(), '/');
-            $canonicalUrl = $publicBaseUrl.($canonicalPath === '' ? '' : '/'.$canonicalPath);
-            if (request()->routeIs('gallery') && request()->integer('page') > 1) $canonicalUrl .= '?page='.request()->integer('page');
-        @endphp
         <link rel="canonical" href="{{ $canonicalUrl }}">
         <meta property="og:type" content="website">
-        <meta property="og:title" content="{{ $title ?? $salonName }}">
+        <meta property="og:title" content="{{ $pageTitle }}">
         <meta property="og:description" content="{{ $metaDescription }}">
         <meta property="og:url" content="{{ $canonicalUrl }}">
         <meta property="og:image" content="{{ secure_asset($settings['og_image'] ?? 'images/salon/premium-salon-hero.webp') }}">
+        <meta name="twitter:image" content="{{ secure_asset($image ?? $settings['og_image'] ?? 'images/salon/premium-salon-hero.webp') }}">
         <script type="application/ld+json">{!! json_encode($businessSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+        @if ($breadcrumbSchema)<script type="application/ld+json">{!! json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>@endif
         <link rel="icon" href="{{ asset('favicon.ico') }}">
         <link rel="apple-touch-icon" href="{{ asset('images/brand/5-star-new-look-salon-logo.png') }}">
         <meta name="apple-mobile-web-app-capable" content="yes">
@@ -829,12 +834,11 @@
                         </div>
                     </div>
                     <address class="not-italic text-sm leading-6 theme-text-secondary">
-                        @if (filled($settings['address'] ?? null)) {{ $settings['address'] }}<br> @endif
-                        {{ collect([$settings['area'] ?? null, $settings['city'] ?? null, $settings['state'] ?? null, $settings['pincode'] ?? null])->filter()->implode(', ') }}
+                        {{ $businessAddress }}<br>{{ collect([$businessArea, $businessCity, $businessState, $businessPincode])->filter()->implode(', ') }}
                         @if (filled($settings['primary_phone'] ?? null))<br><a href="tel:{{ preg_replace('/[^+\d]/', '', $settings['primary_phone']) }}">{{ $settings['primary_phone'] }}</a>@endif
                     </address>
                     <div class="flex flex-wrap gap-3 text-sm md:justify-end">
-                        @if (filled($settings['google_maps_url'] ?? null))<a href="{{ $settings['google_maps_url'] }}" target="_blank" rel="noopener noreferrer" class="rounded-md border px-3 py-2 font-semibold link-theme" style="border-color: var(--border-clr);">Get Directions</a>@endif
+                        <a href="{{ $mapsUrl }}" target="_blank" rel="noopener noreferrer" class="rounded-md border px-3 py-2 font-semibold link-theme" style="border-color: var(--border-clr);">Get Directions</a>
                         <a href="{{ route('contact') }}" class="rounded-md border px-3 py-2 link-theme" style="border-color: var(--border-clr);">Contact</a>
                         <a href="{{ route('login') }}" class="rounded-md border px-3 py-2 link-theme" style="border-color: var(--border-clr);">Staff Login</a>
                     </div>
