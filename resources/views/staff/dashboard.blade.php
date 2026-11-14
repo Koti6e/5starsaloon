@@ -11,6 +11,9 @@
 
     <div class="py-8">
         <div class="mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8">
+            @if (session('status') || request()->query('attendance_checkin') === 'saved')
+                <p class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100" role="status" aria-live="polite">{{ session('status', 'Attendance was verified and saved.') }}</p>
+            @endif
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 @foreach ([
                     ['Shift Status', str_replace('_', ' ', $attendance?->status ?? 'Not marked')],

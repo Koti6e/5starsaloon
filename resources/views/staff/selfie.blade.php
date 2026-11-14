@@ -11,7 +11,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('staff.selfie.store') }}" x-data="loginSelfie()" class="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-4 shadow-xl" @submit="submitting = true">
+            <form x-ref="form" method="POST" action="{{ route('staff.selfie.store') }}" x-data="loginSelfie({gpsRequired: @js($requiresGps)})" class="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-4 shadow-xl" @submit.prevent="submitCheckIn($event)">
                 @csrf
                 <input type="hidden" name="selfie_image" :value="photoData">
                 <input type="hidden" name="latitude" :value="latitude">
@@ -25,9 +25,10 @@
                     <canvas x-ref="canvas" class="hidden"></canvas>
                 </div>
 
-                <p class="mt-4 rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-text)]" x-text="message" role="status"></p>
+                <p class="mt-4 rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--app-text)]" x-text="message" role="status" aria-live="polite"></p>
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <button type="button" @click="refreshPermissions()" class="rounded-md border border-[var(--app-border)] px-4 py-3 text-sm font-semibold text-[var(--app-text)]">Refresh permission status</button>
                     @if ($requiresGps)
                         <button type="button" @click="requestLocation()" class="rounded-md border border-[var(--app-border)] px-4 py-3 text-sm font-semibold text-[var(--app-text)]">Verify Salon Location</button>
                     @endif
@@ -46,106 +47,4 @@
         </div>
     </div>
 
-    <script>
-        function loginSelfie() {
-            return {
-                gpsRequired: @js($requiresGps),
-                stream: null,
-                ready: false,
-                photoData: '',
-                submitting: false,
-                latitude: '',
-                longitude: '',
-                accuracy: '',
-                locationReady: false,
-                deviceKey: '',
-                consentChecked: false,
-                message: @js($requiresGps ? 'Verify your salon location and capture an attendance selfie to continue.' : 'Capture an attendance selfie to continue.'),
-                init() {
-                    try {
-                        this.deviceKey = localStorage.getItem('salonos-attendance-device') || '';
-                        if (!this.deviceKey) {
-                            const bytes = new Uint8Array(16);
-                            crypto.getRandomValues(bytes);
-                            bytes[6] = (bytes[6] & 0x0f) | 0x40;
-                            bytes[8] = (bytes[8] & 0x3f) | 0x80;
-                            const hex = [...bytes].map(value => value.toString(16).padStart(2, '0')).join('');
-                            this.deviceKey = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-                            localStorage.setItem('salonos-attendance-device', this.deviceKey);
-                        }
-                    } catch (error) {
-                        this.message = 'This browser cannot save a device registration. Enable site storage or contact an administrator.';
-                    }
-                },
-                requestLocation() {
-                    this.locationReady = false;
-                    this.message = 'Checking current GPS location…';
-                    if (!navigator.geolocation) {
-                        this.message = 'GPS location is unavailable in this browser. Check-in cannot continue.';
-                        return;
-                    }
-                    navigator.geolocation.getCurrentPosition((position) => {
-                        this.latitude = position.coords.latitude;
-                        this.longitude = position.coords.longitude;
-                        this.accuracy = position.coords.accuracy;
-                        this.locationReady = true;
-                        this.message = `Location captured with ${Math.round(this.accuracy)} m accuracy. The server will verify the salon boundary.`;
-                    }, (error) => {
-                        this.latitude = this.longitude = this.accuracy = '';
-                        this.message = error && error.code === 1
-                            ? 'Location permission was denied. Allow GPS access and retry; attendance will not be marked without it.'
-                            : 'A reliable GPS fix was not available. Move to an open area and try again.';
-                    }, {enableHighAccuracy: true, maximumAge: 0, timeout: 20000});
-                },
-                async startCamera() {
-                    if (this.gpsRequired && !this.locationReady) {
-                        this.message = 'Verify your GPS location before opening the camera.';
-                        return;
-                    }
-                    this.photoData = '';
-                    this.ready = false;
-                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        this.message = 'This browser does not support camera capture. Please use Chrome or Safari on HTTPS.';
-                        return;
-                    }
-                    try {
-                        this.stream = await navigator.mediaDevices.getUserMedia({
-                            video: {facingMode: 'user', width: {ideal: 720}, height: {ideal: 960}},
-                            audio: false,
-                        });
-                        this.$refs.video.srcObject = this.stream;
-                        this.ready = true;
-                        this.message = 'Camera ready. Capture a selfie. A camera capture is not face or liveness verification.';
-                    } catch (error) {
-                        this.message = error && error.name === 'NotAllowedError'
-                            ? 'Camera permission was denied. Allow camera access and tap Enable Camera again.'
-                            : 'Camera is unavailable. Check the device camera and try again.';
-                    }
-                },
-                capture() {
-                    if (!this.ready) return;
-                    const video = this.$refs.video;
-                    const canvas = this.$refs.canvas;
-                    canvas.width = video.videoWidth || 720;
-                    canvas.height = video.videoHeight || 960;
-                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-                    this.photoData = canvas.toDataURL('image/jpeg', 0.82);
-                    this.message = this.gpsRequired
-                        ? 'Selfie captured. Submit check-in for server-side GPS verification and administrator review.'
-                        : 'Selfie captured. Submit check-in for administrator review.';
-                    this.stopCamera();
-                },
-                retake() {
-                    this.startCamera();
-                },
-                stopCamera() {
-                    if (this.stream) {
-                        this.stream.getTracks().forEach(track => track.stop());
-                        this.stream = null;
-                    }
-                    this.ready = false;
-                },
-            };
-        }
-    </script>
 </x-app-layout>
