@@ -1,3 +1,5 @@
+import { installPwaUpdateHandling } from './pwa-updates';
+
 const installEvents = new WeakMap();
 const foregroundMessaging = new WeakSet();
 
@@ -281,7 +283,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if ('serviceWorker' in navigator && window.isSecureContext) {
         try {
-            await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+            const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+            installPwaUpdateHandling(registration);
         } catch (error) {
             console.error('SalonOS service worker registration failed.', error);
             document.querySelectorAll('[data-pwa-install-card]').forEach(card => {

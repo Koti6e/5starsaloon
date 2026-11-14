@@ -21,6 +21,17 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Running PHPUnit in Docker
+
+The production app image continues to install Composer dependencies with `--no-dev`. To run tests with development dependencies in an isolated environment, use the test Compose profile:
+
+```sh
+docker compose --profile test build test
+docker compose --profile test run --rm test vendor/bin/phpunit tests/Feature/StaffAttendanceCalendarTest.php
+```
+
+This profile builds a separate PHP CLI image with PHPUnit 12 and starts a separate MySQL service on an internal test-only network. The test database uses temporary storage and test-only credentials. It does not load `.env.docker`, publish a database port, or connect to the production app or MySQL services. Laravel feature tests may run migrations through `RefreshDatabase` against this test database only.
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.

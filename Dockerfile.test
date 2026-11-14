@@ -1,0 +1,38 @@
+FROM node:24-bookworm-slim AS assets
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY resources resources
+COPY vite.config.js postcss.config.js tailwind.config.js ./
+RUN npm run build
+
+FROM php:8.3-cli-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        libfreetype6-dev \
+        libicu-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        libzip-dev \
+        unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" bcmath gd intl pdo_mysql zip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+COPY docker/php/testing.ini /usr/local/etc/php/conf.d/99-salonos-testing.ini
+
+WORKDIR /var/www/html
+
+COPY . .
+COPY --from=assets /app/public/build /var/www/html/public/build
+
+RUN composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader
+
+CMD ["vendor/bin/phpunit"]

@@ -8,16 +8,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
+use App\Support\StaffCredentialPolicy;
 
 class ForcedPasswordController extends Controller
 {
     public function edit(): View
     {
+        abort_if(StaffCredentialPolicy::usesFixedPassword(request()->user()), 403);
+
         return view('auth.force-password');
     }
 
     public function update(Request $request): RedirectResponse
     {
+        abort_if(StaffCredentialPolicy::usesFixedPassword($request->user()), 403);
+
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', Password::min(10)->mixedCase()->numbers()->symbols()],

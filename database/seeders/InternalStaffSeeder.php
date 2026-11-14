@@ -20,7 +20,7 @@ class InternalStaffSeeder extends Seeder
                     'role' => 'staff',
                     'status' => 'active',
                     'must_change_password' => false,
-                    'password' => Hash::make('password'),
+                    'password' => Hash::make('5starnewlook'),
                 ],
             );
         }

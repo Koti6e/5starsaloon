@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\StaffAttendance;
+use App\Support\StaffCredentialPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +31,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         $request->session()->put('staff_login_date', now('Asia/Kolkata')->toDateString());
 
-        if ($request->user()->must_change_password) {
+        if ($request->user()->must_change_password && ! StaffCredentialPolicy::usesFixedPassword($request->user())) {
             return redirect()->route('password.force.edit');
         }
 

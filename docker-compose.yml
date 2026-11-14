@@ -38,6 +38,56 @@ services:
       retries: 10
       start_period: 30s
 
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_DEBUG: "true"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql-test
+      DB_PORT: 3306
+      DB_DATABASE: jarvis_salon_testing
+      DB_USERNAME: salonos_test
+      DB_PASSWORD: salonos_test_only
+      DB_URL: ""
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+    networks:
+      - test
+
+  mysql-test:
+    profiles: ["test"]
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: jarvis_salon_testing
+      MYSQL_USER: salonos_test
+      MYSQL_PASSWORD: salonos_test_only
+      MYSQL_ROOT_PASSWORD: salonos_test_root_only
+    tmpfs:
+      - /var/lib/mysql
+    networks:
+      - test
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+networks:
+  test:
+    name: salonos-test-isolated
+    internal: true
+
 volumes:
   salonos_mysql:
   salonos_storage:

@@ -7,12 +7,14 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Support\StaffCredentialPolicy;
 
 class StaffPasswordController extends Controller
 {
     public function edit(User $staff)
     {
         abort_unless($staff->role === 'staff', 404);
+        abort_if(StaffCredentialPolicy::usesFixedPassword($staff), 403);
 
         return view('admin.staff.edit', ['staff' => $staff]);
     }
@@ -20,6 +22,7 @@ class StaffPasswordController extends Controller
     public function update(Request $request, User $staff): RedirectResponse
     {
         abort_unless($staff->role === 'staff', 404);
+        abort_if(StaffCredentialPolicy::usesFixedPassword($staff), 403);
 
         $validated = $request->validate([
             'password' => ['required', 'string', 'min:8', 'confirmed'],

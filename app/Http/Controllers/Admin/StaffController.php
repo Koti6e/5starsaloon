@@ -126,12 +126,19 @@ class StaffController extends Controller
         $calendar = collect(range(1, $month->daysInMonth))->map(function (int $day) use ($month, $expectedStaff, $attendanceRows) {
             $date = $month->copy()->day($day);
             $rows = $attendanceRows->get($date->toDateString(), collect())->keyBy('staff_id');
-            $details = $expectedStaff->map(function (User $member) use ($rows) {
+            $details = $expectedStaff->map(function (User $member, int $index) use ($rows) {
                 $row = $rows->get($member->id);
                 $present = in_array($row?->status, ['present', 'late'], true);
+                $username = Str::lower((string) $member->username);
+                $color = match ($username) {
+                    'staff1' => 'blue',
+                    'staff2' => 'yellow',
+                    default => $index === 0 ? 'blue' : 'yellow',
+                };
 
                 return [
                     'name' => $member->name,
+                    'color' => $color,
                     'status' => $present ? 'Present' : ($row?->status ? Str::headline($row->status) : 'Absent'),
                     'present' => $present,
                     'time' => $row?->check_in_time,
@@ -139,15 +146,10 @@ class StaffController extends Controller
                 ];
             });
 
-            $presentCount = $details->where('present', true)->count();
-            $state = $date->isFuture()
-                ? 'future'
-                : ($presentCount === $expectedStaff->count() ? 'present' : ($presentCount === 0 ? 'absent' : 'mixed'));
-
             return [
                 'date' => $date->toDateString(),
                 'day' => $day,
-                'state' => $state,
+                'future' => $date->isFuture(),
                 'details' => $details->values(),
             ];
         });

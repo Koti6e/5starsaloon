@@ -24,10 +24,10 @@
                         <h2 class="font-serif text-xl text-[var(--app-primary)]">Attendance Calendar</h2>
                         <p class="mt-1 text-sm text-[var(--app-muted)]">{{ $attendanceMonth->format('F Y') }} · Staff1 / Staff2 login selfies</p>
                     </div>
-                    <div class="hidden gap-3 text-xs text-[var(--app-muted)] sm:flex">
-                        <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-full bg-emerald-500"></span> All present</span>
-                        <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-full bg-gradient-to-r from-emerald-500 from-50% to-red-500 to-50%"></span> Mixed</span>
-                        <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-full bg-red-500"></span> Absent</span>
+                    <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--app-muted)]">
+                        <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-full bg-blue-600"></span> Staff1 – Present</span>
+                        <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-full bg-yellow-400"></span> Staff2 – Present</span>
+                        <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-full bg-red-600"></span> Absent</span>
                     </div>
                 </div>
 
@@ -39,8 +39,15 @@
                         <div></div>
                     @endfor
                     @foreach ($attendanceCalendar as $day)
-                        <button type="button" @click="openDate = openDate === '{{ $day['date'] }}' ? null : '{{ $day['date'] }}'" class="relative min-h-14 rounded-md border border-[var(--app-border)] p-2 text-left text-[var(--app-text)] transition hover:border-[var(--accent-border)] {{ $day['state'] === 'present' ? 'bg-emerald-600/80' : ($day['state'] === 'absent' ? 'bg-red-700/80' : ($day['state'] === 'mixed' ? 'bg-gradient-to-r from-emerald-600 from-50% to-red-700 to-50%' : 'bg-[var(--app-bg)]/40 text-[var(--app-subtle)]')) }}">
-                            <span class="font-bold">{{ $day['day'] }}</span>
+                        <button type="button" @click="openDate = openDate === '{{ $day['date'] }}' ? null : '{{ $day['date'] }}'" aria-label="{{ $day['date'] }} attendance details" class="relative isolate min-h-14 overflow-hidden rounded-md border border-[var(--app-border)] p-2 text-left text-white transition hover:border-[var(--accent-border)] {{ $day['future'] ? 'bg-[var(--app-bg)]/40 text-[var(--app-subtle)]' : '' }}">
+                            @unless ($day['future'])
+                                <span aria-hidden="true" class="absolute inset-0 flex">
+                                    @foreach ($day['details'] as $detail)
+                                        <span class="h-full w-1/2 {{ $detail['present'] ? ($detail['color'] === 'blue' ? 'bg-blue-600' : 'bg-yellow-400') : 'bg-red-600' }}"></span>
+                                    @endforeach
+                                </span>
+                            @endunless
+                            <span class="relative z-10 font-bold {{ $day['future'] ? 'text-[var(--app-subtle)]' : 'drop-shadow' }}">{{ $day['day'] }}</span>
                         </button>
                     @endforeach
                 </div>
@@ -55,7 +62,7 @@
                                         <div class="flex items-start justify-between gap-3">
                                             <div>
                                                 <p class="font-semibold text-[var(--app-text)]">{{ $detail['name'] }}</p>
-                                                <p class="mt-1 text-sm {{ $detail['present'] ? 'text-emerald-300' : 'text-red-300' }}">{{ $detail['status'] }}</p>
+                                                <p class="mt-1 text-sm {{ $detail['present'] ? ($detail['color'] === 'blue' ? 'text-blue-600' : 'text-yellow-600') : 'text-red-600' }}">{{ $detail['status'] }}</p>
                                                 <p class="mt-1 text-xs text-[var(--app-subtle)]">{{ $detail['time'] ? 'Login: '.$detail['time'] : 'No login time' }}</p>
                                             </div>
                                             @if ($detail['selfie_url'])
@@ -82,7 +89,9 @@
                                 <td class="px-4 py-3">{{ $member->must_change_password ? 'Required' : 'Completed' }}</td>
                                 <td class="px-4 py-3">
                                     <a href="{{ route('admin.staff.show', $member) }}" class="mr-2 inline-flex rounded-full border border-[var(--app-border)] px-3 py-2 text-xs font-semibold text-[var(--app-primary)] transition hover:bg-[var(--app-primary-soft)]">Profile</a>
-                                    <a href="{{ route('admin.staff.edit-password', $member) }}" class="inline-flex rounded-full bg-[var(--app-primary)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] transition hover:bg-[var(--app-primary)]">Reset Password</a>
+                                    @unless (\App\Support\StaffCredentialPolicy::usesFixedPassword($member))
+                                        <a href="{{ route('admin.staff.edit-password', $member) }}" class="inline-flex rounded-full bg-[var(--app-primary)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] transition hover:bg-[var(--app-primary)]">Reset Password</a>
+                                    @endunless
                                 </td>
                             </tr>
                         @empty

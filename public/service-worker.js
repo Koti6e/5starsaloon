@@ -4,7 +4,7 @@ try {
     console.error('SalonOS background notifications could not be initialized.', error);
 }
 
-const CACHE_NAME = 'salonos-pwa-v2';
+const CACHE_NAME = 'salonos-pwa-v3';
 const STATIC_ASSETS = [
     '/offline.html',
     '/favicon.ico',
@@ -39,7 +39,10 @@ self.addEventListener('install', event => {
                 }
             })
     );
-    self.skipWaiting();
+});
+
+self.addEventListener('message', event => {
+    if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
