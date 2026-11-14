@@ -33,6 +33,7 @@ class LoginRequest extends FormRequest
         return [
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'gps_timestamp' => ['nullable', 'integer', 'min:1'],
         ];
     }
 
@@ -59,6 +60,11 @@ class LoginRequest extends FormRequest
                 $coordinates['longitude'],
                 $coordinates['accuracy'],
             );
+            $freshnessFailure = $this->gpsFreshnessFailure($coordinates['timestamp']);
+            if ($freshnessFailure !== null && $coordinates['latitude'] !== null && $coordinates['longitude'] !== null) {
+                $location['allowed'] = false;
+                $location['reason'] = $freshnessFailure;
+            }
             $gpsContext = compact('staffCandidate', 'coordinates', 'location');
 
             if (! $location['allowed']) {
@@ -66,7 +72,7 @@ class LoginRequest extends FormRequest
                 RateLimiter::hit($this->throttleKey());
 
                 throw ValidationException::withMessages([
-                    'username' => 'Staff login requires an accurate GPS location within 200 metres of the salon.',
+                    'username' => $location['reason'] ?? 'GPS verification failed. Retry GPS and try again.',
                 ]);
             }
         }
@@ -108,12 +114,13 @@ class LoginRequest extends FormRequest
         RateLimiter::clear($this->throttleKey());
     }
 
-    /** @return array{latitude: ?float, longitude: ?float, accuracy: ?float} */
+    /** @return array{latitude: ?float, longitude: ?float, accuracy: ?float, timestamp: ?float} */
     private function coordinates(): array
     {
         $latitude = $this->numberOrNull($this->input('latitude'));
         $longitude = $this->numberOrNull($this->input('longitude'));
         $accuracy = $this->numberOrNull($this->input('gps_accuracy_meters'));
+        $timestamp = $this->numberOrNull($this->input('gps_timestamp'));
 
         if ($latitude !== null && ($latitude < -90 || $latitude > 90)) {
             $latitude = null;
@@ -125,7 +132,24 @@ class LoginRequest extends FormRequest
             $accuracy = null;
         }
 
-        return ['latitude' => $latitude, 'longitude' => $longitude, 'accuracy' => $accuracy];
+        return ['latitude' => $latitude, 'longitude' => $longitude, 'accuracy' => $accuracy, 'timestamp' => $timestamp];
+    }
+
+    private function gpsFreshnessFailure(?float $timestamp): ?string
+    {
+        if ($timestamp === null) {
+            return 'The GPS fix has no timestamp. Tap Retry GPS to get a fresh location.';
+        }
+
+        $ageMilliseconds = now()->valueOf() - $timestamp;
+        if ($ageMilliseconds > 120_000) {
+            return 'The GPS fix is more than two minutes old. Tap Retry GPS to get a fresh location.';
+        }
+        if ($ageMilliseconds < -30_000) {
+            return 'The GPS fix timestamp is invalid. Check your device clock and retry GPS.';
+        }
+
+        return null;
     }
 
     private function numberOrNull(mixed $value): ?float
@@ -148,6 +172,9 @@ class LoginRequest extends FormRequest
             'latitude' => $coordinates['latitude'],
             'longitude' => $coordinates['longitude'],
             'gps_accuracy_meters' => $coordinates['accuracy'],
+            'gps_position_at' => $coordinates['timestamp'] !== null
+                ? \Illuminate\Support\Carbon::createFromTimestampMs((int) round($coordinates['timestamp']), config('app.timezone'))
+                : null,
             'distance_from_salon_meters' => is_finite($location['distance']) ? $location['distance'] : null,
             'decision' => $decision,
             'reason' => $reason,

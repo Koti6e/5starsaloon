@@ -124,6 +124,48 @@ class StaffAttendanceTest extends TestCase
         ]);
     }
 
+    public function test_staff1_and_staff2_share_the_same_accuracy_and_distance_validation(): void
+    {
+        foreach (['staff1', 'staff2'] as $username) {
+            $staff = User::factory()->create(['username' => $username, 'role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
+            $this->post('/login', ['username' => $username, 'password' => 'password'] + $this->loginGps([
+                'gps_accuracy_meters' => '86616',
+            ]))->assertSessionHasErrors('username');
+            $this->assertStringContainsString('configured limit', session('errors')->first('username'));
+
+            $this->post('/login', ['username' => $username, 'password' => 'password'] + $this->loginGps([
+                // Accurate coordinates are still rejected when their calculated distance exceeds 200 m.
+                'latitude' => '12.8851489',
+                'gps_accuracy_meters' => '20',
+            ]))->assertSessionHasErrors('username');
+            $this->assertStringContainsString('metres from the salon', session('errors')->first('username'));
+
+            $attempts = AttendanceVerificationAttempt::query()->where('staff_id', $staff->id)->where('attempt_type', 'login_gps')->orderBy('id')->get();
+            $this->assertCount(2, $attempts);
+            $this->assertStringContainsString('configured limit', $attempts[0]->reason);
+            $attempt = $attempts[1];
+            $this->assertSame('rejected', $attempt->decision);
+            $this->assertGreaterThan(200, (float) $attempt->distance_from_salon_meters);
+            $this->assertSame('2026-11-14', $attempt->gps_position_at->toDateString());
+        }
+    }
+
+    public function test_stale_gps_fix_is_rejected_and_its_position_timestamp_is_audited(): void
+    {
+        $staff = User::factory()->create(['username' => 'staff1', 'role' => 'staff', 'status' => 'active', 'must_change_password' => false]);
+        $staleTimestamp = now()->valueOf() - 121_000;
+
+        $this->post('/login', ['username' => 'staff1', 'password' => 'password'] + $this->loginGps([
+            'gps_timestamp' => (string) $staleTimestamp,
+        ]))->assertSessionHasErrors('username');
+        $this->assertStringContainsString('more than two minutes old', session('errors')->first('username'));
+
+        $attempt = AttendanceVerificationAttempt::query()->where('staff_id', $staff->id)->where('attempt_type', 'login_gps')->firstOrFail();
+        $this->assertSame('rejected', $attempt->decision);
+        $this->assertSame((int) floor($staleTimestamp / 1000), $attempt->gps_position_at->timestamp);
+        $this->assertDatabaseCount('staff_attendances', 0);
+    }
+
     public function test_other_staff_keep_daily_camera_check_in_without_geofence_restriction(): void
     {
         Storage::fake('local');
@@ -521,6 +563,7 @@ class StaffAttendanceTest extends TestCase
             'latitude' => '12.8821489',
             'longitude' => '80.0808760',
             'gps_accuracy_meters' => '15',
+            'gps_timestamp' => (string) now()->valueOf(),
         ], $overrides);
     }
 }

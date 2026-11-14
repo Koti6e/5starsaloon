@@ -128,6 +128,7 @@ class NextProductionBatchTest extends TestCase
 
         $this->post(route('staff.selfie.store'), [
             'latitude' => '12.8821489', 'longitude' => '80.0808760', 'gps_accuracy_meters' => '15',
+            'gps_timestamp' => (string) now()->valueOf(),
             'device_key' => (string) Str::uuid(), 'consent' => '1',
         ])->assertSessionHasErrors('attendance');
         $this->assertDatabaseCount('staff_attendances', 0);
@@ -167,6 +168,11 @@ class NextProductionBatchTest extends TestCase
 
     private function salonLocation(): array
     {
-        return ['latitude' => '12.8821489', 'longitude' => '80.0808760', 'gps_accuracy_meters' => '15'];
+        return [
+            'latitude' => '12.8821489',
+            'longitude' => '80.0808760',
+            'gps_accuracy_meters' => '15',
+            'gps_timestamp' => (string) now()->valueOf(),
+        ];
     }
 }

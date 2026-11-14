@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\StaffAttendance;
+use App\Services\AttendanceGeofence;
 use App\Support\StaffCredentialPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,9 +17,11 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create(AttendanceGeofence $geofence): View
     {
-        return view('auth.login');
+        return view('auth.login', [
+            'gpsConfiguration' => $geofence->clientConfiguration(),
+        ]);
     }
 
     /**

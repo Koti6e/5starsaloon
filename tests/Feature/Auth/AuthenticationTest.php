@@ -61,6 +61,7 @@ class AuthenticationTest extends TestCase
                 'latitude' => '12.8821489',
                 'longitude' => '80.0808760',
                 'gps_accuracy_meters' => '15',
+                'gps_timestamp' => (string) now()->valueOf(),
             ]);
 
             $this->assertAuthenticated();
@@ -87,6 +88,7 @@ class AuthenticationTest extends TestCase
                 'latitude' => '12.8821489',
                 'longitude' => '80.0808760',
                 'gps_accuracy_meters' => '15',
+                'gps_timestamp' => (string) now()->valueOf(),
             ]);
 
             $this->assertAuthenticatedAs($staff);
